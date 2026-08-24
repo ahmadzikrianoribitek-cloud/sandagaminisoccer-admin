@@ -11888,6 +11888,12 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 </main>
 <!-- Script Firebase & Logika Aplikasi -->
 
+<style id="sparing-edit-modal-ui-v1">
+.sparing-edit-overlay{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:14px;background:rgba(8,20,35,.58);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);}
+.sparing-edit-modal{width:min(94vw,720px);max-height:min(92vh,760px);overflow:auto;background:rgba(248,250,252,.98);border:1px solid rgba(255,255,255,.9);border-radius:24px;box-shadow:0 30px 90px rgba(0,0,0,.30);padding:18px;}
+.sparing-edit-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;padding-bottom:14px;border-bottom:1px solid #dbe3ea;}
+.sparing-edit-kicker{font-size:9px;font-weight:950;letter-spacing:.12em;color:#2e607a;margin-bottom:3px}.sparing-edit-head h3{margin:0;color:#0e2538;font-size:18px;font-weight:950}.sparing-edit-head p{margin:4px 0 0;color:#64748b;font-size:10px;font-weight:750}.sparing-edit-close{width:36px;height:36px;border:1px solid #dbe3ea;border-radius:11px;background:#fff;color:#475569;font-size:23px;font-weight:900;cursor:pointer}.sparing-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.sparing-edit-team-card{background:rgba(255,255,255,.82);border:1px solid #dbe3ea;border-radius:17px;padding:13px}.sparing-edit-team-title,.sparing-edit-section-title{font-size:10px;font-weight:950;letter-spacing:.06em;color:#0e2538;margin-bottom:9px}.sparing-edit-logo-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}.sparing-edit-logo-preview{width:68px;height:68px;flex:0 0 68px;border-radius:14px;border:1px solid #cbd5e1;background:#f8fafc;display:grid;place-items:center;overflow:hidden;font-size:28px}.sparing-edit-logo-preview img{width:100%;height:100%;object-fit:contain}.sparing-edit-logo-tools{display:flex;flex-direction:column;gap:6px}.sparing-edit-upload,.sparing-edit-remove-logo{display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:6px 9px;border-radius:9px;font-size:9px;font-weight:900;cursor:pointer;border:1px solid #dbe3ea}.sparing-edit-upload{background:#163b55;color:#fff}.sparing-edit-upload input{display:none}.sparing-edit-remove-logo{background:#f8fafc;color:#64748b}.sparing-edit-input{width:100%;min-height:40px;border:1px solid #cbd5e1;border-radius:11px;background:#fff;color:#0e2538;padding:8px 10px;font-size:12px;font-weight:800;outline:none}.sparing-edit-input:focus{border-color:#2e607a;box-shadow:0 0 0 3px rgba(46,96,122,.10)}.sparing-edit-schedule{margin-top:11px;padding:13px;background:rgba(233,240,244,.58);border:1px solid #dbe3ea;border-radius:17px}.sparing-edit-schedule-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.sparing-edit-schedule-grid label span{display:block;font-size:9px;color:#64748b;font-weight:900;margin:0 0 4px}.sparing-edit-note{margin-top:10px;padding:9px 10px;border-radius:11px;background:#eef6fa;color:#456579;font-size:9px;font-weight:750;line-height:1.4}.sparing-edit-footer{display:flex;gap:8px;margin-top:14px}.sparing-edit-footer button{min-height:42px;border-radius:12px;border:0;font-size:10px;font-weight:950;cursor:pointer}.sparing-edit-cancel{width:34%;background:#e9f0f4;color:#0e2538}.sparing-edit-save{flex:1;background:#163b55;color:#fff;box-shadow:0 8px 18px rgba(22,59,85,.18)}.sparing-edit-save:disabled{opacity:.55;cursor:wait}@media(max-width:640px){.sparing-edit-overlay{padding:8px}.sparing-edit-modal{padding:13px;border-radius:19px;max-height:94vh}.sparing-edit-grid{grid-template-columns:1fr}.sparing-edit-schedule-grid{grid-template-columns:1fr 1fr}.sparing-edit-head h3{font-size:15px}.sparing-edit-logo-preview{width:58px;height:58px;flex-basis:58px}.sparing-edit-footer{position:sticky;bottom:0;background:rgba(248,250,252,.98);padding-top:8px}}
+</style>
 <style id="sparing-chooser-ui-v1">
 .sparing-chooser-overlay{position:fixed;inset:0;z-index:2147483646;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(15,23,42,.42);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:sparingChooserFade .16s ease-out}
 .sparing-chooser-overlay.is-open{display:flex!important}
@@ -13013,7 +13019,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 // DP hanya dicatat pada slot pertama agar tidak terhitung dua kali.
                 const startHour = Number(String(jamInput).split(':')[0]);
                 const endExclusive = startHour + durasi;
-                if(startHour >= 23 || endExclusive > 24) {
+                if(startHour < 0 || startHour > 23 || endExclusive > 24) {
                     alert('Durasi booking melewati batas jadwal lapangan. Silakan pilih jam mulai yang lebih awal atau durasi yang lebih pendek.');
                     return;
                 }
@@ -18018,7 +18024,7 @@ return;
         function getBookingOptionsForSparing() {
             const options = [];
             Object.entries(globalCache.booking || {}).forEach(([key, item]) => {
-                if(!item || !item.nama || !item.tgl) return;
+                if(!item || !item.nama || !item.tgl || item.sparringOpponent === true) return;
                 const dt = sparringDateTime(item);
                 if(!dt.date || !dt.jam || !isSparingDateInRange(dt.date)) return;
                 options.push({
@@ -18168,6 +18174,13 @@ return;
         // Data Sparing manual harus selalu mempunyai booking nyata. Fungsi ini
         // sengaja dibuat terpisah dari tombol Simpan agar jika listener Firebase
         // menerima data sparing lebih dulu, booking tetap otomatis dibuat.
+        // =========================================================
+        // SINKRONISASI SPARING -> BOOKING (BOOKING UTAMA SAJA)
+        // =========================================================
+        // Tim B/lawan sparing BUKAN booking. Hanya Tim A yang menjadi
+        // booking nyata. Ini mencegah Booking History menghitung lawan
+        // sebagai booking kedua dan mencegah lawan muncul kembali setelah
+        // booking-nya dihapus.
         window.syncManualSparingToBooking = async () => {
             const sparrings = globalCache.sparring || {};
             const bookings = globalCache.booking || {};
@@ -18176,59 +18189,113 @@ return;
             for (const [sparringKey, s] of Object.entries(sparrings)) {
                 if(!s || s.source !== 'Manual' || !s.tanggal || !s.jam || !s.timA) continue;
 
-                const teams = [String(s.timA).trim(), String(s.timB || '').trim()].filter(Boolean);
-                const bookingKeys = Array.isArray(s.bookingKeys) ? [...s.bookingKeys.filter(Boolean)] : [];
+                const teamA = String(s.timA).trim();
+                const teamALower = teamA.toLowerCase();
+                const slotDate = String(s.tanggal);
+                const slotJam = String(s.jam).substring(0,5);
 
-                for(const team of teams) {
-                    const teamLower = team.toLowerCase();
-                    let foundKey = bookingKeys.find(k => {
-                        const b = bookings[k];
-                        if(!b) return false;
-                        return String(b.nama || '').trim().toLowerCase() === teamLower &&
-                            String(b.tgl || '').split('T')[0] === String(s.tanggal) &&
-                            String(b.tgl || '').split('T')[1]?.substring(0,5) === String(s.jam).substring(0,5);
+                let bookingKeys = Array.isArray(s.bookingKeys)
+                    ? [...new Set(s.bookingKeys.filter(Boolean).map(String))]
+                    : (s.bookingKey ? [String(s.bookingKey)] : []);
+
+                // Booking lawan lama boleh masih tersimpan dari versi sebelumnya.
+                // Jangan pernah menganggapnya sebagai booking utama.
+                const legacyOpponentKeys = new Set();
+                bookingKeys.forEach(k => {
+                    const b = bookings[k];
+                    if(b?.sparringOpponent === true && String(b.sparringKey || '') === String(sparringKey)) {
+                        legacyOpponentKeys.add(k);
+                    }
+                });
+
+                // Cari booking utama yang sudah direlasikan.
+                let mainBookingKey = bookingKeys.find(k => {
+                    const b = bookings[k];
+                    if(!b || b.sparringOpponent === true) return false;
+                    return String(b.nama || '').trim().toLowerCase() === teamALower &&
+                        String(b.tgl || '').split('T')[0] === slotDate &&
+                        String(b.tgl || '').split('T')[1]?.substring(0,5) === slotJam;
+                }) || '';
+
+                // Fallback untuk data lama: cari booking Tim A yang memang menunjuk sparring ini.
+                if(!mainBookingKey) {
+                    const related = Object.entries(bookings).find(([k,b]) => {
+                        if(!b || b.sparringOpponent === true || String(b.sparringKey || '') !== String(sparringKey)) return false;
+                        return String(b.nama || '').trim().toLowerCase() === teamALower &&
+                            String(b.tgl || '').split('T')[0] === slotDate &&
+                            String(b.tgl || '').split('T')[1]?.substring(0,5) === slotJam;
                     });
-
-                    if(!foundKey) {
-                        const existing = Object.entries(bookings).find(([k,b]) => {
-                            if(!b || !b.tgl || String(b.sparringKey || '') !== String(sparringKey)) return false;
-                            return String(b.nama || '').trim().toLowerCase() === teamLower &&
-                                String(b.tgl).split('T')[0] === String(s.tanggal) &&
-                                String(b.tgl).split('T')[1]?.substring(0,5) === String(s.jam).substring(0,5);
-                        });
-                        if(existing) foundKey = existing[0];
-                    }
-
-                    if(!foundKey) {
-                        const isTeamA = teamLower === String(s.timA).trim().toLowerCase();
-                        const record = {
-                            status: isTeamA ? (s.statusA || 'Non Member') : (s.statusB || 'Non Member'),
-                            nama: team,
-                            wa: isTeamA ? (s.wa || '') : '', 
-                            tgl: `${s.tanggal}T${String(s.jam).substring(0,5)}`,
-                            dp: 0,
-                            tglDp: '',
-                            metode: 'Cash',
-                            sparringSource: true,
-                            sparringKey: sparringKey,
-                            sparringManual: true,
-                            timestamp: Date.now()
-                        };
-                        const pushed = await push(ref(db, 'booking'), record);
-                        foundKey = pushed.key || '';
-                        if(foundKey) {
-                            globalCache.booking = globalCache.booking || {};
-                            globalCache.booking[foundKey] = record;
-                        }
-                        changed = true;
-                    }
-
-                    if(foundKey && !bookingKeys.includes(foundKey)) bookingKeys.push(foundKey);
+                    if(related) mainBookingKey = related[0];
                 }
 
-                const newKeys = [...new Set(bookingKeys)];
-                if(JSON.stringify(newKeys) !== JSON.stringify(Array.isArray(s.bookingKeys) ? s.bookingKeys : [])) {
-                    const patch = { bookingKeys: newKeys, bookingKey: newKeys[0] || '' };
+                // Untuk sparing manual, Tim A harus punya satu booking nyata.
+                if(!mainBookingKey) {
+                    const existing = Object.entries(bookings).find(([k,b]) => {
+                        if(!b || b.sparringOpponent === true || !b.tgl) return false;
+                        return String(b.nama || '').trim().toLowerCase() === teamALower &&
+                            String(b.tgl).split('T')[0] === slotDate &&
+                            String(b.tgl).split('T')[1]?.substring(0,5) === slotJam;
+                    });
+                    if(existing) mainBookingKey = existing[0];
+                }
+
+                if(!mainBookingKey) {
+                    const record = {
+                        status: s.statusA || 'Non Member',
+                        nama: teamA,
+                        wa: s.wa || '',
+                        tgl: `${slotDate}T${slotJam}`,
+                        dp: 0,
+                        tglDp: '',
+                        metode: 'Cash',
+                        sparringSource: true,
+                        sparringKey,
+                        sparringManual: true,
+                        sparringOpponent: false,
+                        timestamp: Date.now()
+                    };
+                    const pushed = await push(ref(db, 'booking'), record);
+                    mainBookingKey = pushed.key || '';
+                    if(mainBookingKey) {
+                        globalCache.booking = globalCache.booking || {};
+                        globalCache.booking[mainBookingKey] = { ...record };
+                    }
+                    changed = true;
+                } else {
+                    const b = globalCache.booking?.[mainBookingKey];
+                    if(b && b.sparringOpponent === true) {
+                        // Safety guard: jangan gunakan booking lawan sebagai booking utama.
+                        mainBookingKey = '';
+                    }
+                }
+
+                // Hapus booking lawan legacy yang dibuat versi lama.
+                for(const opponentKey of legacyOpponentKeys) {
+                    if(opponentKey === mainBookingKey) continue;
+                    await remove(ref(db, 'booking/' + opponentKey));
+                    if(globalCache.booking?.[opponentKey]) delete globalCache.booking[opponentKey];
+                    changed = true;
+                }
+
+                if(mainBookingKey) {
+                    const current = globalCache.booking?.[mainBookingKey] || {};
+                    const normalizedPatch = {
+                        sparringKey,
+                        sparringSource: true,
+                        sparringOpponent: false,
+                        sparringManual: true
+                    };
+                    if(current.sparringKey !== sparringKey || current.sparringOpponent === true) {
+                        await update(ref(db, 'booking/' + mainBookingKey), normalizedPatch);
+                        globalCache.booking[mainBookingKey] = { ...current, ...normalizedPatch };
+                        changed = true;
+                    }
+                }
+
+                const newKeys = mainBookingKey ? [mainBookingKey] : [];
+                const oldKeys = Array.isArray(s.bookingKeys) ? s.bookingKeys.map(String) : [];
+                if(String(s.bookingKey || '') !== String(mainBookingKey || '') || JSON.stringify(oldKeys) !== JSON.stringify(newKeys)) {
+                    const patch = { bookingKeys: newKeys, bookingKey: mainBookingKey || '' };
                     await update(ref(db, 'sparring/' + sparringKey), patch);
                     globalCache.sparring[sparringKey] = { ...s, ...patch };
                     changed = true;
@@ -18394,59 +18461,33 @@ return;
                     createdBookingKeys.push(manualBookingKey);
                 }
 
-                // Jika Tim B diketik manual dan belum mempunyai booking pada slot ini,
-                // buat juga booking-nya agar kedua tim sparing terlihat di jadwal.
-                if(isManual && timB) {
-                    const existingOpponentBooking = Object.entries(globalCache.booking || {}).find(([key,item]) => {
-                        if(!item || !item.nama || !item.tgl) return false;
-                        const itemDate = String(item.tgl).split('T')[0];
-                        const itemJam = String(item.tgl).split('T')[1]?.substring(0,5) || '';
-                        return itemDate === tanggal && itemJam === jam &&
-                            String(item.nama).trim().toLowerCase() === timB.toLowerCase();
-                    });
-                    if(existingOpponentBooking) {
-                        createdBookingKeys.push(existingOpponentBooking[0]);
-                    } else {
-                        const opponentBookingData = {
-                            status: 'Non Member',
-                            nama: timB,
-                            wa: '',
-                            tgl: `${tanggal}T${jam}`,
-                            dp: 0,
-                            tglDp: '',
-                            metode: 'Cash',
-                            sparringSource: true,
-                            sparringKey: sparringKey || '',
-                            sparringOpponent: true,
-                            timestamp: Date.now()
-                        };
-                        const pushedOpponent = await push(ref(db, 'booking'), opponentBookingData);
-                        const opponentBookingKey = pushedOpponent.key || '';
-                        if(opponentBookingKey) {
-                            globalCache.booking = globalCache.booking || {};
-                            globalCache.booking[opponentBookingKey] = { ...opponentBookingData };
-                        }
-                        createdBookingKeys.push(opponentBookingKey);
-                    }
+                // Tim B hanya disimpan di node Sparing sebagai lawan.
+                // Jangan membuat booking kedua untuk Tim B.
+                const existingRelated = Array.isArray(existingSparing?.bookingKeys)
+                    ? existingSparing.bookingKeys.filter(Boolean).map(String)
+                    : (existingSparing?.bookingKey ? [String(existingSparing.bookingKey)] : []);
+                const mainBookingKey = bookingKeyA || manualBookingKey || existingRelated.find(k => {
+                    const b = globalCache.booking?.[k];
+                    return b && b.sparringOpponent !== true;
+                }) || '';
+
+                // Bersihkan booking lawan legacy yang pernah dibuat versi lama.
+                const legacyOpponentKeys = new Set(existingRelated.filter(k => {
+                    const b = globalCache.booking?.[k];
+                    return b?.sparringOpponent === true && String(b.sparringKey || '') === String(sparringKey);
+                }));
+                for(const opponentKey of legacyOpponentKeys) {
+                    await remove(ref(db, 'booking/' + opponentKey));
+                    if(globalCache.booking?.[opponentKey]) delete globalCache.booking[opponentKey];
                 }
 
-                // Simpan relasi booking ke Sparing.
-                const existingRelated = Array.isArray(existingSparing?.bookingKeys)
-                    ? existingSparing.bookingKeys.filter(Boolean)
-                    : (existingSparing?.bookingKey ? [existingSparing.bookingKey] : []);
-                const allRelatedBookingKeys = [...new Set([
-                    ...existingRelated,
-                    ...(bookingKeyA ? [bookingKeyA] : []),
-                    ...createdBookingKeys.filter(Boolean)
-                ])];
+                const allRelatedBookingKeys = mainBookingKey ? [mainBookingKey] : [];
 
                 if(sparringKey) {
                     const finalSparingData = {
                         ...sparringDataBase,
-                        ...(allRelatedBookingKeys.length ? {
-                            bookingKeys: allRelatedBookingKeys,
-                            bookingKey: allRelatedBookingKeys[0]
-                        } : {}),
+                        bookingKeys: allRelatedBookingKeys,
+                        bookingKey: mainBookingKey || '',
                         ...(manualBookingKey ? { manualBookingKey } : {})
                     };
                     await update(ref(db, 'sparring/' + sparringKey), finalSparingData);
@@ -18454,11 +18495,17 @@ return;
                     globalCache.sparring[sparringKey] = { ...(globalCache.sparring[sparringKey] || {}), ...finalSparingData };
                 }
 
-                if(createdBookingKeys.length) {
-                    globalCache.booking = globalCache.booking || {};
-                    createdBookingKeys.forEach(k => {
-                        if(k && globalCache.booking[k]) globalCache.booking[k].sparringKey = sparringKey || globalCache.booking[k].sparringKey || '';
-                    });
+                if(mainBookingKey && globalCache.booking?.[mainBookingKey]) {
+                    const mainPatch = {
+                        sparringKey: sparringKey || '',
+                        sparringSource: true,
+                        sparringOpponent: false
+                    };
+                    await update(ref(db, 'booking/' + mainBookingKey), mainPatch);
+                    globalCache.booking[mainBookingKey] = {
+                        ...globalCache.booking[mainBookingKey],
+                        ...mainPatch
+                    };
                 }
 
                 batalEditSparing();
@@ -18475,24 +18522,294 @@ return;
             }
         };
 
+        // =========================================================
+        // EDIT SPARING — modal khusus untuk mengubah Tim 1, Tim 2, logo,
+        // tanggal dan jam tanpa bergantung pada form tambah sparing.
+        // =========================================================
+        function sparingEditReadFile(file) {
+            return new Promise((resolve, reject) => {
+                if(!file) return resolve('');
+                if(!String(file.type || '').startsWith('image/')) {
+                    reject(new Error('File logo harus berupa gambar.'));
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = () => resolve(String(reader.result || ''));
+                reader.onerror = () => reject(new Error('Gagal membaca file logo.'));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function sparingEditPreview(id, logo) {
+            const el = document.getElementById(id);
+            if(!el) return;
+            const safe = escapeAttrLogo(logo || '');
+            el.innerHTML = safe
+                ? `<img src="${safe}" alt="Preview logo" onerror="this.style.display='none';this.parentElement.classList.add('is-error');">`
+                : '<span>⚽</span>';
+            el.classList.toggle('is-empty', !logo);
+        }
+
+        window.closeSparingEditModal = () => {
+            document.getElementById('modal-sparing-edit')?.remove();
+        };
+
+        window.sparingEditRemoveLogo = (side) => {
+            const input = document.getElementById('sparing-edit-logo-' + side);
+            const removed = document.getElementById('sparing-edit-logo-' + side + '-removed');
+            if(input) input.value = '';
+            if(removed) removed.value = '1';
+            sparingEditPreview('sparing-edit-logo-preview-' + side, '');
+        };
+
+        window.sparingEditUploadLogo = async (side, fileInput) => {
+            const file = fileInput?.files?.[0];
+            if(!file) return;
+            try {
+                const logo = await sparingEditReadFile(file);
+                const input = document.getElementById('sparing-edit-logo-' + side);
+                const removed = document.getElementById('sparing-edit-logo-' + side + '-removed');
+                if(input) input.value = logo;
+                if(removed) removed.value = '';
+                sparingEditPreview('sparing-edit-logo-preview-' + side, logo);
+            } catch(error) {
+                alert(error.message || 'Gagal membaca logo.');
+                if(fileInput) fileInput.value = '';
+            }
+        };
+
+        window.simpanEditSparingModal = async () => {
+            const modal = document.getElementById('modal-sparing-edit');
+            if(!modal) return;
+            const key = modal.dataset.key || '';
+            const current = globalCache.sparring?.[key];
+            if(!key || !current) {
+                alert('Data sparing tidak ditemukan.');
+                return;
+            }
+
+            const timA = document.getElementById('sparing-edit-tim-a')?.value.trim() || '';
+            const timB = document.getElementById('sparing-edit-tim-b')?.value.trim() || '';
+            const tanggal = document.getElementById('sparing-edit-tanggal')?.value || '';
+            const jam = document.getElementById('sparing-edit-jam')?.value || '';
+            const logoA = document.getElementById('sparing-edit-logo-a')?.value || '';
+            const logoB = document.getElementById('sparing-edit-logo-b')?.value || '';
+            const saveBtn = document.getElementById('sparing-edit-save-btn');
+
+            if(!timA || !tanggal || !jam) {
+                alert('Nama Tim 1, tanggal, dan jam wajib diisi.');
+                return;
+            }
+            if(timB && timA.toLowerCase() === timB.toLowerCase()) {
+                alert('Tim 1 dan Tim 2 tidak boleh sama.');
+                return;
+            }
+
+            const duplicate = Object.entries(globalCache.sparring || {}).find(([otherKey, item]) => {
+                if(String(otherKey) === String(key) || !item || item.status !== 'matched') return false;
+                if(String(item.tanggal || '') !== tanggal || String(item.jam || '').substring(0,5) !== jam.substring(0,5)) return false;
+                const a = String(item.timA || '').trim().toLowerCase();
+                const b = String(item.timB || '').trim().toLowerCase();
+                const x = timA.toLowerCase(), y = timB.toLowerCase();
+                return a === x || b === x || (y && (a === y || b === y));
+            });
+            if(duplicate) {
+                const d = duplicate[1];
+                alert(`Tim tersebut sudah tercatat sparring pada ${tanggal} ${jam}: ${d.timA} vs ${d.timB}.`);
+                return;
+            }
+
+            if(saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Menyimpan...'; }
+            try {
+                const oldA = String(current.timA || '').trim();
+                const oldB = String(current.timB || '').trim();
+                const oldDate = String(current.tanggal || '');
+                const oldJam = String(current.jam || '').substring(0,5);
+                const sparringPatch = {
+                    ...current,
+                    tanggal,
+                    jam,
+                    timA,
+                    timB,
+                    status: timB ? 'matched' : 'pending',
+                    statusB: timB ? (current.statusB || 'Non Member') : ''
+                };
+                delete sparringPatch.bookingKeys;
+                delete sparringPatch.bookingKey;
+
+                // Simpan perubahan utama Sparing.
+                await update(ref(db, 'sparring/' + key), {
+                    ...sparringPatch,
+                    updatedAt: Date.now()
+                });
+
+                // Perbarui booking utama yang terhubung dengan Tim 1, jika ada.
+                const related = Array.isArray(current.bookingKeys)
+                    ? current.bookingKeys.filter(Boolean).map(String)
+                    : (current.bookingKey ? [String(current.bookingKey)] : []);
+                if(current.manualBookingKey) related.push(String(current.manualBookingKey));
+                const uniqueRelated = [...new Set(related)];
+                for(const bookingKey of uniqueRelated) {
+                    const booking = globalCache.booking?.[bookingKey];
+                    if(booking?.sparringOpponent === true) continue;
+                    const bookingPatch = {
+                        nama: timA,
+                        tgl: `${tanggal}T${jam.substring(0,5)}`,
+                        sparringKey: key,
+                        sparringSource: true,
+                        sparringOpponent: false
+                    };
+                    await update(ref(db, 'booking/' + bookingKey), bookingPatch);
+                    globalCache.booking[bookingKey] = { ...booking, ...bookingPatch };
+                }
+
+                // Logo tersimpan di node teamLogos agar seluruh halaman otomatis ikut berubah.
+                const logoRemovedA = document.getElementById('sparing-edit-logo-a-removed')?.value === '1';
+                const logoRemovedB = document.getElementById('sparing-edit-logo-b-removed')?.value === '1';
+                const saveLogo = async (oldName, newName, logo, removed) => {
+                    if(!newName) return;
+                    const oldKey = oldName ? getTeamLogoKey(oldName) : '';
+                    const newKey = getTeamLogoKey(newName);
+                    if(removed && oldKey && normalizeTeamLogoName(oldName) === normalizeTeamLogoName(newName)) {
+                        await remove(ref(db, 'teamLogos/' + oldKey));
+                        if(globalCache.teamLogos?.[oldKey]) delete globalCache.teamLogos[oldKey];
+                        return;
+                    }
+                    if(logo) {
+                        await update(ref(db, 'teamLogos/' + newKey), {
+                            nama:newName, normalizedNama:normalizeTeamLogoName(newName), logo, updatedAt:Date.now()
+                        });
+                        globalCache.teamLogos = globalCache.teamLogos || {};
+                        globalCache.teamLogos[newKey] = {
+                            ...(globalCache.teamLogos[newKey] || {}), nama:newName,
+                            normalizedNama:normalizeTeamLogoName(newName), logo, updatedAt:Date.now()
+                        };
+                    }
+                };
+                await saveLogo(oldA, timA, logoA, logoRemovedA);
+                if(timB) await saveLogo(oldB, timB, logoB, logoRemovedB);
+
+                // Jika nama berubah dan admin tidak mengganti/menghapus logo, salin logo lama
+                // ke nama baru supaya logo tetap tampil.
+                const copyOldLogoIfNeeded = async (oldName, newName, logo, removed) => {
+                    if(removed || !oldName || !newName || normalizeTeamLogoName(oldName) === normalizeTeamLogoName(newName) || logo) return;
+                    const oldLogo = getTeamLogo(oldName);
+                    if(!oldLogo) return;
+                    const newKey = getTeamLogoKey(newName);
+                    await update(ref(db, 'teamLogos/' + newKey), {
+                        nama:newName, normalizedNama:normalizeTeamLogoName(newName), logo:oldLogo, updatedAt:Date.now()
+                    });
+                    globalCache.teamLogos = globalCache.teamLogos || {};
+                    globalCache.teamLogos[newKey] = { nama:newName, normalizedNama:normalizeTeamLogoName(newName), logo:oldLogo, updatedAt:Date.now() };
+                };
+                await copyOldLogoIfNeeded(oldA, timA, logoA, logoRemovedA);
+                if(timB) await copyOldLogoIfNeeded(oldB, timB, logoB, logoRemovedB);
+
+                globalCache.sparring[key] = {
+                    ...current,
+                    tanggal, jam, timA, timB,
+                    status: timB ? 'matched' : 'pending',
+                    statusB: timB ? (current.statusB || 'Non Member') : '',
+                    updatedAt: Date.now()
+                };
+
+                closeSparingEditModal();
+                if(typeof syncManualSparingToBooking === 'function') {
+                    try { await syncManualSparingToBooking(); } catch(e) { console.error('Sync setelah edit sparing:', e); }
+                }
+                if(typeof renderAll === 'function') renderAll();
+                if(typeof renderSparing === 'function') renderSparing();
+                if(typeof renderTodaySchedule === 'function') renderTodaySchedule();
+                if(typeof renderTabelBooking === 'function') renderTabelBooking();
+                if(typeof refreshTeamLogoIndicators === 'function') refreshTeamLogoIndicators();
+                showSuccessPopup('Data sparing berhasil diperbarui.');
+            } catch(error) {
+                console.error('Edit Sparing:', error);
+                alert('Gagal menyimpan perubahan sparing: ' + (error?.message || error));
+                if(saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Simpan Perubahan'; }
+            }
+        };
+
         window.editSparing = (key) => {
             const item = globalCache.sparring?.[key];
-            if(!item) return;
-            document.getElementById('sparring-edit-key').value = key;
-            document.getElementById('sparring-tim-b').value = item.timB || '';
-            document.getElementById('sparring-status-a').value = item.statusA || (item.source === 'Manual' ? 'Non Member' : 'Member');
-            document.getElementById('sparring-status-b').value = item.statusB || 'Non Member';
-            document.getElementById('sparring-wa').value = item.wa || '';
-            const editManual = item.source === 'Manual';
-            document.getElementById('sparring-tim-a-manual').value = editManual ? (item.timA || '') : '';
-            document.getElementById('sparring-tanggal-manual').value = editManual ? (item.tanggal || '') : '';
-            document.getElementById('sparring-jam-manual').value = editManual ? (item.jam || '') : '';
-            document.getElementById('sparring-catatan').value = item.catatan || '';
-            document.getElementById('sparring-form-title').textContent = '✏️ Edit Catatan Sparing';
-            document.getElementById('sparring-save-btn').textContent = 'Simpan Perubahan';
-            document.getElementById('sparring-cancel-edit').classList.remove('hidden');
-            updateSparingBookingOptions();
-            document.getElementById('sparring-tim-a')?.scrollIntoView({behavior:'smooth',block:'center'});
+            if(!item) {
+                alert('Data sparing tidak ditemukan.');
+                return;
+            }
+
+            document.getElementById('modal-sparing-edit')?.remove();
+            const timA = String(item.timA || '').trim();
+            const timB = String(item.timB || '').trim();
+            const tanggal = String(item.tanggal || '');
+            const jam = String(item.jam || '').substring(0,5);
+            const logoA = getTeamLogo(timA);
+            const logoB = getTeamLogo(timB);
+            const safeA = escapeHtmlSparing(timA);
+            const safeB = escapeHtmlSparing(timB);
+
+            document.body.insertAdjacentHTML('beforeend', `
+                <div id="modal-sparing-edit" class="sparing-edit-overlay" data-key="${escapeAttrLogo(key)}" role="dialog" aria-modal="true" aria-labelledby="sparing-edit-title">
+                    <div class="sparing-edit-modal">
+                        <div class="sparing-edit-head">
+                            <div>
+                                <div class="sparing-edit-kicker">🤝 SPARING</div>
+                                <h3 id="sparing-edit-title">✏️ Edit Data Sparing</h3>
+                                <p>Ubah nama tim, logo, tanggal, atau jam main.</p>
+                            </div>
+                            <button type="button" class="sparing-edit-close" onclick="closeSparingEditModal()">×</button>
+                        </div>
+
+                        <div class="sparing-edit-grid">
+                            <section class="sparing-edit-team-card">
+                                <div class="sparing-edit-team-title">TIM 1</div>
+                                <div class="sparing-edit-logo-row">
+                                    <div id="sparing-edit-logo-preview-a" class="sparing-edit-logo-preview">${logoA ? `<img src="${escapeAttrLogo(logoA)}" alt="Logo Tim 1">` : '<span>⚽</span>'}</div>
+                                    <div class="sparing-edit-logo-tools">
+                                        <label class="sparing-edit-upload">🖼️ Ganti Logo<input type="file" accept="image/*" onchange="sparingEditUploadLogo('a',this)"></label>
+                                        <button type="button" class="sparing-edit-remove-logo" onclick="sparingEditRemoveLogo('a')">Hapus Logo</button>
+                                    </div>
+                                </div>
+                                <input id="sparing-edit-tim-a" class="sparing-edit-input" type="text" value="${safeA}" placeholder="Nama Tim 1">
+                                <input id="sparing-edit-logo-a" type="hidden" value="${escapeAttrLogo(logoA)}">
+                                <input id="sparing-edit-logo-a-removed" type="hidden" value="">
+                            </section>
+
+                            <section class="sparing-edit-team-card">
+                                <div class="sparing-edit-team-title">TIM 2 / LAWAN</div>
+                                <div class="sparing-edit-logo-row">
+                                    <div id="sparing-edit-logo-preview-b" class="sparing-edit-logo-preview">${logoB ? `<img src="${escapeAttrLogo(logoB)}" alt="Logo Tim 2">` : '<span>⚽</span>'}</div>
+                                    <div class="sparing-edit-logo-tools">
+                                        <label class="sparing-edit-upload">🖼️ Ganti Logo<input type="file" accept="image/*" onchange="sparingEditUploadLogo('b',this)"></label>
+                                        <button type="button" class="sparing-edit-remove-logo" onclick="sparingEditRemoveLogo('b')">Hapus Logo</button>
+                                    </div>
+                                </div>
+                                <input id="sparing-edit-tim-b" class="sparing-edit-input" type="text" value="${safeB}" placeholder="Nama Tim 2 / kosongkan jika belum ada lawan">
+                                <input id="sparing-edit-logo-b" type="hidden" value="${escapeAttrLogo(logoB)}">
+                                <input id="sparing-edit-logo-b-removed" type="hidden" value="">
+                            </section>
+                        </div>
+
+                        <div class="sparing-edit-schedule">
+                            <div class="sparing-edit-section-title">📅 JADWAL MAIN</div>
+                            <div class="sparing-edit-schedule-grid">
+                                <label><span>Tanggal</span><input id="sparing-edit-tanggal" class="sparing-edit-input" type="date" value="${escapeAttrLogo(tanggal)}"></label>
+                                <label><span>Jam Main</span><input id="sparing-edit-jam" class="sparing-edit-input" type="time" value="${escapeAttrLogo(jam)}"></label>
+                            </div>
+                        </div>
+
+                        <div class="sparing-edit-note">💡 Perubahan jadwal Tim 1 juga akan memperbarui jadwal booking yang terhubung dengan sparing ini.</div>
+                        <div class="sparing-edit-footer">
+                            <button type="button" class="sparing-edit-cancel" onclick="closeSparingEditModal()">BATAL</button>
+                            <button type="button" id="sparing-edit-save-btn" class="sparing-edit-save" onclick="simpanEditSparingModal()">💾 SIMPAN PERUBAHAN</button>
+                        </div>
+                    </div>
+                </div>
+            `);
+
+            const overlay = document.getElementById('modal-sparing-edit');
+            overlay?.addEventListener('click', e => {
+                if(e.target === overlay) closeSparingEditModal();
+            });
         };
 
         window.batalEditSparing = () => {
@@ -18516,35 +18833,37 @@ return;
             const sparringItem = globalCache.sparring?.[key];
             if(!sparringItem) return;
 
-            const bookingKeys = new Set(
-                Array.isArray(sparringItem.bookingKeys)
-                    ? sparringItem.bookingKeys.filter(Boolean)
-                    : (sparringItem.bookingKey ? [sparringItem.bookingKey] : [])
-            );
-            if(sparringItem.manualBookingKey) {
-                bookingKeys.add(String(sparringItem.manualBookingKey));
-            }
+            const bookingKeys = new Set();
+            const relatedKeys = Array.isArray(sparringItem.bookingKeys)
+                ? sparringItem.bookingKeys.filter(Boolean).map(String)
+                : (sparringItem.bookingKey ? [String(sparringItem.bookingKey)] : []);
 
-            // Data sparring lama mungkin belum mempunyai bookingKey.
-            // Untuk data lama, cari booking berdasarkan nama tim + tanggal + jam.
+            // Hanya booking utama yang dihapus. Booking lawan legacy yang ditandai
+            // sparringOpponent=true juga dibersihkan, tetapi booking normal milik
+            // tim lawan tidak pernah disentuh.
+            relatedKeys.forEach(k => {
+                const b = globalCache.booking?.[k];
+                if(!b || b.sparringOpponent !== true) bookingKeys.add(k);
+                else if(String(b.sparringKey || '') === String(key)) bookingKeys.add(k);
+            });
+            if(sparringItem.manualBookingKey) bookingKeys.add(String(sparringItem.manualBookingKey));
+
             const tanggal = String(sparringItem.tanggal || '');
-            const jam = String(sparringItem.jam || '').substring(0, 5);
-            const teams = [sparringItem.timA, sparringItem.timB]
-                .map(v => String(v || '').trim().toLowerCase())
-                .filter(Boolean);
+            const jam = String(sparringItem.jam || '').substring(0,5);
+            const teamA = String(sparringItem.timA || '').trim().toLowerCase();
 
-            if(tanggal && jam && teams.length) {
+            // Data legacy yang belum menyimpan bookingKey: cari hanya Tim A.
+            if(tanggal && jam && teamA) {
                 Object.entries(globalCache.booking || {}).forEach(([bookingKey, bookingItem]) => {
                     if(!bookingItem || !bookingItem.nama || !bookingItem.tgl) return;
+                    if(bookingItem.sparringOpponent === true) {
+                        if(String(bookingItem.sparringKey || '') === String(key)) bookingKeys.add(bookingKey);
+                        return;
+                    }
                     const bookingDate = String(bookingItem.tgl).split('T')[0];
-                    const bookingTime = String(bookingItem.tgl).split('T')[1]?.substring(0, 5) || '';
+                    const bookingTime = String(bookingItem.tgl).split('T')[1]?.substring(0,5) || '';
                     const bookingTeam = String(bookingItem.nama).trim().toLowerCase();
-
-                    if(
-                        bookingDate === tanggal &&
-                        bookingTime === jam &&
-                        teams.includes(bookingTeam)
-                    ) {
+                    if(bookingDate === tanggal && bookingTime === jam && bookingTeam === teamA) {
                         bookingKeys.add(bookingKey);
                     }
                 });
@@ -18552,28 +18871,20 @@ return;
 
             const bookingCount = bookingKeys.size;
             const confirmMessage = bookingCount
-                ? `Yakin ingin menghapus catatan sparring ini?\\n\\n${bookingCount} data booking terkait juga akan dihapus dari Booking History dan Booking Schedule.`
+                ? `Yakin ingin menghapus catatan sparring ini?\n\n${bookingCount} data booking utama/legacy terkait juga akan dihapus.`
                 : 'Yakin ingin menghapus catatan sparring ini?';
 
             if(!await window.appConfirm(confirmMessage)) return;
 
             try {
-                // Hapus semua booking terkait terlebih dahulu.
                 for(const bookingKey of bookingKeys) {
                     await remove(ref(db, 'booking/' + bookingKey));
-                    if(globalCache.booking?.[bookingKey]) {
-                        delete globalCache.booking[bookingKey];
-                    }
+                    if(globalCache.booking?.[bookingKey]) delete globalCache.booking[bookingKey];
                 }
 
-                // Lalu hapus catatan sparring.
                 await remove(ref(db, 'sparring/' + key));
-                if(globalCache.sparring?.[key]) {
-                    delete globalCache.sparring[key];
-                }
+                if(globalCache.sparring?.[key]) delete globalCache.sparring[key];
 
-                // Render ulang agar History dan Schedule langsung bersih
-                // tanpa menunggu listener Firebase selesai bekerja.
                 renderAll();
                 updateSparingBookingOptions();
                 renderSparing();
@@ -18660,7 +18971,7 @@ return;
                 const hubungiHtml = waIntl
                     ? `<a class="sparring-action sparring-action-wa" href="https://wa.me/${waIntl}" target="_blank" rel="noopener noreferrer" title="Hubungi melalui WhatsApp" aria-label="Hubungi melalui WhatsApp">🟢 Hubungi</a>`
                     : '';
-                return `<div class="sparring-record">\n<div class="sparring-record-main">\n<div class="sparring-record-meta"><span class="sparring-badge sparring-badge-date">📅 ${dateLabel} · ${escapeHtmlSparing(item.jam||'-')}</span><span class="sparring-badge ${matched?'sparring-badge-matched':'sparring-badge-pending'}">${matched?'✓ SUDAH DAPAT LAWAN':'⌛ MENCARI LAWAN'}</span></div>\n<div class="sparring-pair">${pair}</div>\n</div>\n<div class="sparring-actions">${hubungiHtml}<button type="button" class="sparring-action sparring-action-edit" onclick="editSparing('${key}')">Edit</button><button type="button" class="sparring-action sparring-action-delete" onclick="hapusSparing('${key}')">Hapus</button></div>\n</div>`;
+                return `<div class="sparring-record">\n<div class="sparring-record-main">\n<div class="sparring-record-meta"><span class="sparring-badge sparring-badge-date">📅 ${dateLabel} · ${escapeHtmlSparing(item.jam||'-')}</span><span class="sparring-badge ${matched?'sparring-badge-matched':'sparring-badge-pending'}">${matched?'✓ SUDAH DAPAT LAWAN':'⌛ MENCARI LAWAN'}</span></div>\n<div class="sparring-pair">${pair}</div>\n</div>\n<div class="sparring-actions">${hubungiHtml}<button type="button" class="sparring-action sparring-action-edit" onclick="event.preventDefault(); event.stopPropagation(); editSparing(decodeURIComponent('${encodeURIComponent(key)}'))">Edit</button><button type="button" class="sparring-action sparring-action-delete" onclick="hapusSparing('${key}')">Hapus</button></div>\n</div>`;
             }).join('');
         };
 
@@ -19016,39 +19327,23 @@ return;
                 const sparringKey = pushedSparing.key || '';
                 if(!sparringKey) throw new Error('Gagal membuat data Sparing.');
 
-                const opponentBookingData = {
-                    status: statusLawan,
-                    nama: namaLawan,
-                    wa: waLawan,
-                    tgl: `${tanggal}T${jam}`,
-                    dp: 0,
-                    tglDp: '',
-                    metode: 'Cash',
-                    sparringSource: true,
-                    sparringKey,
-                    sparringOpponent: true,
-                    timestamp: Date.now()
-                };
-                const pushedBooking = await push(ref(db, 'booking'), opponentBookingData);
-                const opponentBookingKey = pushedBooking.key || '';
-                if(!opponentBookingKey) throw new Error('Gagal membuat booking lawan.');
-
-                await update(ref(db, 'sparring/' + sparringKey), {
-                    bookingKeys: [bookingKey, opponentBookingKey],
-                    bookingKey
-                });
-
-                // Hubungkan booking Tim A dengan Sparing yang baru dibuat.
+                // Lawan sparing bukan booking. Booking utama tetap bookingKey milik Tim A.
                 await update(ref(db, 'booking/' + bookingKey), {
                     sparringKey,
                     sparringSource: true,
                     sparringOpponent: false
                 });
 
+                // Hubungkan booking Tim A dengan Sparing. Hanya satu booking utama.
+                await update(ref(db, 'sparring/' + sparringKey), {
+                    bookingKeys: [bookingKey],
+                    bookingKey
+                });
+
                 globalCache.sparring = globalCache.sparring || {};
                 globalCache.sparring[sparringKey] = {
                     ...sparringData,
-                    bookingKeys: [bookingKey, opponentBookingKey],
+                    bookingKeys: [bookingKey],
                     bookingKey
                 };
                 globalCache.booking = globalCache.booking || {};
@@ -19058,7 +19353,6 @@ return;
                     sparringSource: true,
                     sparringOpponent: false
                 };
-                globalCache.booking[opponentBookingKey] = opponentBookingData;
 
                 closeAddOpponentSparingModal();
                 if(typeof renderAll === 'function') renderAll();
@@ -19187,112 +19481,68 @@ return;
                 return;
             }
 
-            const oldName = String(sp.timB || '').trim();
-            const oldNameLower = oldName.toLowerCase();
+            const timA = String(sp.timA || '').trim();
+            if(timA && timA.toLowerCase() === namaBaru.toLowerCase()) {
+                alert('Tim A dan lawan tidak boleh sama.');
+                return;
+            }
+
             const tanggal = String(sp.tanggal || '').trim();
             const jam = String(sp.jam || '').substring(0,5);
-            const existingKeys = Array.isArray(sp.bookingKeys)
-                ? [...new Set(sp.bookingKeys.filter(Boolean).map(String))]
-                : (sp.bookingKey ? [String(sp.bookingKey)] : []);
 
             try {
-                // Cari booking lawan yang memang dibuat/ditandai sebagai bagian sparing.
-                let opponentBookingKey = existingKeys.find(k => {
-                    if(k === bookingKey) return false;
-                    const b = globalCache.booking?.[k];
-                    if(!b) return false;
-                    return b.sparringKey === sparringKey &&
-                        String(b.nama || '').trim().toLowerCase() === oldNameLower;
-                });
-
-                // Jika key relasi belum ada, cari berdasarkan sparringKey + flag opponent.
-                if(!opponentBookingKey) {
-                    const found = Object.entries(globalCache.booking || {}).find(([k,b]) => {
-                        if(!b || String(k) === String(bookingKey)) return false;
-                        return String(b.sparringKey || '') === String(sparringKey) &&
-                            (b.sparringOpponent === true || String(b.nama || '').trim().toLowerCase() === oldNameLower) &&
-                            String(b.tgl || '').split('T')[0] === tanggal &&
-                            String(b.tgl || '').split('T')[1]?.substring(0,5) === jam;
-                    });
-                    if(found) opponentBookingKey = found[0];
-                }
-
+                // Update node Sparing. Tim B tetap hanya atribut lawan.
                 const newSparingData = {
                     ...sp,
                     timB: namaBaru,
                     statusB: statusBaru,
                     waB: waBaru,
                     waTimB: waBaru,
-                    status: 'matched'
+                    status: 'matched',
+                    bookingKeys: bookingKey ? [bookingKey] : (sp.bookingKey ? [String(sp.bookingKey)] : []),
+                    bookingKey: bookingKey || String(sp.bookingKey || '')
                 };
-
-                // Update node Sparing terlebih dahulu.
                 await update(ref(db, 'sparring/' + sparringKey), newSparingData);
                 globalCache.sparring[sparringKey] = {
                     ...(globalCache.sparring[sparringKey] || {}),
                     ...newSparingData
                 };
 
-                if(opponentBookingKey && globalCache.booking?.[opponentBookingKey]) {
-                    // Booking lawan yang merupakan pasangan sparing boleh diganti langsung.
+                // Pastikan booking utama tetap menunjuk Sparing dan bukan lawan.
+                const mainBookingKey = bookingKey || String(sp.bookingKey || '');
+                if(mainBookingKey && globalCache.booking?.[mainBookingKey]) {
                     const patch = {
-                        nama: namaBaru,
-                        status: statusBaru,
-                        wa: waBaru,
-                        tgl: `${tanggal}T${jam}`,
                         sparringKey,
                         sparringSource: true,
-                        sparringOpponent: true
+                        sparringOpponent: false
                     };
-                    await update(ref(db, 'booking/' + opponentBookingKey), patch);
-                    globalCache.booking[opponentBookingKey] = {
-                        ...globalCache.booking[opponentBookingKey],
+                    await update(ref(db, 'booking/' + mainBookingKey), patch);
+                    globalCache.booking[mainBookingKey] = {
+                        ...globalCache.booking[mainBookingKey],
                         ...patch
                     };
-                } else {
-                    // Belum ada booking lawan: buat agar langsung muncul di Booking Schedule.
-                    const newBooking = {
-                        status: statusBaru,
-                        nama: namaBaru,
-                        wa: waBaru,
-                        tgl: `${tanggal}T${jam}`,
-                        dp: 0,
-                        tglDp: '',
-                        metode: 'Cash',
-                        sparringSource: true,
-                        sparringKey,
-                        sparringOpponent: true,
-                        timestamp: Date.now()
-                    };
-                    const pushed = await push(ref(db, 'booking'), newBooking);
-                    if(pushed.key) {
-                        opponentBookingKey = pushed.key;
-                        globalCache.booking = globalCache.booking || {};
-                        globalCache.booking[pushed.key] = { ...newBooking };
-                    }
                 }
 
-                // Pastikan relasi booking tetap tersimpan.
-                const finalBookingKeys = [...new Set([
-                    ...existingKeys.filter(k => k !== opponentBookingKey),
-                    opponentBookingKey
-                ].filter(Boolean))];
-
-                await update(ref(db, 'sparring/' + sparringKey), {
-                    bookingKeys: finalBookingKeys,
-                    bookingKey: finalBookingKeys[0] || ''
+                // Bersihkan booking lawan legacy yang pernah dibuat versi lama.
+                const legacyOpponentKeys = new Set();
+                Object.entries(globalCache.booking || {}).forEach(([k,b]) => {
+                    if(!b || String(k) === String(mainBookingKey)) return;
+                    if(b.sparringOpponent === true && String(b.sparringKey || '') === String(sparringKey)) {
+                        legacyOpponentKeys.add(k);
+                    }
                 });
-                globalCache.sparring[sparringKey].bookingKeys = finalBookingKeys;
-                globalCache.sparring[sparringKey].bookingKey = finalBookingKeys[0] || '';
+                for(const opponentKey of legacyOpponentKeys) {
+                    await remove(ref(db, 'booking/' + opponentKey));
+                    if(globalCache.booking?.[opponentKey]) delete globalCache.booking[opponentKey];
+                }
 
                 closeEditOpponentSparingModal();
-
                 if(typeof renderAll === 'function') renderAll();
                 if(typeof renderGridJadwal === 'function') renderGridJadwal();
                 if(typeof renderSparing === 'function') renderSparing();
                 if(typeof updateSparingBookingOptions === 'function') updateSparingBookingOptions();
 
-                showSuccessPopup('Lawan sparing berhasil diubah dan data Sparing/Booking sudah disinkronkan.');
+                showSuccessPopup('Lawan sparing berhasil diubah. Booking tetap dihitung 1 untuk Tim utama.');
             } catch(error) {
                 console.error(error);
                 alert('Gagal mengubah lawan sparing: ' + error.message);
@@ -19430,7 +19680,7 @@ return;
             // Data booking terkini.
             const bookedTeamDateKeys = new Set();
             Object.values(globalCache.booking || {}).forEach(b => {
-                if(!b || !b.tgl || !b.nama) return;
+                if(!b || !b.tgl || !b.nama || b.sparringOpponent === true) return;
                 const datePart = String(b.tgl).split('T')[0];
                 const teamName = String(b.nama).trim().toLowerCase();
                 if(datePart && teamName) bookedTeamDateKeys.add(`${datePart}|${teamName}`);
@@ -19438,7 +19688,7 @@ return;
 
             const bookingBySlot = {};
             Object.entries(globalCache.booking || {}).forEach(([bookingKey,b]) => {
-                if(!b || !b.tgl) return;
+                if(!b || !b.tgl || b.sparringOpponent === true) return;
                 const datePart = String(b.tgl).split('T')[0];
                 const timePart = String(b.tgl).split('T')[1] || '';
                 const jamFormat = timePart.substring(0,5);
@@ -19614,6 +19864,8 @@ return;
             const rowsSelesai = [];
 
             bookingEntries.forEach(([key, item]) => {
+                // Lawan sparing bukan booking dan tidak boleh dihitung di History.
+                if(item?.sparringOpponent === true) return;
                 let tanggalBooking = item.tgl ? item.tgl.split('T')[0] : "";
                 let dpVal = Number(item.dp || 0);
                 let row = `<div class="booking-history-card">
@@ -27309,7 +27561,7 @@ body.jadwal-uang-masuk-modal-active #page-masuk {
     function getHistoryBookings(dateKey){
         const map = new Map();
         Object.entries(getHistoryCache().booking || {}).forEach(([key,item])=>{
-            if(!item || dateOnly(item.tgl)!==dateKey || !item.nama) return;
+            if(!item || item.sparringOpponent === true || dateOnly(item.tgl)!==dateKey || !item.nama) return;
             const jam=timeOnly(item.tgl);
             if(!jam) return;
             const groupKey=String(item.bookingGroupId || key);
