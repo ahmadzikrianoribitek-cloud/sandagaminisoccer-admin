@@ -40945,3 +40945,141 @@ body > header .admin-global-header-brand-title{
   }
 }
 </style>
+<!-- GLOBAL MODAL CLICK-SHIELD v1
+     Saat popup ditutup dengan klik di luar, event yang sama TIDAK boleh
+     diteruskan ke tombol/elemen di halaman belakang. Berlaku untuk semua
+     popup/modal custom di aplikasi. -->
+<script id="global-modal-click-shield-v1">
+(function(){
+  'use strict';
+
+  let suppressNextClick = false;
+  let suppressUntil = 0;
+
+  const OVERLAY_SELECTORS = [
+    '[id*="modal"]',
+    '[id*="overlay"]',
+    '[id*="backdrop"]',
+    '[role="dialog"]',
+    '.modal',
+    '.modal-overlay',
+    '.modal-backdrop',
+    '.overlay',
+    '.backdrop',
+    '.atur-member-chooser-overlay',
+    '.sparing-chooser-overlay'
+  ].join(',');
+
+  const MODAL_PAGE_SELECTORS = [
+    'body.jadwal-uang-masuk-modal-active #page-masuk',
+    'body.jadwal-uang-keluar-modal-active #page-keluar'
+  ];
+
+  function isVisible(el){
+    if(!el || !el.isConnected) return false;
+    const cs = getComputedStyle(el);
+    if(cs.display === 'none' || cs.visibility === 'hidden' || cs.pointerEvents === 'none') return false;
+    if(Number(cs.opacity) === 0) return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  }
+
+  function zIndexOf(el){
+    const z = getComputedStyle(el).zIndex;
+    const n = Number(z);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function getActiveOverlays(){
+    const list = [];
+    document.querySelectorAll(OVERLAY_SELECTORS).forEach(el=>{
+      if(isVisible(el)) list.push(el);
+    });
+    return list.sort((a,b)=>zIndexOf(b)-zIndexOf(a));
+  }
+
+  function getActiveModalPages(){
+    const list=[];
+    MODAL_PAGE_SELECTORS.forEach(sel=>{
+      document.querySelectorAll(sel).forEach(el=>{ if(isVisible(el)) list.push(el); });
+    });
+    return list;
+  }
+
+  function modalIsOpen(){
+    return getActiveOverlays().length > 0 || getActiveModalPages().length > 0;
+  }
+
+  function isInsideVisibleModal(target){
+    if(!(target instanceof Element)) return false;
+
+    // Uang Masuk / Uang Keluar dipindahkan langsung ke <body>,
+    // sehingga card modal-nya bukan anak backdrop.
+    if(getActiveModalPages().some(page=>page.contains(target))) return true;
+
+    const overlays=getActiveOverlays();
+    if(!overlays.length) return false;
+
+    // Kalau klik di dalam card/modal, event harus tetap normal.
+    for(const overlay of overlays){
+      if(overlay.contains(target) && target !== overlay) return true;
+    }
+    return false;
+  }
+
+  function closeByOutsideClick(overlay){
+    if(!overlay || !overlay.isConnected) return;
+
+    // Sebagian popup memakai click pada backdrop, sebagian pointerdown.
+    // Panggilan .click() aman karena listener capture di bawah akan
+    // melewati synthetic click ini, sehingga listener penutup lama tetap jalan.
+    try{ overlay.click(); }catch(_){ }
+  }
+
+  // POINTERDOWN: blokir event menuju halaman belakang dan minta popup
+  // melakukan close melalui mekanisme existing-nya.
+  document.addEventListener('pointerdown', function(e){
+    if(!modalIsOpen()) return;
+    if(isInsideVisibleModal(e.target)) return;
+
+    suppressNextClick = true;
+    suppressUntil = Date.now() + 700;
+
+    // Sangat penting: cegah default activation pada elemen di belakang
+    // (misalnya tombol SIMPAN), tetapi jangan menghentikan propagation
+    // agar listener backdrop existing tetap bisa menutup popup.
+    e.preventDefault();
+
+    const overlays=getActiveOverlays();
+    const top=overlays[0];
+    if(top && e.target === top){
+      closeByOutsideClick(top);
+    }
+  }, true);
+
+  // CLICK: jika popup sudah tertutup oleh pointerdown, klik yang sama
+  // jangan pernah "jatuh" ke tombol halaman di belakangnya.
+  document.addEventListener('click', function(e){
+    if(!suppressNextClick) return;
+    if(Date.now() > suppressUntil){
+      suppressNextClick=false;
+      return;
+    }
+
+    suppressNextClick=false;
+    suppressUntil=0;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }, true);
+
+  // Touch fallback: beberapa browser/mobile dapat menghasilkan click
+  // tanpa urutan pointer event yang konsisten.
+  document.addEventListener('touchstart', function(e){
+    if(!modalIsOpen()) return;
+    if(isInsideVisibleModal(e.target)) return;
+    suppressNextClick=true;
+    suppressUntil=Date.now()+900;
+  }, {capture:true, passive:true});
+
+})();
+</script>
