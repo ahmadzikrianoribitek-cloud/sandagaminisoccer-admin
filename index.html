@@ -11194,7 +11194,7 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 <div class="p-3 rounded-xl border border-violet-400/50 mb-3 space-y-2 bg-violet-50/50 uang-masuk-option-panel">
   <label class="block text-xs font-black text-violet-950">💸 Diskon Tambahan Manual dari Admin</label>
   <input id="in-diskon-manual" class="w-full p-2 rounded-xl text-sm glass-input font-bold" type="text" inputmode="numeric" oninput="formatNominalInput(this); hitungOtomatisBiaya()" min="0" step="1000" value="0" placeholder="Masukkan nominal diskon (Rp)"/>
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
     <label class="flex items-center gap-2 rounded-xl border border-violet-200 bg-white/70 px-3 py-2 cursor-pointer">
       <input type="radio" name="diskon-manual-alokasi" id="in-diskon-manual-tim1" value="tim1" onchange="hitungOtomatisBiaya()" checked>
       <span class="text-xs font-black text-slate-900">Untuk Tim 1</span>
@@ -11207,6 +11207,20 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
       <input type="radio" name="diskon-manual-alokasi" id="in-diskon-manual-rata" value="rata" onchange="hitungOtomatisBiaya()">
       <span class="text-xs font-black text-slate-900">Dibagi Rata</span>
     </label>
+    <label class="flex items-center gap-2 rounded-xl border border-violet-300 bg-violet-100/70 px-3 py-2 cursor-pointer">
+      <input type="radio" name="diskon-manual-alokasi" id="in-diskon-manual-berbeda" value="berbeda" onchange="hitungOtomatisBiaya()">
+      <span class="text-xs font-black text-violet-950">Nominal Berbeda</span>
+    </label>
+  </div>
+  <div id="in-diskon-manual-berbeda-wrap" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-xl border border-violet-200 bg-white/60 p-2">
+    <div>
+      <label class="block text-[10px] font-black text-violet-900 mb-1">Diskon Tim 1 (Rp)</label>
+      <input id="in-diskon-manual-tim1-nominal" class="w-full p-2 rounded-xl text-sm glass-input font-bold" type="text" inputmode="numeric" oninput="formatNominalInput(this); hitungOtomatisBiaya()" value="0" placeholder="Contoh: 10.000"/>
+    </div>
+    <div>
+      <label class="block text-[10px] font-black text-violet-900 mb-1">Diskon Tim 2 (Rp)</label>
+      <input id="in-diskon-manual-tim2-nominal" class="w-full p-2 rounded-xl text-sm glass-input font-bold" type="text" inputmode="numeric" oninput="formatNominalInput(this); hitungOtomatisBiaya()" value="0" placeholder="Contoh: 20.000"/>
+    </div>
   </div>
   <p id="info-diskon-manual" class="text-[10px] text-violet-800 font-black">Diskon tambahan tidak aktif</p>
 </div>
@@ -12376,6 +12390,14 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             if (diskonTim2Radio) diskonTim2Radio.checked = false;
             const diskonRataRadio = document.getElementById('in-diskon-manual-rata');
             if (diskonRataRadio) diskonRataRadio.checked = false;
+            const diskonBerbedaRadio = document.getElementById('in-diskon-manual-berbeda');
+            if (diskonBerbedaRadio) diskonBerbedaRadio.checked = false;
+            const diskonBerbedaTim1El = document.getElementById('in-diskon-manual-tim1-nominal');
+            if (diskonBerbedaTim1El) diskonBerbedaTim1El.value = 0;
+            const diskonBerbedaTim2El = document.getElementById('in-diskon-manual-tim2-nominal');
+            if (diskonBerbedaTim2El) diskonBerbedaTim2El.value = 0;
+            const diskonBerbedaWrap = document.getElementById('in-diskon-manual-berbeda-wrap');
+            if (diskonBerbedaWrap) diskonBerbedaWrap.classList.add('hidden');
             document.getElementById('info-biaya-tambahan').innerText = "Biaya tambahan sewa: Rp 0";
 
             if(!tglInput) return;
@@ -12473,8 +12495,15 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             const pakaiRompi2 = !!document.getElementById('in-sewa-rompi-2')?.checked;
             const pakaiDiskonKhusus = false;
             const diskonManualInput = parseNominalInputValue(document.getElementById("in-diskon-manual")?.value || "");
-            const diskonManual = Math.max(0, Number.isFinite(diskonManualInput) ? diskonManualInput : 0);
+            let diskonManual = Math.max(0, Number.isFinite(diskonManualInput) ? diskonManualInput : 0);
             const diskonManualAlokasi = document.querySelector('input[name="diskon-manual-alokasi"]:checked')?.value || 'tim1';
+            const diskonManualTim1Input = parseNominalInputValue(document.getElementById("in-diskon-manual-tim1-nominal")?.value || "");
+            const diskonManualTim2Input = parseNominalInputValue(document.getElementById("in-diskon-manual-tim2-nominal")?.value || "");
+            const diskonManualBerbedaTim1 = Math.max(0, Number.isFinite(diskonManualTim1Input) ? diskonManualTim1Input : 0);
+            const diskonManualBerbedaTim2 = Math.max(0, Number.isFinite(diskonManualTim2Input) ? diskonManualTim2Input : 0);
+            if (diskonManualAlokasi === 'berbeda') {
+                diskonManual = diskonManualBerbedaTim1 + diskonManualBerbedaTim2;
+            }
 
             let durasiJam = 1;
             if (jamMainStr.includes('-')) {
@@ -12669,6 +12698,9 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                     } else if (diskonManualAlokasi === 'rata') {
                         diskonManualTim1 = diskonManual / 2;
                         diskonManualTim2 = diskonManual / 2;
+                    } else if (diskonManualAlokasi === 'berbeda') {
+                        diskonManualTim1 = diskonManualBerbedaTim1;
+                        diskonManualTim2 = diskonManualBerbedaTim2;
                     } else {
                         diskonManualTim1 = diskonManual;
                     }
@@ -12811,7 +12843,9 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                             ? `Diskon ${formatRupiah(diskonManual)} untuk Tim 2`
                             : diskonManualAlokasi === 'rata'
                                 ? `Diskon ${formatRupiah(diskonManual)} dibagi rata · Tim 1: ${formatRupiah(diskonManualTim1)} · Tim 2: ${formatRupiah(diskonManualTim2)}`
-                                : `Diskon ${formatRupiah(diskonManual)} untuk Tim 1`)
+                                : diskonManualAlokasi === 'berbeda'
+                                    ? `Diskon nominal berbeda · Tim 1: ${formatRupiah(diskonManualTim1)} · Tim 2: ${formatRupiah(diskonManualTim2)} · Total: ${formatRupiah(diskonManual)}`
+                                    : `Diskon ${formatRupiah(diskonManual)} untuk Tim 1`)
                         : `Diskon tambahan Tim Internal: ${formatRupiah(diskonManualTim1)}`)
                     : 'Diskon tambahan tidak aktif';
             }
@@ -12820,6 +12854,13 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             if (diskonTim2Radio) diskonTim2Radio.disabled = !isSparingPayment;
             const diskonRataRadio = document.getElementById('in-diskon-manual-rata');
             if (diskonRataRadio) diskonRataRadio.disabled = !isSparingPayment;
+            const diskonBerbedaRadio = document.getElementById('in-diskon-manual-berbeda');
+            if (diskonBerbedaRadio) diskonBerbedaRadio.disabled = !isSparingPayment;
+            const diskonBerbedaWrap = document.getElementById('in-diskon-manual-berbeda-wrap');
+            if (diskonBerbedaWrap) {
+                const tampilkanDiskonBerbeda = isSparingPayment && diskonManualAlokasi === 'berbeda';
+                diskonBerbedaWrap.classList.toggle('hidden', !tampilkanDiskonBerbeda);
+            }
             if (!isSparingPayment && diskonManualAlokasi !== 'tim1') {
                 const tim1Radio = document.getElementById('in-diskon-manual-tim1');
                 if (tim1Radio) tim1Radio.checked = true;
@@ -14775,7 +14816,10 @@ kaosKakiTerjual: jumlahKaosKaki,
         const listJam = ["07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00", "24:00"];
         const listHariKey = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
 
-        let globalCache = { member: {}, booking: {}, pemasukan: {}, minuman: {}, pengeluaran: {}, adminJaga: {}, sparring: {}, teamLogos: {}, pelunasanMember: {}, lunasDarurat: {}, bookingBatal: {}, pendingSparingNames: {}, __initialMemberLoaded: false, __initialBookingLoaded: false };
+        // Cache data tetap memakai struktur lama agar seluruh fungsi aplikasi tidak berubah.
+        // Tambahan flag timeout hanya dipakai untuk mencegah halaman awal terkunci terlalu lama
+        // saat koneksi tertentu lambat menerima snapshot Firebase.
+        let globalCache = { member: {}, booking: {}, pemasukan: {}, minuman: {}, pengeluaran: {}, adminJaga: {}, sparring: {}, teamLogos: {}, pelunasanMember: {}, lunasDarurat: {}, bookingBatal: {}, pendingSparingNames: {}, __initialMemberLoaded: false, __initialBookingLoaded: false, __initialLoadingTimedOut: false };
         // Riwayat Jadwal berada di scope script terpisah, sehingga cache utama diekspos secara read-only ke modul riwayat.
         window.__sandagaGlobalCache = globalCache;
 
@@ -14789,6 +14833,47 @@ kaosKakiTerjual: jumlahKaosKaki,
         window.__sandagaInitialLoadingProgress = 0;
         window.__sandagaInitialLoadingTimer = null;
         window.__sandagaInitialLoadingHideTimer = null;
+        window.__sandagaInitialLoadingFallbackTimer = null;
+        const INITIAL_LOADING_MAX_WAIT = 15000;
+
+        function finishInitialLoadingOverlay(timedOut = false) {
+            const overlay = document.getElementById('app-initial-loading-overlay');
+            if (!overlay) return;
+            clearInterval(window.__sandagaInitialLoadingTimer);
+            window.__sandagaInitialLoadingTimer = null;
+            clearTimeout(window.__sandagaInitialLoadingFallbackTimer);
+            window.__sandagaInitialLoadingFallbackTimer = null;
+            renderInitialLoadingProgress(100);
+            overlay.classList.add('is-success');
+            const title = overlay.querySelector('[data-app-loading-title]');
+            const text = overlay.querySelector('[data-app-loading-text]');
+            const icon = overlay.querySelector('[data-app-loading-icon]');
+            if (timedOut) {
+                if (title) title.textContent = 'Aplikasi siap digunakan';
+                if (text) text.textContent = 'Koneksi masih menyinkronkan data di latar belakang.';
+                if (icon) icon.textContent = '✓';
+            } else {
+                if (title) title.textContent = 'Data berhasil dimuat';
+                if (text) text.textContent = 'Jadwal Hari Ini siap ditampilkan.';
+                if (icon) icon.textContent = '✓';
+            }
+            clearTimeout(window.__sandagaInitialLoadingHideTimer);
+            window.__sandagaInitialLoadingHideTimer = setTimeout(() => {
+                overlay.classList.add('is-hidden');
+                setTimeout(() => overlay.remove(), 220);
+            }, timedOut ? 450 : 80);
+        }
+
+        function armInitialLoadingFallback() {
+            clearTimeout(window.__sandagaInitialLoadingFallbackTimer);
+            window.__sandagaInitialLoadingFallbackTimer = setTimeout(() => {
+                const complete = !!globalCache.__initialMemberLoaded && !!globalCache.__initialBookingLoaded;
+                if (complete) return;
+                globalCache.__initialLoadingTimedOut = true;
+                try { if (typeof renderTodaySchedule === 'function') renderTodaySchedule(); } catch (e) { console.warn('Fallback Jadwal Hari Ini:', e); }
+                finishInitialLoadingOverlay(true);
+            }, INITIAL_LOADING_MAX_WAIT);
+        }
 
         function renderInitialLoadingProgress(value) {
             const overlay = document.getElementById('app-initial-loading-overlay');
@@ -14829,6 +14914,12 @@ kaosKakiTerjual: jumlahKaosKaki,
                 const bookingLoaded = !!globalCache.__initialBookingLoaded;
                 const complete = memberLoaded && bookingLoaded;
                 const current = Number(window.__sandagaInitialLoadingProgress || 0);
+
+                if (globalCache.__initialLoadingTimedOut) {
+                    clearInterval(window.__sandagaInitialLoadingTimer);
+                    window.__sandagaInitialLoadingTimer = null;
+                    return;
+                }
 
                 if (current < 50) {
                     renderInitialLoadingProgress(current + 1);
@@ -14897,16 +14988,7 @@ kaosKakiTerjual: jumlahKaosKaki,
             // Kedua sumber utama sudah masuk. Progress melanjutkan dari posisi terakhir
             // sampai 100%, dengan jeda per 1% yang sama.
             if (progress >= 100) {
-                overlay.classList.add('is-success');
-                if (title) title.textContent = 'Data berhasil dimuat';
-                if (text) text.textContent = 'Jadwal Hari Ini siap ditampilkan.';
-                if (icon) icon.textContent = '✓';
-
-                clearTimeout(window.__sandagaInitialLoadingHideTimer);
-                window.__sandagaInitialLoadingHideTimer = setTimeout(() => {
-                    overlay.classList.add('is-hidden');
-                    setTimeout(() => overlay.remove(), 220);
-                }, 80);
+                finishInitialLoadingOverlay(false);
             } else if (progress >= 50) {
                 if (title) title.textContent = 'Menyinkronkan data...';
                 if (text) text.textContent = 'Data utama sudah masuk. Menyelesaikan sinkronisasi...';
@@ -14917,6 +14999,7 @@ kaosKakiTerjual: jumlahKaosKaki,
         // Tampilkan popup segera saat halaman dibuka dan mulai animasi 0% -> 1% -> ...
         document.addEventListener('DOMContentLoaded', () => {
             renderInitialLoadingProgress(0);
+            armInitialLoadingFallback();
             updateInitialLoadingPopup();
         }, { once: true });
 
@@ -15940,6 +16023,9 @@ kaosKakiTerjual: jumlahKaosKaki,
             // Tandai bahwa snapshot awal Firebase sudah selesai diterima,
             // lalu render ulang agar loading berubah menjadi data/empty state.
             globalCache.__initialMemberLoaded = true;
+            if (globalCache.__initialMemberLoaded && globalCache.__initialBookingLoaded) {
+                clearTimeout(window.__sandagaInitialLoadingFallbackTimer);
+            }
             updateInitialLoadingPopup();
             if (typeof renderAll === 'function') renderAll();
             if (typeof window.renderTeamList === 'function') window.renderTeamList();
@@ -15965,6 +16051,9 @@ kaosKakiTerjual: jumlahKaosKaki,
             globalCache.booking = snapshot.val() || {};
             // Tandai bahwa snapshot awal Booking sudah selesai diterima.
             globalCache.__initialBookingLoaded = true;
+            if (globalCache.__initialMemberLoaded && globalCache.__initialBookingLoaded) {
+                clearTimeout(window.__sandagaInitialLoadingFallbackTimer);
+            }
             updateInitialLoadingPopup();
             renderAll();
             if (typeof window.renderTeamList === 'function') window.renderTeamList();
@@ -17628,24 +17717,33 @@ kaosKakiTerjual: jumlahKaosKaki,
 
             const today = getLocalDateString();
             const dataAwalSelesai = globalCache.__initialMemberLoaded && globalCache.__initialBookingLoaded;
-
-            // Saat aplikasi baru dibuka, Firebase belum tentu sudah mengirim
-            // snapshot Member + Booking. Jangan tampilkan "Tidak ada jadwal"
-            // karena itu membuat admin mengira datanya memang kosong.
-            if(!dataAwalSelesai) {
-                listEl.innerHTML = `
-                    <div class="today-schedule-loading" role="status" aria-live="polite">
-                        <div class="today-schedule-loading-title">⏳ Memuat jadwal hari ini...</div>
-                        <div class="today-schedule-loading-bar" aria-hidden="true">
-                            <div class="today-schedule-loading-progress"></div>
-                        </div>
-                        <div class="today-schedule-loading-sub">Mohon tunggu sebentar, data sedang disinkronkan.</div>
-                    </div>`;
-                return;
-            }
+            const koneksiMasihLambat = !!globalCache.__initialLoadingTimedOut;
             const todayDate = new Date(today + 'T00:00:00');
             const hariNama = getNamaHari(today);
             dateEl.textContent = todayDate.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+            // Aplikasi boleh dibuka setelah batas fallback agar tidak terkunci terlalu lama,
+            // tetapi data yang belum selesai TIDAK boleh diterjemahkan sebagai jadwal kosong.
+            // Admin selalu melihat status sinkronisasi sampai snapshot Member + Booking benar-benar
+            // diterima. Listener Firebase yang sudah ada akan otomatis memanggil render ulang saat
+            // data masuk, sehingga tidak perlu refresh atau mengubah fungsi Firebase lainnya.
+            if(!dataAwalSelesai) {
+                const loadingTitle = koneksiMasihLambat
+                    ? '📡 Menunggu koneksi ke server...'
+                    : '⏳ Memuat jadwal hari ini...';
+                const loadingSub = koneksiMasihLambat
+                    ? 'Koneksi sedang lambat. Jadwal akan muncul otomatis begitu data berhasil tersinkron.'
+                    : 'Mohon tunggu sebentar, data sedang disinkronkan.';
+                listEl.innerHTML = `
+                    <div class="today-schedule-loading" role="status" aria-live="polite">
+                        <div class="today-schedule-loading-title">${loadingTitle}</div>
+                        <div class="today-schedule-loading-bar" aria-hidden="true">
+                            <div class="today-schedule-loading-progress"></div>
+                        </div>
+                        <div class="today-schedule-loading-sub">${loadingSub}</div>
+                    </div>`;
+                return;
+            }
 
             // Booking hari ini menjadi sumber utama. Jadwal member yang belum punya
             // booking tetap ditampilkan agar admin tahu slot member yang terjadwal.
