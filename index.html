@@ -9329,6 +9329,21 @@ body.minuman-edit-modal-open{overflow:hidden !important}
 }
 </style>
 
+<style id="desktop-today-schedule-loading-center-v1">
+/* Desktop: kartu "Menunggu koneksi / Memuat jadwal" dipusatkan di tengah
+   area Jadwal Hari Ini. HP tidak disentuh karena tampilannya sudah pas. */
+@media (min-width: 641px) {
+  #today-schedule-panel #today-schedule-list .today-schedule-loading {
+    grid-column: 1 / -1 !important;
+    width: min(100%, 715px) !important;
+    justify-self: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    box-sizing: border-box !important;
+  }
+}
+</style>
+
 
 <style id="desktop-jadwal-hari-ini-scroll-fix-v1">
 /* FIX DESKTOP — Jadwal Hari Ini dapat di-scroll tanpa mengubah tampilan HP.
@@ -10112,6 +10127,101 @@ body > header h1{
     #page-minuman .minuman-action-row {
         gap: 8px !important;
     }
+}
+</style>
+<style id="daily-report-jpg-table-layout-final-fix">
+/* FINAL FIX: layout tabel Versi Lengkap agar detail transaksi tidak saling menimpa.
+   Hanya berlaku pada kanvas JPG hasil download, tidak mengubah tabel di web. */
+#daily-report-jpg-canvas .report-source table {
+    width:100% !important;
+    table-layout:fixed !important;
+    border-collapse:collapse !important;
+    height:auto !important;
+}
+
+/* Setelah kolom Aksi dihapus oleh JS, tabel menjadi 3 kolom. */
+#daily-report-jpg-canvas .report-source table th:nth-child(1),
+#daily-report-jpg-canvas .report-source table td:nth-child(1) {
+    width:42% !important;
+}
+#daily-report-jpg-canvas .report-source table th:nth-child(2),
+#daily-report-jpg-canvas .report-source table td:nth-child(2) {
+    width:40% !important;
+}
+#daily-report-jpg-canvas .report-source table th:nth-child(3),
+#daily-report-jpg-canvas .report-source table td:nth-child(3) {
+    width:18% !important;
+}
+
+#daily-report-jpg-canvas .report-source table tr,
+#daily-report-jpg-canvas .report-source table td,
+#daily-report-jpg-canvas .report-source table th {
+    height:auto !important;
+    min-height:0 !important;
+    box-sizing:border-box !important;
+    vertical-align:middle !important;
+}
+
+#daily-report-jpg-canvas .report-source table td {
+    padding:9px 8px !important;
+    white-space:normal !important;
+    overflow:visible !important;
+    overflow-wrap:break-word !important;
+    word-break:normal !important;
+}
+
+/* Kolom Detail diberi line-height lebih longgar agar Tim 1, Tim 2,
+   DP/diskon dan metode pembayaran tidak bertabrakan saat html2canvas. */
+#daily-report-jpg-canvas .report-source table td:nth-child(2) {
+    line-height:1.55 !important;
+    padding-top:10px !important;
+    padding-bottom:10px !important;
+    text-align:center !important;
+}
+
+#daily-report-jpg-canvas .report-source table td:nth-child(2) br {
+    line-height:1.55 !important;
+}
+
+#daily-report-jpg-canvas .report-source table td:nth-child(2) > span {
+    line-height:1.55 !important;
+}
+
+#daily-report-jpg-canvas .report-source table td:nth-child(2) .status-badge-inline {
+    display:inline-block !important;
+    vertical-align:middle !important;
+    white-space:nowrap !important;
+    line-height:1.15 !important;
+    font-size:9px !important;
+    padding:2px 6px !important;
+    margin:0 2px 1px !important;
+}
+
+#daily-report-jpg-canvas .report-source table td:nth-child(1) {
+    line-height:1.4 !important;
+    text-align:left !important;
+}
+
+#daily-report-jpg-canvas .report-source table td:nth-child(3) {
+    line-height:1.3 !important;
+    text-align:center !important;
+    white-space:nowrap !important;
+    word-break:normal !important;
+    overflow-wrap:normal !important;
+}
+
+/* Header tetap proporsional dan tidak memaksa teks turun ke baris aneh. */
+#daily-report-jpg-canvas .report-source table thead th {
+    white-space:nowrap !important;
+    word-break:normal !important;
+    line-height:1.2 !important;
+    vertical-align:middle !important;
+}
+
+/* Tabel pembayaran panjang tetap bisa bertambah tinggi secara natural. */
+#daily-report-jpg-canvas .report-source table tbody tr {
+    break-inside:avoid !important;
+    page-break-inside:avoid !important;
 }
 </style>
 </head>
@@ -14827,6 +14937,11 @@ kaosKakiTerjual: jumlahKaosKaki,
                             <div><label class="text-xs font-black text-slate-700">Tanggal</label><input id="edit-in-tgl" type="date" value="${tgl}" class="w-full mt-1 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900"></div>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div><label class="text-xs font-black text-slate-700">Status Tim 1</label><select id="edit-in-status1" class="w-full mt-1 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900"><option value="Member" ${String(item.status1 || item.status || '').toLowerCase() === 'member' ? 'selected' : ''}>Member</option><option value="Non-Member" ${String(item.status1 || item.status || '').toLowerCase() !== 'member' ? 'selected' : ''}>Non-Member</option></select></div>
+                            <div><label class="text-xs font-black text-slate-700">Status Tim 2</label><select id="edit-in-status2" class="w-full mt-1 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900" ${item.timNama2 ? '' : 'disabled'}><option value="Member" ${String(item.status2 || '').toLowerCase() === 'member' ? 'selected' : ''}>Member</option><option value="Non-Member" ${String(item.status2 || '').toLowerCase() === 'member' ? '' : 'selected'}>Non-Member</option></select></div>
+                        </div>
+                        <div class="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-[10px] font-bold text-blue-800">ℹ️ Jika status diubah menjadi <b>Member</b>, diskon member otomatis dicatat pada keterangan Daily.</div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div><label class="text-xs font-black text-slate-700">Jumlah Tim 1</label><input id="edit-in-jml1" type="text" inputmode="numeric" oninput="formatNominalInput(this)" min="0" value="${formatNominalInputValue(jml1)}" class="w-full mt-1 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900"></div>
                             <div><label class="text-xs font-black text-slate-700">Metode Tim 1</label><select id="edit-in-met1" onchange="toggleEditFreePaymentInput(1)" class="w-full mt-1 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900"><option value="Cash" ${met1==='Cash'?'selected':''}>Cash</option><option value="QRIS" ${met1==='QRIS'?'selected':''}>QRIS</option><option value="Transfer" ${met1==='Transfer'?'selected':''}>Transfer</option><option value="Free" ${met1==='Free'?'selected':''}>Free / Gratis</option><option value="Campuran" ${mixed1?'selected':''}>Campuran (2 Metode)</option></select><label class="flex items-center gap-2 text-[10px] font-black text-slate-700 mt-1"><input id="edit-in-campuran-1" type="checkbox" ${mixed1?'checked':''} onchange="toggleEditMixedPayment(1)"> Bayar dengan 2 metode</label><div id="edit-in-campuran-box-1" class="${mixed1?'':'hidden '}grid grid-cols-2 gap-2 mt-1"><input id="edit-in-jml1b" type="text" inputmode="numeric" oninput="formatNominalInput(this)" min="0" value="${formatNominalInputValue(jml1b)}" class="w-full border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900"><select id="edit-in-met1b" class="w-full border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900"><option value="QRIS" ${met1b==='QRIS'?'selected':''}>QRIS</option><option value="Cash" ${met1b==='Cash'?'selected':''}>Cash</option><option value="Transfer" ${met1b==='Transfer'?'selected':''}>Transfer</option></select></div></div>
                             <div><label class="text-xs font-black text-slate-700">Jumlah Tim 2</label><input id="edit-in-jml2" type="text" inputmode="numeric" oninput="formatNominalInput(this)" min="0" value="${formatNominalInputValue(jml2)}" class="w-full mt-1 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900"></div>
@@ -14873,16 +14988,36 @@ kaosKakiTerjual: jumlahKaosKaki,
             const jml2b = mixed2 ? parseNominalInputValue(document.getElementById("edit-in-jml2b")?.value || "") : 0;
             const met1b = document.getElementById('edit-in-met1b')?.value || 'QRIS';
             const met2b = document.getElementById('edit-in-met2b')?.value || 'QRIS';
+            const status1 = document.getElementById('edit-in-status1')?.value || 'Non-Member';
+            const status2 = document.getElementById('edit-in-status2')?.value || 'Non-Member';
             if((mixed1 && jml1b<=0) || (mixed2 && jml2b<=0)) { alert('Nominal metode kedua harus diisi.'); return; }
             if(!tim || !tgl || jml1 < 0 || jml2 < 0) { alert('Mohon lengkapi data dengan benar.'); return; }
             const oldItem = globalCache?.pemasukan?.[key] || {};
             const rentalText = String(oldItem.ket || '').match(/\s\+\sSewa\s.*$/i)?.[0] || '';
+            const rawJam = String(jam || '').trim();
+            const range = rawJam.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+            let durasiEdit = 0;
+            if(range) { const a=Number(range[1])+Number(range[2])/60, b=Number(range[3])+Number(range[4])/60; if(b>a) durasiEdit=b-a; }
+            if(!durasiEdit) durasiEdit = Number(oldItem.durasiEfektifJam) || 1;
+            const m1 = String(status1).toLowerCase() === 'member';
+            const m2 = String(status2).toLowerCase() === 'member';
+            const sparingEdit = String(oldItem.jenisPembayaran || '').toLowerCase() === 'sparing';
+            let totalDiskonTim1 = 0, totalDiskonTim2 = 0;
+            if(sparingEdit) {
+                if(m1 && m2) { totalDiskonTim1=25000*durasiEdit; totalDiskonTim2=25000*durasiEdit; }
+                else if(m1) totalDiskonTim1=50000*durasiEdit;
+                else if(m2) totalDiskonTim2=50000*durasiEdit;
+            } else if(m1) { totalDiskonTim1=50000*durasiEdit; }
             try {
-                await update(ref(db, 'pemasukan/' + key), {
+                const patchData = {
                     ...oldItem,
                     ket: `Pelunasan ${tim} (${jam})${rentalText}`,
                     timNamaBersih: tim,
                     timNama2: String(oldItem.timNama2 || '').trim(),
+                    status1,
+                    status2: oldItem.timNama2 ? status2 : '',
+                    totalDiskonTim1,
+                    totalDiskonTim2,
                     jumlah1: jml1,
                     metode1: mixed1 ? 'Campuran' : met1,
                     metode1a: mixed1 ? ((met1 !== 'Campuran' ? met1 : (oldItem.metode1a || 'Cash'))) : '',
@@ -14895,7 +15030,10 @@ kaosKakiTerjual: jumlahKaosKaki,
                     metode2b: mixed2 ? met2b : '',
                     jumlah: jml1 + (mixed1 ? jml1b : 0) + jml2 + (mixed2 ? jml2b : 0),
                     tgl
-                });
+                };
+                await update(ref(db, 'pemasukan/' + key), patchData);
+                globalCache.pemasukan[key] = patchData;
+                if(typeof renderRekapHarian === 'function') renderRekapHarian();
                 document.getElementById('modal-edit-pemasukan')?.remove();
                 showSuccessPopup('Data uang lapangan berhasil diperbarui!');
             } catch(error) {
@@ -20144,6 +20282,23 @@ return;
                 const rupiah = value => `Rp ${Math.round(value).toLocaleString('id-ID')}`;
                 const details = [];
 
+                // Durasi booking harus ikut menentukan diskon member.
+                // Contoh: 2 jam = Rp50.000 x 2 = Rp100.000 untuk Tim 1 Member.
+                // Untuk sparing: 2 jam + 2 member = Rp25.000 x 2 per tim.
+                const getDurasiDiskonDaily = (row) => {
+                    const direct = Number(row?.durasiEfektifJam);
+                    if (Number.isFinite(direct) && direct > 0) return direct;
+                    const ket = String(row?.ket || '');
+                    const match = ket.match(/\((\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})\)/);
+                    if (match) {
+                        const start = Number(match[1]) * 60 + Number(match[2]);
+                        const end = Number(match[3]) * 60 + Number(match[4]);
+                        if (end > start) return (end - start) / 60;
+                    }
+                    return 1;
+                };
+                const durasiDiskon = getDurasiDiskonDaily(data);
+
                 // Keterangan DP dibuat eksplisit di Daily Recap agar nominal yang
                 // sudah dibayar di muka tidak terlihat seperti belum ada pembayaran.
                 const dp1 = num('dpManual1', 'dp');
@@ -20160,6 +20315,14 @@ return;
                 let member2 = num('totalDiskonTim2', 'diskonMemberTim2');
                 let status1 = data.status1 ?? data.status ?? '';
                 let status2 = data.status2 ?? '';
+
+                // Selalu normalisasi diskon dari status + durasi agar data lama
+                // yang sebelumnya hanya menyimpan diskon 1 jam tetap benar saat
+                // ditampilkan di Daily Recap dan otomatis ikut ke download lengkap.
+                if (isMemberStatus(status1)) member1 = 50000 * durasiDiskon;
+                else member1 = 0;
+                if (isMemberStatus(status2)) member2 = 50000 * durasiDiskon;
+                else member2 = 0;
 
                 // SPARING lama diperbaiki saat ditampilkan: distribusi diskon ditentukan
                 // ulang dari nama Tim 1/Tim 2 dan data Member, bukan dari nominal lama.
@@ -20180,9 +20343,9 @@ return;
                     const m2 = isRegisteredMember(nama2);
                     status1 = m1 ? 'Member' : 'Non-Member';
                     status2 = m2 ? 'Member' : 'Non-Member';
-                    if (m1 && m2) { member1 = 25000; member2 = 25000; }
-                    else if (m1) { member1 = 50000; member2 = 0; }
-                    else if (m2) { member1 = 0; member2 = 50000; }
+                    if (m1 && m2) { member1 = 25000 * durasiDiskon; member2 = 25000 * durasiDiskon; }
+                    else if (m1) { member1 = 50000 * durasiDiskon; member2 = 0; }
+                    else if (m2) { member1 = 0; member2 = 50000 * durasiDiskon; }
                     else { member1 = 0; member2 = 0; }
                 }
 
@@ -41275,5 +41438,127 @@ body > header .admin-global-header-brand-title{
     suppressUntil=Date.now()+900;
   }, {capture:true, passive:true});
 
+})();
+</script>
+<style id="desktop-riwayat-position-final-v1">
+/* =========================================================
+   RIWAYAT JADWAL — POSISI DESKTOP
+   Tombol riwayat ditempatkan di dalam kartu JADWAL HARI INI,
+   pojok kanan atas, agar tidak melayang jauh di luar panel.
+   Tampilan HP tetap memakai posisi yang sudah ada.
+   ========================================================= */
+@media (min-width: 641px) {
+  #page-jadwal #today-schedule-panel {
+    position: relative !important;
+  }
+
+  #page-jadwal #today-schedule-panel .today-schedule-head {
+    position: relative !important;
+    width: 100% !important;
+    min-height: 52px !important;
+    box-sizing: border-box !important;
+    padding: 0 64px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  #page-jadwal #today-schedule-panel .today-schedule-head-actions {
+    position: absolute !important;
+    top: 50% !important;
+    right: 12px !important;
+    left: auto !important;
+    bottom: auto !important;
+    transform: translateY(-50%) !important;
+    width: 44px !important;
+    height: 44px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 20 !important;
+  }
+
+  #page-jadwal #today-schedule-panel .today-history-btn {
+    position: relative !important;
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    max-width: 44px !important;
+    max-height: 44px !important;
+  }
+}
+</style>
+
+<style id="desktop-riwayat-hard-fix-v2">
+/* =========================================================
+   RIWAYAT JADWAL — HARD FIX DESKTOP V2
+   Tombol diposisikan langsung relatif terhadap kartu JADWAL HARI INI,
+   bukan relatif terhadap header/viewport.
+   HP tidak diubah.
+   ========================================================= */
+@media (min-width:641px){
+  #page-jadwal #today-schedule-panel > .today-schedule-head-actions{
+    position:absolute !important;
+    top:12px !important;
+    right:12px !important;
+    left:auto !important;
+    bottom:auto !important;
+    transform:none !important;
+    width:44px !important;
+    height:44px !important;
+    margin:0 !important;
+    padding:0 !important;
+    z-index:99999 !important;
+  }
+  #page-jadwal #today-schedule-panel > .today-schedule-head-actions .today-history-btn{
+    position:relative !important;
+    inset:auto !important;
+    transform:none !important;
+    width:44px !important;
+    height:44px !important;
+  }
+}
+</style>
+<script id="desktop-riwayat-hard-fix-v2-script">
+(function(){
+  function syncRiwayatPosition(){
+    const panel=document.getElementById('today-schedule-panel');
+    const actions=document.querySelector('#page-jadwal .today-schedule-head-actions');
+    const head=panel?.querySelector('.today-schedule-head');
+    if(!panel || !actions || !head) return;
+
+    if(window.innerWidth >= 641){
+      /* Pindahkan secara fisik menjadi anak langsung panel desktop. */
+      if(actions.parentElement !== panel) panel.appendChild(actions);
+      panel.style.position='relative';
+      actions.style.position='absolute';
+      actions.style.top='12px';
+      actions.style.right='12px';
+      actions.style.left='auto';
+      actions.style.bottom='auto';
+      actions.style.transform='none';
+      actions.style.width='44px';
+      actions.style.height='44px';
+      actions.style.margin='0';
+      actions.style.padding='0';
+      actions.style.zIndex='99999';
+    }else{
+      /* Kembalikan ke header saat masuk mode HP agar layout HP tetap seperti semula. */
+      if(actions.parentElement !== head) head.appendChild(actions);
+      actions.removeAttribute('style');
+    }
+  }
+  function init(){
+    syncRiwayatPosition();
+    window.addEventListener('resize',syncRiwayatPosition,{passive:true});
+    const observer=new MutationObserver(syncRiwayatPosition);
+    const panel=document.getElementById('today-schedule-panel');
+    if(panel) observer.observe(panel,{childList:true,subtree:true});
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true});
+  else init();
 })();
 </script>
