@@ -10224,6 +10224,100 @@ body > header h1{
     page-break-inside:avoid !important;
 }
 </style>
+
+<style id="desktop-layout-width-sync-final-v1">
+/* =========================================================
+   DESKTOP — GLOBAL WIDTH SYNC
+   Header, isi halaman, card utama, dan dock memakai SATU
+   lebar referensi. HP tidak disentuh.
+   ========================================================= */
+@media (min-width: 768px){
+  :root{
+    --desktop-app-width:min(1200px, calc(100vw - 32px));
+  }
+
+  /* Area utama aplikasi */
+  body > header,
+  body > main{
+    width:var(--desktop-app-width) !important;
+    max-width:var(--desktop-app-width) !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+    margin-left:auto !important;
+    margin-right:auto !important;
+  }
+
+  /* Header mengikuti lebar aplikasi, bukan max-width 780px lama. */
+  body > header{
+    margin-top:0 !important;
+    margin-bottom:16px !important;
+  }
+
+  /* Main tidak boleh punya batas lebar berbeda dari header. */
+  body > main{
+    width:var(--desktop-app-width) !important;
+    max-width:var(--desktop-app-width) !important;
+  }
+
+  /* Semua halaman langsung di dalam main mengikuti lebar yang sama. */
+  body > main > [id^="page-"],
+  body > main > .sub-menu-modern,
+  #page-jadwal,
+  #page-daily-recap,
+  #page-minuman,
+  #page-more{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    margin-left:0 !important;
+    margin-right:0 !important;
+    box-sizing:border-box !important;
+  }
+
+  /* Hapus pembatas 780px yang sebelumnya membuat beberapa halaman
+     lebih sempit daripada header/dock. */
+  body > main .sub-menu-modern{
+    width:100% !important;
+    max-width:100% !important;
+  }
+
+  /* Card/section utama jangan shrink sendiri di desktop. */
+  body > main > [id^="page-"] > *,
+  body > main > .sub-menu-modern > *,
+  #page-jadwal > *,
+  #page-daily-recap > *,
+  #page-minuman > *{
+    box-sizing:border-box;
+  }
+
+  /* Dock benar-benar satu garis dengan sisi header dan konten. */
+  .quick-bottom-nav{
+    left:50% !important;
+    right:auto !important;
+    transform:translateX(-50%) !important;
+    width:var(--desktop-app-width) !important;
+    max-width:var(--desktop-app-width) !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+  }
+
+  /* Isi dock membagi lebar secara merata. */
+  .quick-bottom-nav .quick-nav-item{
+    min-width:0 !important;
+    width:auto !important;
+    flex:1 1 0 !important;
+  }
+
+  /* Menu Lainnya juga memakai lebar global yang sama. */
+  #page-more .more-menu-page{
+    width:100% !important;
+    max-width:100% !important;
+    margin-left:0 !important;
+    margin-right:0 !important;
+  }
+}
+</style>
+
 </head>
 <body class="min-h-screen p-2 sm:p-4 pt-4 sm:pt-6 flex flex-col items-center text-slate-900 font-medium">
 
@@ -41562,3 +41656,59 @@ body > header .admin-global-header-brand-title{
   else init();
 })();
 </script>
+
+<style id="daily-recap-desktop-width-final-v2">
+/* =========================================================
+   DAILY RECAP — SAMAKAN PENUH DENGAN LEBAR DESKTOP GLOBAL
+   Perbaikan khusus desktop.
+   HP sengaja tidak disentuh.
+   ========================================================= */
+@media (min-width: 768px){
+  /* Halaman Daily Recap harus mengikuti lebar aplikasi global,
+     bukan lagi batas lama 780px. */
+  #page-daily-recap,
+  #page-daily-recap.sub-menu-modern{
+    width:var(--desktop-app-width, min(1200px, calc(100vw - 32px))) !important;
+    max-width:var(--desktop-app-width, min(1200px, calc(100vw - 32px))) !important;
+    min-width:0 !important;
+    margin-left:0 !important;
+    margin-right:0 !important;
+    padding-left:0 !important;
+    padding-right:0 !important;
+    box-sizing:border-box !important;
+  }
+
+  /* Semua isi utama Daily Recap ikut melebar sampai batas halaman. */
+  #page-daily-recap > .flex.justify-between.items-center,
+  #page-daily-recap > #daily-cash-dashboard,
+  #page-daily-recap > #daily-menu-grid,
+  #page-daily-recap > .daily-recap-download-area,
+  #page-daily-recap > .space-y-6,
+  #page-daily-recap > [id^="sub-page-"],
+  #page-daily-recap .daily-recap-date-control,
+  #page-daily-recap #daily-cash-dashboard > section{
+    width:100% !important;
+    max-width:none !important;
+    min-width:0 !important;
+    margin-left:0 !important;
+    margin-right:0 !important;
+    box-sizing:border-box !important;
+  }
+
+  /* Pastikan grid kas benar-benar menggunakan seluruh ruang yang tersedia. */
+  #page-daily-recap #daily-cash-dashboard > section > .grid,
+  #page-daily-recap #daily-menu-grid{
+    width:100% !important;
+    max-width:none !important;
+    min-width:0 !important;
+  }
+
+  /* Hilangkan pembatas lebar internal yang mungkin diwariskan dari
+     style Daily Recap lama. */
+  #page-daily-recap .daily-mini-card,
+  #page-daily-recap .glass-btn{
+    min-width:0 !important;
+    box-sizing:border-box !important;
+  }
+}
+</style>
