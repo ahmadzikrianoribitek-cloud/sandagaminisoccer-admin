@@ -262,6 +262,28 @@
         #page-booking-history th:nth-child(6),
         #page-booking-history td:nth-child(6) { width: 15%; }
 
+        .status-badge-inline {
+            display: inline-block;
+            padding: 2px 6px;
+            margin: 0 2px;
+            border-radius: 999px;
+            font-size: 8px;
+            font-weight: 900;
+            line-height: 1.15;
+            vertical-align: middle;
+            letter-spacing: .02em;
+        }
+        .status-member-inline {
+            color: #1d4ed8;
+            background: #dbeafe;
+            border: 1px solid #93c5fd;
+        }
+        .status-nonmember-inline {
+            color: #b91c1c;
+            background: #fee2e2;
+            border: 1px solid #fca5a5;
+        }
+
         .status-badge-member,
         .status-badge-nonmember {
             display: inline-flex;
@@ -12518,7 +12540,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             const selectedName = isManual
                 ? (document.getElementById('in-keterangan-manual')?.value || 'Pemasukan Manual')
                 : (selectedOption?.value || '');
-            const selectedStatus = isManual ? 'Non-Member' : (selectedOption?.getAttribute('data-status') || 'Non-Member');
+            let selectedStatus = isManual ? 'Non-Member' : (selectedOption?.getAttribute('data-status') || 'Non-Member');
             const jam = jamMainStr && jamMainStr !== '-' ? jamMainStr.substring(0, 5) : '';
             const nama1 = String(selectedName || '').replace(/\s*\(Booking\)$/i, '').trim();
 
@@ -12606,7 +12628,63 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                     return false;
                 });
             }
-            second.status = document.getElementById('in-status-2')?.value || 'Non-Member';
+            // STATUS SPARING: gunakan pasangan yang tepat dan utamakan data Member.
+            if (isSparingPayment && tgl && jam) {
+                try {
+                    const n1 = String(nama1 || '').trim();
+                    const n2 = String(second.nama || '').trim();
+                    const a1 = n1.toLowerCase();
+                    const a2 = n2.toLowerCase();
+
+                    const isRegisteredMember = (teamName) => {
+                        const target = String(teamName || '').trim().toLowerCase();
+                        if(!target) return false;
+                        return Object.values(globalCache.member || {}).some(perHari =>
+                            Object.values(perHari || {}).some(cell => {
+                                if(!cell || cell.type === 'off' || !cell.nama) return false;
+                                return String(cell.nama).trim().toLowerCase() === target && isMemberActiveOnDate(cell, tgl);
+                            })
+                        );
+                    };
+
+                    const exactSparing = Object.values(globalCache.sparing || {}).find(sp => {
+                        if(!sp || String(sp.status || '').toLowerCase() !== 'matched') return false;
+                        if(String(sp.tanggal || '') !== String(tgl)) return false;
+                        if(String(sp.jam || '').substring(0,5) !== String(jam).substring(0,5)) return false;
+                        const sa = String(sp.timA || '').trim().toLowerCase();
+                        const sb = String(sp.timB || '').trim().toLowerCase();
+                        return (sa === a1 && sb === a2) || (sa === a2 && sb === a1);
+                    });
+
+                    let statusTim1 = isRegisteredMember(n1) ? 'Member' : 'Non-Member';
+                    let statusTim2 = isRegisteredMember(n2) ? 'Member' : 'Non-Member';
+
+                    if(exactSparing) {
+                        const sa = String(exactSparing.timA || '').trim().toLowerCase();
+                        const rawA = String(exactSparing.statusA || 'Non-Member').trim();
+                        const rawB = String(exactSparing.statusB || 'Non-Member').trim();
+                        if(!isRegisteredMember(n1)) statusTim1 = sa === a1 ? rawA : rawB;
+                        if(!isRegisteredMember(n2)) statusTim2 = sa === a2 ? rawA : rawB;
+                    }
+
+                    selectedStatus = statusTim1;
+                    second.status = statusTim2;
+                    const optStatus1 = document.getElementById('in-tim')?.selectedOptions?.[0];
+                    if(optStatus1) optStatus1.setAttribute('data-status', statusTim1);
+                } catch (e) {
+                    second.status = 'Non-Member';
+                }
+            } else {
+                second.status = document.getElementById('in-status-2')?.value || 'Non-Member';
+            }
+
+            // Sinkronkan field Tim 2 supaya tampilan form juga menunjukkan status yang dipakai kalkulator.
+            const status2Field = document.getElementById('in-status-2');
+            if (isSparingPayment && status2Field) {
+                status2Field.value = String(second.status || 'Non-Member').toLowerCase() === 'member' ? 'Member' : 'Non-Member';
+            }
+            // Status Tim 1/Tim 2 sudah ditetapkan oleh resolver Sparing di atas.
+
             const timNama2 = isSparingPayment ? String(second.nama || '').trim() : '';
 
             // Harga booking normal = JUMLAH seluruh jam. Bukan harga satu jam.
@@ -12679,17 +12757,26 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 const hargaDasarPerTim = Math.round(hargaNormalPerJam / 2);
                 hargaTim1 = hargaDasarPerTim;
                 hargaTim2 = hargaDasarPerTim;
-                const tim1Member = String(selectedStatus).toLowerCase() === 'member';
-                const tim2Member = String(second.status).toLowerCase() === 'member';
+                // ATURAN DISKON MEMBER SPARING:
+                // Tim 1 MEMBER + Tim 2 NON-MEMBER  -> Tim 1 diskon Rp50.000
+                // Tim 1 MEMBER + Tim 2 MEMBER      -> Tim 1 Rp25.000 + Tim 2 Rp25.000
+                // Tim 1 NON-MEMBER + Tim 2 NON-MEMBER -> tidak ada diskon member
+                // Tim 1 NON-MEMBER + Tim 2 MEMBER  -> Tim 2 diskon Rp50.000
+                const normalizeStatus = value => String(value || '').trim().toLowerCase().replace(/[ _-]/g, '');
+                const tim1Member = normalizeStatus(selectedStatus) === 'member';
+                const tim2Member = normalizeStatus(second.status) === 'member';
+
                 if (tim1Member && tim2Member) {
                     diskonNormalMemberTim1 = 25000;
                     diskonNormalMemberTim2 = 25000;
-                    hargaTim1 = Math.max(0, hargaTim1 - 25000);
-                    hargaTim2 = Math.max(0, hargaTim2 - 25000);
-                } else {
-                    if (tim1Member) { diskonNormalMemberTim1 = 50000; hargaTim1 = Math.max(0, hargaTim1 - 50000); }
-                    if (tim2Member) { diskonNormalMemberTim2 = 50000; hargaTim2 = Math.max(0, hargaTim2 - 50000); }
+                } else if (tim1Member) {
+                    diskonNormalMemberTim1 = 50000;
+                } else if (tim2Member) {
+                    diskonNormalMemberTim2 = 50000;
                 }
+
+                hargaTim1 = Math.max(0, hargaTim1 - diskonNormalMemberTim1);
+                hargaTim2 = Math.max(0, hargaTim2 - diskonNormalMemberTim2);
                 // Diskon manual dari admin dapat diarahkan ke Tim 1, Tim 2, atau dibagi rata.
                 // Diskon manual dari admin dapat diarahkan ke Tim 1, Tim 2, atau dibagi rata.
                 if (diskonManual > 0) {
@@ -12754,7 +12841,8 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 diskonManual,
                 diskonManualAlokasi,
                 diskonManualTim1,
-                diskonManualTim2
+                diskonManualTim2,
+                statusTim2: String(second.status || 'Non-Member').trim() || 'Non-Member'
             };
 
             let dp1 = 0;
@@ -13268,6 +13356,10 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                     ket: `Pelunasan ${tim} (${jamMain})${ketTambahanStr}${kaosKakiAktif ? ` + Kaos Kaki ${jumlahKaosKaki} pcs (${formatRupiah(totalKaosKaki)})` : ''}`, 
                     timNamaBersih: tim.replace(/\s*\(.*\)/g, '').trim(),
                     timNama2: timNama2,
+                    // Simpan status kedua tim agar Daily Recap dan hasil download
+                    // selalu bisa menjelaskan MEMBER / NON-MEMBER per tim.
+                    status1: String(window.__pelunasanCalc?.selectedStatus || document.getElementById('in-status-1')?.value || 'Non-Member').trim() || 'Non-Member',
+                    status2: String(window.__pelunasanCalc?.statusTim2 || document.getElementById('in-status-2')?.value || 'Non-Member').trim() || 'Non-Member',
                     jumlah1: totalTim1,
                     metode1: campur1 ? 'Campuran' : met1,
                     metode1a: campur1 ? met1 : '',
@@ -13285,7 +13377,6 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                     paymentStatus1: met1 === 'Free' ? 'free' : (met1 === 'Belum Bayar' ? 'unpaid' : 'paid'),
                     paymentStatus2: isSparingPayment ? (met2 === 'Free' ? 'free' : (met2 === 'Belum Bayar' ? 'unpaid' : 'paid')) : 'not_applicable',
                     jenisPembayaran: isSparingPayment ? 'sparing' : 'internal',
-                    status2: document.getElementById('in-status-2')?.value || 'Non-Member',
                     diskonManual: Number(window.__pelunasanCalc?.diskonManual || 0),
                     diskonManualAlokasi: window.__pelunasanCalc?.diskonManualAlokasi || 'tim1',
                     diskonManualTim1: Number(window.__pelunasanCalc?.diskonManualTim1 || 0),
@@ -20038,6 +20129,87 @@ return;
             }
             let totalLapangan = 0, totalLapanganCash = 0, totalLapanganQrif = 0;
 
+            // Keterangan diskon untuk Daily Uang Lapangan dan otomatis ikut
+            // ke hasil download Versi Lengkap karena laporan menyalin tabel transaksi.
+            const formatDiskonDaily = (data) => {
+                if (!data || typeof data !== 'object') return '';
+
+                const num = (...keys) => {
+                    for (const key of keys) {
+                        const value = Number(data[key]);
+                        if (Number.isFinite(value) && value > 0) return value;
+                    }
+                    return 0;
+                };
+                const rupiah = value => `Rp ${Math.round(value).toLocaleString('id-ID')}`;
+                const details = [];
+
+                // Keterangan DP dibuat eksplisit di Daily Recap agar nominal yang
+                // sudah dibayar di muka tidak terlihat seperti belum ada pembayaran.
+                const dp1 = num('dpManual1', 'dp');
+                const dp2 = num('dpManual2');
+                if (dp1 > 0) details.push(`💰 DP Tim 1: ${rupiah(dp1)}`);
+                if (dp2 > 0) details.push(`💰 DP Tim 2: ${rupiah(dp2)}`);
+
+                // Diskon member hanya boleh ditampilkan jika status tim memang MEMBER.
+                // Data lama kadang masih memiliki nominal diskon member meskipun status
+                // transaksi sekarang NON-MEMBER, jadi jangan tampilkan berdasarkan nominal
+                // saja. Status harus MEMBER secara eksplisit.
+                const isMemberStatus = (status) => String(status || '').trim().toLowerCase() === 'member';
+                let member1 = num('totalDiskonTim1', 'diskonMemberTim1');
+                let member2 = num('totalDiskonTim2', 'diskonMemberTim2');
+                let status1 = data.status1 ?? data.status ?? '';
+                let status2 = data.status2 ?? '';
+
+                // SPARING lama diperbaiki saat ditampilkan: distribusi diskon ditentukan
+                // ulang dari nama Tim 1/Tim 2 dan data Member, bukan dari nominal lama.
+                if (String(data.jenisPembayaran || '').toLowerCase() === 'sparing') {
+                    const nama1 = String(data.timNamaBersih || '').trim();
+                    const nama2 = String(data.timNama2 || '').trim();
+                    const isRegisteredMember = (teamName) => {
+                        const target = String(teamName || '').trim().toLowerCase();
+                        if(!target) return false;
+                        return Object.values(globalCache.member || {}).some(perHari =>
+                            Object.values(perHari || {}).some(cell => {
+                                if(!cell || cell.type === 'off' || !cell.nama) return false;
+                                return String(cell.nama).trim().toLowerCase() === target && isMemberActiveOnDate(cell, filterTgl);
+                            })
+                        );
+                    };
+                    const m1 = isRegisteredMember(nama1);
+                    const m2 = isRegisteredMember(nama2);
+                    status1 = m1 ? 'Member' : 'Non-Member';
+                    status2 = m2 ? 'Member' : 'Non-Member';
+                    if (m1 && m2) { member1 = 25000; member2 = 25000; }
+                    else if (m1) { member1 = 50000; member2 = 0; }
+                    else if (m2) { member1 = 0; member2 = 50000; }
+                    else { member1 = 0; member2 = 0; }
+                }
+
+                if (isMemberStatus(status1) && member1 > 0) {
+                    details.push(`🏷️ Diskon Member Tim 1: ${rupiah(member1)}`);
+                }
+                if (isMemberStatus(status2) && member2 > 0) {
+                    details.push(`🏷️ Diskon Member Tim 2: ${rupiah(member2)}`);
+                }
+
+                // Diskon tambahan/manual/promo.
+                const manual1 = num('diskonManualTim1');
+                const manual2 = num('diskonManualTim2');
+                if (manual1 > 0) details.push(`🎁 Diskon Promo/Manual Tim 1: ${rupiah(manual1)}`);
+                if (manual2 > 0) details.push(`🎁 Diskon Promo/Manual Tim 2: ${rupiah(manual2)}`);
+
+                // Fallback untuk data lama atau skema transaksi lain.
+                const manualTotal = num('diskonManual', 'diskonPromo', 'diskonKhusus', 'diskon');
+                if (manualTotal > 0 && manual1 + manual2 === 0) {
+                    details.push(`🎁 Diskon Promo/Manual: ${rupiah(manualTotal)}`);
+                }
+
+                return details.length
+                    ? `<br><span class="text-[9px] text-violet-700 font-black leading-relaxed">${details.join('<br>')}</span>`
+                    : '';
+            };
+
             Object.entries(globalCache.pemasukan).forEach(([key, item]) => {
                 if(item.tgl === filterTgl) {
                     // Jika jumlah1 tersedia, termasuk ketika nilainya 0,
@@ -20048,6 +20220,8 @@ return;
                     let met1 = item.metode1 || item.metode || 'Cash';
                     let jml2 = Number(item.jumlah2 || 0);
                     let met2 = item.metode2 || 'Cash';
+                    const status1Daily = String(item.status1 || item.status || 'Non-Member').trim() || 'Non-Member';
+                    const status2Daily = String(item.status2 || 'Non-Member').trim() || 'Non-Member';
 
                     // Free/Gratis dianggap lunas, tetapi nominalnya tidak masuk
                     // ke total keuangan maupun saldo Cash/QRIS/Transfer.
@@ -20064,10 +20238,12 @@ return;
                         else if(met1 !== 'Free' && met1 !== 'Belum Bayar') totalLapanganQrif += nilaiKaosKakiKeuangan;
                     }
 
-                    let detailTxt = `Tim 1: Rp ${jml1.toLocaleString('id-ID')} (${met1 === 'Campuran' ? ((item.metode1a||'Cash')+' + '+(item.jumlah1b||0).toLocaleString('id-ID')+' '+(item.metode1b||'QRIS')) : met1})`;
-                    if(jml2 > 0) {
-                        detailTxt += `<br>Tim 2: Rp ${jml2.toLocaleString('id-ID')} (${met2 === 'Campuran' ? ((item.metode2a||'Cash')+' + '+(item.jumlah2b||0).toLocaleString('id-ID')+' '+(item.metode2b||'QRIS')) : met2})`;
+                    let detailTxt = `Tim 1 <span class=\"status-badge-inline ${String(status1Daily).toLowerCase().includes('member') && !String(status1Daily).toLowerCase().includes('non') ? 'status-member-inline' : 'status-nonmember-inline'}\">${status1Daily.toUpperCase()}</span>: Rp ${jml1.toLocaleString('id-ID')} (${met1 === 'Campuran' ? ((item.metode1a||'Cash')+' + '+(item.jumlah1b||0).toLocaleString('id-ID')+' '+(item.metode1b||'QRIS')) : met1})`;
+                    if(jml2 > 0 || String(item.jenisPembayaran || '').toLowerCase() === 'sparing' || String(item.timNama2 || '').trim()) {
+                        detailTxt += `<br>Tim 2 <span class=\"status-badge-inline ${String(status2Daily).toLowerCase().includes('member') && !String(status2Daily).toLowerCase().includes('non') ? 'status-member-inline' : 'status-nonmember-inline'}\">${status2Daily.toUpperCase()}</span>: Rp ${jml2.toLocaleString('id-ID')} (${met2 === 'Campuran' ? ((item.metode2a||'Cash')+' + '+(item.jumlah2b||0).toLocaleString('id-ID')+' '+(item.metode2b||'QRIS')) : met2})`;
                     }
+
+                    detailTxt += formatDiskonDaily(item);
 
                     if(tbodyLapangan) {
                         tbodyLapangan.innerHTML += `<tr class="border-b border-slate-900/40 text-center font-bold">
@@ -20115,12 +20291,12 @@ return;
                     tbodyLapangan.innerHTML += `<tr class="border-b border-violet-300/50 text-center font-bold bg-violet-50/60">
                         <td class="p-2 border border-slate-900/40 text-left">
                             <div class="font-black text-violet-950">🧾 ${escapeHtmlSparing(nama)}</div>
-                            <div class="text-[9px] text-violet-700 font-black mt-0.5">Pelunasan Member</div>
+                            <div class="text-[9px] font-black mt-0.5"><span class="status-badge-inline status-member-inline">MEMBER</span> Pelunasan Member</div>
                             <div class="text-[9px] text-slate-600 mt-0.5">Jadwal dilunasi: ${tanggalJadwal ? tanggalJadwal.split('-').reverse().join('/') : '-'}</div>
                         </td>
                         <td class="p-2 border border-slate-900/40 text-xs">
                             <span class="font-black text-violet-800">${escapeHtmlSparing(metode)}</span><br>
-                            <span class="text-slate-600">Alokasi:</span><br>${detailAlokasi}
+                            <span class="text-slate-600">Alokasi:</span><br>${detailAlokasi}${formatDiskonDaily(item)}
                         </td>
                         <td class="p-2 border border-slate-900/40 text-violet-900 font-black">Rp ${jumlah.toLocaleString('id-ID')}</td>
                         <td class="p-2 border border-slate-900/40 text-center whitespace-nowrap">
@@ -20162,7 +20338,7 @@ return;
                                 <div class="text-[9px] text-blue-700 font-black mt-0.5">${item.status || ''} • DP Booking</div>
                                 <div class="text-[9px] text-slate-600 mt-0.5">Main: ${tanggalMain ? tanggalMain.split('-').reverse().join('/') : '-'} ⏰ ${jamMain}</div>
                             </td>
-                            <td class="p-2 border border-slate-900/40 text-xs">Metode: ${metode}<br><span class="text-indigo-700 font-black">Tgl DP: ${tanggalDp ? tanggalDp.split('-').reverse().join('/') : '-'}</span></td>
+                            <td class="p-2 border border-slate-900/40 text-xs">Metode: ${metode}<br><span class="text-indigo-700 font-black">Tgl DP: ${tanggalDp ? tanggalDp.split('-').reverse().join('/') : '-'}</span>${formatDiskonDaily(item)}</td>
                             <td class="p-2 border border-slate-900/40 text-emerald-900 font-black">Rp ${dpVal.toLocaleString('id-ID')}</td>
                             <td class="p-2 border border-slate-900/40 text-center whitespace-nowrap">
                                 <div class="flex items-center justify-center gap-1">
@@ -21536,6 +21712,24 @@ window.downloadDailyRecapJPGFull = async function() {
 
         // Jika tidak ada transaksi, tampilkan keterangan yang jelas agar
         // tabel kosong tidak terlihat seperti data gagal dimuat.
+        if (item.key === 'lapangan') {
+            const table = clone.querySelector('table');
+            if (table) {
+                table.querySelectorAll('tbody tr').forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (!cells.length) return;
+                    const detailCell = cells[1];
+                    if (!detailCell) return;
+                    const text = detailCell.textContent || '';
+                    // Data DP yang sudah dirender di Daily Recap dipertahankan;
+                    // tambahkan penanda visual supaya mudah dibaca di hasil download.
+                    if (/DP\s*:/i.test(text) || /💰\s*DP/i.test(text)) {
+                        detailCell.style.fontWeight = '900';
+                    }
+                });
+            }
+        }
+
         if (item.key === 'lapangan' || item.key === 'pengeluaran') {
             const table = clone.querySelector('table');
             const tbody = table?.querySelector('tbody');
