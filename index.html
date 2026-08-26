@@ -11450,6 +11450,31 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
   </div>
   <p id="info-diskon-manual" class="text-[10px] text-violet-800 font-black">Diskon tambahan tidak aktif</p>
 </div>
+
+<!-- Pilihan pembagian DISKON MEMBER khusus saat Tim 1 dan Tim 2 sama-sama Member -->
+<div id="member-discount-allocation-wrap" class="hidden p-3 rounded-xl border border-blue-300/60 mb-3 space-y-2 bg-blue-50/70">
+  <div class="flex items-center justify-between gap-2">
+    <label class="block text-xs font-black text-blue-950">🏷️ Pembagian Diskon Member</label>
+    <span class="text-[9px] font-black text-blue-700 bg-white/80 border border-blue-200 rounded-full px-2 py-1">Tim 1 + Tim 2 Member</span>
+  </div>
+  <p class="text-[10px] text-blue-800 font-semibold">Pilih siapa yang menerima diskon member Rp50.000/jam, atau bagi rata Rp25.000/jam per tim.</p>
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+    <label class="flex items-center gap-2 rounded-xl border border-blue-200 bg-white/80 px-3 py-2 cursor-pointer">
+      <input type="radio" name="diskon-member-alokasi" id="in-diskon-member-tim1" value="tim1" onchange="hitungOtomatisBiaya()">
+      <span class="text-xs font-black text-slate-900">Untuk Tim 1</span>
+    </label>
+    <label class="flex items-center gap-2 rounded-xl border border-blue-200 bg-white/80 px-3 py-2 cursor-pointer">
+      <input type="radio" name="diskon-member-alokasi" id="in-diskon-member-tim2" value="tim2" onchange="hitungOtomatisBiaya()">
+      <span class="text-xs font-black text-slate-900">Untuk Tim 2</span>
+    </label>
+    <label class="flex items-center gap-2 rounded-xl border border-blue-300 bg-blue-100/80 px-3 py-2 cursor-pointer">
+      <input type="radio" name="diskon-member-alokasi" id="in-diskon-member-rata" value="rata" onchange="hitungOtomatisBiaya()" checked>
+      <span class="text-xs font-black text-blue-950">Dibagi Rata</span>
+    </label>
+  </div>
+  <p id="info-diskon-member-alokasi" class="text-[10px] text-blue-800 font-black">Diskon Member: Rp25.000/jam per tim</p>
+</div>
+
 <div class="uang-masuk-socks-card" id="in-kaos-kaki-card">
   <label class="flex items-center gap-2 cursor-pointer">
     <input class="w-4 h-4 rounded accent-sky-600" id="in-kaos-kaki" onchange="updateKaosKakiMasuk()" type="checkbox"/>
@@ -12624,6 +12649,16 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             if (diskonBerbedaTim2El) diskonBerbedaTim2El.value = 0;
             const diskonBerbedaWrap = document.getElementById('in-diskon-manual-berbeda-wrap');
             if (diskonBerbedaWrap) diskonBerbedaWrap.classList.add('hidden');
+            const memberDiskonTim1Radio = document.getElementById('in-diskon-member-tim1');
+            const memberDiskonTim2Radio = document.getElementById('in-diskon-member-tim2');
+            const memberDiskonRataRadio = document.getElementById('in-diskon-member-rata');
+            if (memberDiskonTim1Radio) memberDiskonTim1Radio.checked = false;
+            if (memberDiskonTim2Radio) memberDiskonTim2Radio.checked = false;
+            if (memberDiskonRataRadio) memberDiskonRataRadio.checked = true;
+            const memberDiskonWrap = document.getElementById('member-discount-allocation-wrap');
+            if (memberDiskonWrap) memberDiskonWrap.classList.add('hidden');
+            const memberDiskonInfo = document.getElementById('info-diskon-member-alokasi');
+            if (memberDiskonInfo) memberDiskonInfo.innerText = 'Diskon Member: Rp25.000/jam per tim';
             document.getElementById('info-biaya-tambahan').innerText = "Biaya tambahan sewa: Rp 0";
 
             if(!tglInput) return;
@@ -12730,6 +12765,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             if (diskonManualAlokasi === 'berbeda') {
                 diskonManual = diskonManualBerbedaTim1 + diskonManualBerbedaTim2;
             }
+            const diskonMemberAlokasi = document.querySelector('input[name="diskon-member-alokasi"]:checked')?.value || 'rata';
 
             let durasiJam = 1;
             if (jamMainStr.includes('-')) {
@@ -12843,6 +12879,18 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                     const isRegisteredMember = (teamName) => {
                         const target = String(teamName || '').trim().toLowerCase();
                         if(!target) return false;
+
+                        // Member tanpa jadwal tidak berada di globalCache.member.
+                        // Mereka disimpan di globalCache.memberTanpaJadwal dan
+                        // tetap harus dianggap MEMBER ketika membuka Uang Masuk
+                        // dari kartu Jadwal Hari Ini.
+                        const memberTanpaJadwal = Object.values(globalCache.memberTanpaJadwal || {}).some(item => {
+                            if(!item || !item.nama) return false;
+                            return String(item.nama).trim().toLowerCase() === target &&
+                                String(item.status || 'Member').trim().toLowerCase() !== 'non member';
+                        });
+                        if(memberTanpaJadwal) return true;
+
                         return Object.values(globalCache.member || {}).some(perHari =>
                             Object.values(perHari || {}).some(cell => {
                                 if(!cell || cell.type === 'off' || !cell.nama) return false;
@@ -12971,8 +13019,16 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 const tim2Member = normalizeStatus(second.status) === 'member';
 
                 if (tim1Member && tim2Member) {
-                    diskonNormalMemberTim1 = 25000;
-                    diskonNormalMemberTim2 = 25000;
+                    if (diskonMemberAlokasi === 'tim1') {
+                        diskonNormalMemberTim1 = 50000;
+                        diskonNormalMemberTim2 = 0;
+                    } else if (diskonMemberAlokasi === 'tim2') {
+                        diskonNormalMemberTim1 = 0;
+                        diskonNormalMemberTim2 = 50000;
+                    } else {
+                        diskonNormalMemberTim1 = 25000;
+                        diskonNormalMemberTim2 = 25000;
+                    }
                 } else if (tim1Member) {
                     diskonNormalMemberTim1 = 50000;
                 } else if (tim2Member) {
@@ -13046,6 +13102,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 diskonManualAlokasi,
                 diskonManualTim1,
                 diskonManualTim2,
+                diskonMemberAlokasi,
                 statusTim2: String(second.status || 'Non-Member').trim() || 'Non-Member'
             };
 
@@ -13126,6 +13183,27 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 infoDiskon.innerText = pakaiDiskonKhusus
                     ? `Diskon promo aktif · Tim 1: ${formatRupiah(diskonNormalMemberTim1 + diskonKhususTim1)} total${isSparingPayment ? ` · Tim 2: ${formatRupiah(diskonNormalMemberTim2 + diskonKhususTim2)} total` : ''}`
                     : 'Diskon promo tidak aktif';
+            }
+            const memberDiskonWrap = document.getElementById('member-discount-allocation-wrap');
+            const memberDiskonInfo = document.getElementById('info-diskon-member-alokasi');
+            const memberDiskonTim1Radio = document.getElementById('in-diskon-member-tim1');
+            const memberDiskonTim2Radio = document.getElementById('in-diskon-member-tim2');
+            const memberDiskonRataRadio = document.getElementById('in-diskon-member-rata');
+            const bothMembers = isSparingPayment
+                && String(selectedStatus || '').trim().toLowerCase() === 'member'
+                && String(second.status || '').trim().toLowerCase() === 'member';
+            if (memberDiskonWrap) memberDiskonWrap.classList.toggle('hidden', !bothMembers);
+            if (bothMembers) {
+                if (memberDiskonTim1Radio) memberDiskonTim1Radio.checked = diskonMemberAlokasi === 'tim1';
+                if (memberDiskonTim2Radio) memberDiskonTim2Radio.checked = diskonMemberAlokasi === 'tim2';
+                if (memberDiskonRataRadio) memberDiskonRataRadio.checked = diskonMemberAlokasi === 'rata';
+                if (memberDiskonInfo) {
+                    memberDiskonInfo.innerText = diskonMemberAlokasi === 'tim1'
+                        ? 'Diskon Member: Rp50.000/jam untuk Tim 1'
+                        : diskonMemberAlokasi === 'tim2'
+                            ? 'Diskon Member: Rp50.000/jam untuk Tim 2'
+                            : 'Diskon Member: Rp25.000/jam per tim';
+                }
             }
             const infoDiskonManual = document.getElementById('info-diskon-manual');
             if (infoDiskonManual) {
@@ -13583,6 +13661,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                     jenisPembayaran: isSparingPayment ? 'sparing' : 'internal',
                     diskonManual: Number(window.__pelunasanCalc?.diskonManual || 0),
                     diskonManualAlokasi: window.__pelunasanCalc?.diskonManualAlokasi || 'tim1',
+                    diskonMemberAlokasi: window.__pelunasanCalc?.diskonMemberAlokasi || 'rata',
                     diskonManualTim1: Number(window.__pelunasanCalc?.diskonManualTim1 || 0),
                     diskonManualTim2: isSparingPayment ? Number(window.__pelunasanCalc?.diskonManualTim2 || 0) : 0,
                     biayaTambahanTim1: tambahanTim1,
@@ -15097,9 +15176,13 @@ kaosKakiTerjual: jumlahKaosKaki,
             const m2 = String(status2).toLowerCase() === 'member';
             const sparingEdit = String(oldItem.jenisPembayaran || '').toLowerCase() === 'sparing';
             let totalDiskonTim1 = 0, totalDiskonTim2 = 0;
+            const diskonMemberAlokasiEdit = oldItem.diskonMemberAlokasi || 'rata';
             if(sparingEdit) {
-                if(m1 && m2) { totalDiskonTim1=25000*durasiEdit; totalDiskonTim2=25000*durasiEdit; }
-                else if(m1) totalDiskonTim1=50000*durasiEdit;
+                if(m1 && m2) {
+                    if(diskonMemberAlokasiEdit === 'tim1') totalDiskonTim1=50000*durasiEdit;
+                    else if(diskonMemberAlokasiEdit === 'tim2') totalDiskonTim2=50000*durasiEdit;
+                    else { totalDiskonTim1=25000*durasiEdit; totalDiskonTim2=25000*durasiEdit; }
+                } else if(m1) totalDiskonTim1=50000*durasiEdit;
                 else if(m2) totalDiskonTim2=50000*durasiEdit;
             } else if(m1) { totalDiskonTim1=50000*durasiEdit; }
             try {
@@ -15110,6 +15193,7 @@ kaosKakiTerjual: jumlahKaosKaki,
                     timNama2: String(oldItem.timNama2 || '').trim(),
                     status1,
                     status2: oldItem.timNama2 ? status2 : '',
+                    diskonMemberAlokasi: diskonMemberAlokasiEdit,
                     totalDiskonTim1,
                     totalDiskonTim2,
                     jumlah1: jml1,
@@ -18100,7 +18184,9 @@ kaosKakiTerjual: jumlahKaosKaki,
                     wa: item.wa || '',
                     tanggal: today,
                     jam: jam,
-                    status: item.status || 'Non-Member',
+                    // Status booking menjadi sumber utama, tetapi nama yang
+                    // terdaftar sebagai member tanpa jadwal tetap wajib diprioritaskan.
+                    status: resolveTeamMemberStatus(item.nama || '-', item.status || 'Non-Member'),
                     dp: Number(item.dp || 0),
                     bookingGroupId: item.bookingGroupId || '',
                     durasiBooking: Number(item.durasiBooking || 1),
@@ -18354,6 +18440,34 @@ return;
             }) || null;
         }
 
+        // Resolver status MEMBER lintas sumber.
+        // Member tanpa jadwal tetap disimpan di /memberTanpaJadwal, sehingga
+        // namanya tetap harus dikenali sebagai MEMBER ketika dipakai sebagai
+        // Tim 2/lawan sparing atau ketika booking dibuat dari Jadwal Hari Ini.
+        function isRegisteredMemberByName(nama) {
+            const target = String(nama || '').trim().toLowerCase();
+            if(!target) return false;
+
+            const tanpaJadwal = globalCache.memberTanpaJadwal || {};
+            const manualMember = Object.values(tanpaJadwal).some(item =>
+                item && String(item.nama || '').trim().toLowerCase() === target &&
+                String(item.status || 'Member').trim().toLowerCase() !== 'non member'
+            );
+            if(manualMember) return true;
+
+            return Object.values(globalCache.member || {}).some(perHari =>
+                Object.values(perHari || {}).some(cell =>
+                    cell && cell.nama &&
+                    String(cell.nama).trim().toLowerCase() === target &&
+                    String(cell.status || 'Member').trim().toLowerCase() !== 'non member'
+                )
+            );
+        }
+
+        function resolveTeamMemberStatus(nama, fallback='Non-Member') {
+            return isRegisteredMemberByName(nama) ? 'Member' : fallback;
+        }
+
         function getSparingTeamMemberStatus(nama, tanggal, jam) {
             const target = String(nama || '').trim().toLowerCase();
             if(!target) return 'Non-Member';
@@ -18367,7 +18481,19 @@ return;
                 return dt.date === tgl && dt.jam === jamKey &&
                     String(item.nama).trim().toLowerCase() === target;
             });
-            if(booking) return String(booking.status || 'Non-Member').toLowerCase() === 'member' ? 'Member' : 'Non-Member';
+            if(booking) {
+                // Member tanpa jadwal tetap harus tetap dihitung MEMBER walaupun
+                // record booking lama menyimpan status Non-Member.
+                return resolveTeamMemberStatus(
+                    booking.nama,
+                    String(booking.status || 'Non-Member').toLowerCase() === 'member'
+                        ? 'Member'
+                        : 'Non-Member'
+                );
+            }
+
+            // Jika tidak ada booking, cek member reguler maupun member tanpa jadwal tetap.
+            if(isRegisteredMemberByName(nama)) return 'Member';
 
             // Jika tidak ada booking, cek jadwal member reguler.
             const hariNama = getNamaHari(tgl);
@@ -20437,8 +20563,16 @@ return;
                     const m2 = isRegisteredMember(nama2);
                     status1 = m1 ? 'Member' : 'Non-Member';
                     status2 = m2 ? 'Member' : 'Non-Member';
-                    if (m1 && m2) { member1 = 25000 * durasiDiskon; member2 = 25000 * durasiDiskon; }
-                    else if (m1) { member1 = 50000 * durasiDiskon; member2 = 0; }
+                    const alokasiMember = data.diskonMemberAlokasi || 'rata';
+                    if (m1 && m2) {
+                        if (alokasiMember === 'tim1') {
+                            member1 = 50000 * durasiDiskon; member2 = 0;
+                        } else if (alokasiMember === 'tim2') {
+                            member1 = 0; member2 = 50000 * durasiDiskon;
+                        } else {
+                            member1 = 25000 * durasiDiskon; member2 = 25000 * durasiDiskon;
+                        }
+                    } else if (m1) { member1 = 50000 * durasiDiskon; member2 = 0; }
                     else if (m2) { member1 = 0; member2 = 50000 * durasiDiskon; }
                     else { member1 = 0; member2 = 0; }
                 }
@@ -21136,6 +21270,10 @@ return;
     return ['is-info','i','Informasi'];
   }
   function openDialog(msg, mode, resolve, initialValue=''){ 
+    // Pastikan hanya ada satu dialog aktif.
+    if(root.classList.contains('is-open')){
+      close(mode === 'confirm' ? false : (mode === 'prompt' ? null : true));
+    }
     const c=classify(msg);
     card.className='modern-dialog-card '+c[0]+(mode==='confirm'?' is-confirm':'');
     icon.textContent=mode==='confirm'?'?':c[1];
@@ -21175,6 +21313,9 @@ return;
   // Replace visual presentation while retaining every existing alert()/confirm() call.
   window.alert=function(msg){openDialog(msg,'alert');};
   window.appConfirm=function(msg){return new Promise(resolve=>openDialog(msg,'confirm',resolve));};
+  // Semua confirm() diarahkan ke popup custom agar popup bawaan browser/HP
+  // tidak muncul bersamaan dan membuat tombol seolah tidak berfungsi.
+  window.confirm=function(msg){return window.appConfirm(msg);};
   window.appPrompt=function(msg, initialValue='', title='Input'){return new Promise(resolve=>{ openDialog(msg,'prompt',resolve,initialValue); if(title) document.querySelector('#modern-dialog-root .modern-dialog-title').textContent=title; });};
   root.querySelector('.modern-dialog-backdrop').addEventListener('click',()=>{if(confirmResolver) close(false); else if(promptResolver) close(null); else close(true);});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&root.classList.contains('is-open')) close(confirmResolver ? false : (promptResolver ? null : false));});
@@ -27706,7 +27847,7 @@ window.dailyReportSaveFile=function(dataUrl,fileName){if(!isIOS()){const a=docum
   });
 
   document.addEventListener('change',function(e){
-    if(['in-tgl','in-tim','in-jenis-pembayaran','in-status-2'].includes(e.target?.id)){
+    if(['in-tgl','in-tim','in-jenis-pembayaran','in-status-2','in-diskon-member-tim1','in-diskon-member-tim2','in-diskon-member-rata'].includes(e.target?.id)){
       setTimeout(window.updateCustomerTagihanButton,50);
     }
   });
