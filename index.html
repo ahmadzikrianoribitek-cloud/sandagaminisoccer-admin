@@ -10348,6 +10348,7 @@ body > header h1{
 <div class="w-full" id="page-jadwal">
 <section class="glass-panel home-dashboard p-3 sm:p-6 rounded-2xl today-schedule-modern" id="today-schedule-panel">
 <div class="today-schedule-head">
+<button type="button" class="today-date-picker-btn" onclick="bukaPemilihTanggalJadwalHariIni()" title="Pilih tanggal jadwal" aria-label="Pilih tanggal jadwal"><span class="today-date-picker-icon">📅</span><span id="today-schedule-selected-date">--/--/----</span></button>
 <div class="today-title-wrap">
 <span class="today-icon">📅</span>
 <span class="today-date-badge" id="today-schedule-date"></span>
@@ -11373,7 +11374,7 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 </div>
 <div class="masuk-field-card" data-control="in-tim" aria-label="Pilih tim">
   <div class="masuk-field-value"><span id="in-tim-display">Pilih tim</span><span class="masuk-field-icon">⌄</span></div>
-  <select class="masuk-native-control" id="in-tim" onchange="updateJamMainMasuk()" required="">
+  <select class="masuk-native-control" id="in-tim" onchange="if(typeof resetStatusManualFlags==='function') resetStatusManualFlags(); updateJamMainMasuk()" required="">
     <option value="">-- Pilih Tanggal Terlebih Dahulu --</option>
   </select>
 </div>
@@ -11392,7 +11393,7 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 </div>
 <div class="masuk-field-card" data-control="in-jenis-pembayaran" aria-label="Jenis pembayaran">
   <div class="masuk-field-value"><span id="in-jenis-pembayaran-display">JUMLAH TIM BAYAR</span><span class="masuk-field-icon">⌄</span></div>
-  <select class="masuk-native-control" id="in-jenis-pembayaran" onchange="hitungOtomatisBiaya()">
+  <select class="masuk-native-control" id="in-jenis-pembayaran" onchange="if(typeof resetStatusManualFlags==='function') resetStatusManualFlags(); hitungOtomatisBiaya()">
     <option value="internal">🏠 Tim Internal · 1 Tim Bayar</option>
     <option value="sparing">⚽ Sparing · 2 Tim Bayar</option>
   </select>
@@ -11490,6 +11491,9 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 uang-masuk-payment-wrap">
 <div class="p-3 rounded-xl border border-emerald-500/40 space-y-2 bg-white/30 uang-masuk-payment-card">
 <label id="label-pembayaran-tim-1" class="block text-xs font-black text-emerald-950">Pembayaran Tim 1</label>
+<select class="w-full p-2 rounded text-sm glass-input font-bold" id="in-status-1" onchange="this.dataset.manual='1'; hitungOtomatisBiaya()">
+<option value="Non-Member">Non-Member</option><option value="Member">Member</option>
+</select>
 <input class="w-full p-2 rounded text-sm glass-input font-bold" id="in-jumlah-1" placeholder="Nominal pembayaran sekarang (Rp)" type="text" inputmode="numeric" oninput="formatNominalInput(this)"/>
 <div class="grid grid-cols-2 gap-2"><div><label class="block text-[10px] font-black text-emerald-950 mb-1">DP Manual (Rp)</label><input class="w-full p-2 rounded text-sm glass-input font-bold" id="in-dp-1" min="0" type="text" inputmode="numeric" oninput="formatNominalInput(this)" placeholder="Jika sudah DP"/></div><div><label class="block text-[10px] font-black text-emerald-950 mb-1">Tanggal DP</label><input class="w-full p-2 rounded text-sm glass-input font-bold" id="in-tgl-dp-1" type="date"/></div></div>
 <div class="uang-masuk-method-custom" data-method="1">
@@ -11525,7 +11529,7 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
   <span class="text-[10px] font-bold text-slate-600">Belum bayar? Simpan nama Tim 2 dulu agar tidak perlu mengetik ulang.</span>
   <button type="button" id="btn-simpan-nama-tim-2" onclick="simpanNamaTim2Sementara()" class="shrink-0 bg-blue-700 hover:bg-blue-800 text-white px-3 py-2 rounded-lg text-[10px] font-black shadow">💾 Simpan Nama</button>
 </div>
-<select class="w-full p-2 rounded text-sm glass-input font-bold" id="in-status-2" onchange="hitungOtomatisBiaya()">
+<select class="w-full p-2 rounded text-sm glass-input font-bold" id="in-status-2" onchange="this.dataset.manual='1'; hitungOtomatisBiaya()">
 <option value="Non-Member">Non-Member</option><option value="Member">Member</option>
 </select>
 <input class="w-full p-2 rounded text-sm glass-input font-bold" id="in-jumlah-2" placeholder="Nominal pembayaran sekarang (Rp)" type="text" inputmode="numeric" oninput="formatNominalInput(this)"/>
@@ -12743,6 +12747,17 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             }
         };
 
+        // Reset penanda "diubah manual oleh admin" pada status Tim 1 / Tim 2.
+        // Dipanggil setiap kali admin membuka jadwal baru, mengganti tim,
+        // atau mengganti jenis pembayaran, supaya status kembali mengikuti
+        // perhitungan otomatis sampai admin memilih sendiri lagi.
+        window.resetStatusManualFlags = function(){
+            const s1 = document.getElementById('in-status-1');
+            if(s1) s1.dataset.manual = '';
+            const s2 = document.getElementById('in-status-2');
+            if(s2) s2.dataset.manual = '';
+        };
+
         window.hitungOtomatisBiaya = () => {
             const selectTim = document.getElementById('in-tim');
             const selectedOption = selectTim?.options[selectTim.selectedIndex];
@@ -12781,6 +12796,13 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 ? (document.getElementById('in-keterangan-manual')?.value || 'Pemasukan Manual')
                 : (selectedOption?.value || '');
             let selectedStatus = isManual ? 'Non-Member' : (selectedOption?.getAttribute('data-status') || 'Non-Member');
+            // Jika admin sudah memilih status Tim 1 secara manual di popup,
+            // pilihan itu yang dipakai, bukan hasil deteksi otomatis.
+            const status1FieldEl = document.getElementById('in-status-1');
+            const status1Overridden = !isManual && status1FieldEl?.dataset.manual === '1';
+            if (status1Overridden) {
+                selectedStatus = status1FieldEl.value === 'Member' ? 'Member' : 'Non-Member';
+            }
             const jam = jamMainStr && jamMainStr !== '-' ? jamMainStr.substring(0, 5) : '';
             const nama1 = String(selectedName || '').replace(/\s*\(Booking\)$/i, '').trim();
 
@@ -12919,23 +12941,39 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                         if(!isRegisteredMember(n2)) statusTim2 = sa === a2 ? rawA : rawB;
                     }
 
+                    // Jika admin sudah mengubah status Tim 1/Tim 2 secara manual
+                    // di popup pembayaran, jangan timpa dengan hasil deteksi
+                    // otomatis di atas — pilihan admin yang menang.
+                    const status2FieldEl = document.getElementById('in-status-2');
+                    const status2Overridden = status2FieldEl?.dataset.manual === '1';
+                    if (status1Overridden) statusTim1 = selectedStatus;
+                    if (status2Overridden) statusTim2 = status2FieldEl.value === 'Member' ? 'Member' : 'Non-Member';
+
                     selectedStatus = statusTim1;
                     second.status = statusTim2;
                     const optStatus1 = document.getElementById('in-tim')?.selectedOptions?.[0];
-                    if(optStatus1) optStatus1.setAttribute('data-status', statusTim1);
+                    if(optStatus1 && !status1Overridden) optStatus1.setAttribute('data-status', statusTim1);
                 } catch (e) {
                     second.status = 'Non-Member';
                 }
             } else {
-                second.status = document.getElementById('in-status-2')?.value || 'Non-Member';
+                const status2FieldFallback = document.getElementById('in-status-2');
+                second.status = status2FieldFallback?.value || 'Non-Member';
             }
 
-            // Sinkronkan field Tim 2 supaya tampilan form juga menunjukkan status yang dipakai kalkulator.
+            // Sinkronkan tampilan dropdown status Tim 1 & Tim 2 supaya sesuai
+            // dengan status yang benar-benar dipakai kalkulator. Dropdown yang
+            // sudah diubah manual oleh admin TIDAK ditimpa balik.
+            const status1Field = document.getElementById('in-status-1');
+            if (status1Field && status1Field.dataset.manual !== '1') {
+                status1Field.value = String(selectedStatus || 'Non-Member').toLowerCase() === 'member' ? 'Member' : 'Non-Member';
+            }
             const status2Field = document.getElementById('in-status-2');
-            if (isSparingPayment && status2Field) {
+            if (isSparingPayment && status2Field && status2Field.dataset.manual !== '1') {
                 status2Field.value = String(second.status || 'Non-Member').toLowerCase() === 'member' ? 'Member' : 'Non-Member';
             }
-            // Status Tim 1/Tim 2 sudah ditetapkan oleh resolver Sparing di atas.
+            // Status Tim 1/Tim 2 sudah ditetapkan oleh resolver Sparing di atas,
+            // kecuali admin memilihnya sendiri secara manual.
 
             const timNama2 = isSparingPayment ? String(second.nama || '').trim() : '';
 
@@ -16589,6 +16627,11 @@ kaosKakiTerjual: jumlahKaosKaki,
             const selectTim = document.getElementById('in-tim');
             if(!tglInput || !selectTim) return;
 
+            // Jadwal baru dibuka: lupakan status manual dari transaksi
+            // sebelumnya agar status Tim 1 & Tim 2 kembali mengikuti
+            // perhitungan otomatis, sampai admin memilih sendiri lagi.
+            if(typeof window.resetStatusManualFlags === 'function') window.resetStatusManualFlags();
+
             tglInput.value = tgl;
             updateDropdownTimMasuk();
 
@@ -18122,12 +18165,17 @@ kaosKakiTerjual: jumlahKaosKaki,
             const dateEl = document.getElementById('today-schedule-date');
             if(!listEl || !dateEl) return;
 
-            const today = getLocalDateString();
+            const systemToday = getLocalDateString();
+            if(!window.__todayScheduleSelectedDate) window.__todayScheduleSelectedDate = systemToday;
+            const today = window.__todayScheduleSelectedDate;
             const dataAwalSelesai = globalCache.__initialMemberLoaded && globalCache.__initialBookingLoaded;
             const koneksiMasihLambat = !!globalCache.__initialLoadingTimedOut;
             const todayDate = new Date(today + 'T00:00:00');
             const hariNama = getNamaHari(today);
-            dateEl.textContent = todayDate.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const selectedDateText = todayDate.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            dateEl.textContent = selectedDateText;
+            const selectedDateBtn = document.getElementById('today-schedule-selected-date');
+            if(selectedDateBtn) selectedDateBtn.textContent = selectedDateText;
 
             // Aplikasi boleh dibuka setelah batas fallback agar tidak terkunci terlalu lama,
             // tetapi data yang belum selesai TIDAK boleh diterjemahkan sebagai jadwal kosong.
@@ -30292,6 +30340,145 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 }
 </style>
+
+<style id="jadwal-custom-date-picker-v1">
+#page-jadwal #today-schedule-panel .today-schedule-head-actions{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:7px!important;width:auto!important;min-width:0!important}
+#page-jadwal #today-schedule-panel .today-date-picker-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;min-width:118px!important;height:40px!important;padding:0 10px!important;border:1.5px solid rgba(255,255,255,.78)!important;border-radius:12px!important;background:rgba(255,255,255,.78)!important;color:#065f46!important;font-size:10px!important;font-weight:950!important;line-height:1!important;box-shadow:0 5px 14px rgba(15,23,42,.13),inset 0 1px 0 rgba(255,255,255,.8)!important;cursor:pointer!important;white-space:nowrap!important}
+#page-jadwal #today-schedule-panel .today-date-picker-btn:active{transform:scale(.96)}
+#page-jadwal #today-schedule-panel .today-date-picker-icon{font-size:15px!important}
+#today-schedule-date-modal{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(15,23,42,.48);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.jadwal-date-card{width:min(100%,360px);max-height:92vh;overflow:auto;padding:16px;border:1px solid rgba(255,255,255,.78);border-radius:22px;background:rgba(255,255,255,.96);box-shadow:0 25px 70px rgba(15,23,42,.28);animation:jadwalDateIn .2s ease-out}
+.jadwal-date-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.jadwal-date-title{margin:0;color:#0f172a;font-size:14px;font-weight:950}.jadwal-date-close{width:34px;height:34px;border:0;border-radius:10px;background:#f1f5f9;color:#475569;font-size:18px;font-weight:900;cursor:pointer}
+.jadwal-date-monthbar{display:grid;grid-template-columns:38px 1fr 38px;align-items:center;gap:7px;margin-bottom:10px}.jadwal-date-nav{width:38px;height:38px;border:1px solid #dbeafe;border-radius:11px;background:#eff6ff;color:#1e40af;font-size:18px;font-weight:950;cursor:pointer}.jadwal-date-month{text-align:center;color:#0f172a;font-size:13px;font-weight:950;text-transform:capitalize}
+.jadwal-date-weekdays,.jadwal-date-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}.jadwal-date-weekdays{margin-bottom:5px}.jadwal-date-weekdays span{text-align:center;color:#64748b;font-size:8px;font-weight:900}.jadwal-day{min-height:39px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#0f172a;font-size:10px;font-weight:900;cursor:pointer}.jadwal-day:hover{background:#eff6ff;border-color:#93c5fd}.jadwal-day.is-selected{background:#047857;border-color:#047857;color:#fff;box-shadow:0 5px 12px rgba(5,150,105,.22)}.jadwal-day.is-today:not(.is-selected){border-color:#10b981;box-shadow:inset 0 0 0 1px rgba(16,185,129,.18)}.jadwal-day.is-empty{border:0;background:transparent;cursor:default}.jadwal-date-footer{margin-top:11px;padding-top:10px;border-top:1px solid #e2e8f0;text-align:center;color:#64748b;font-size:9px;font-weight:800}
+@keyframes jadwalDateIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+@media(max-width:640px){#page-jadwal #today-schedule-panel .today-date-picker-btn{min-width:100px!important;height:36px!important;padding:0 7px!important;font-size:8px!important;border-radius:10px!important}#page-jadwal #today-schedule-panel .today-date-picker-icon{font-size:13px!important}#page-jadwal #today-schedule-panel .today-history-btn{width:40px!important;min-width:40px!important;max-width:40px!important;height:40px!important;min-height:40px!important;max-height:40px!important}#today-schedule-date-modal{padding:12px}.jadwal-date-card{padding:13px;border-radius:19px}.jadwal-day{min-height:37px;font-size:9px}}
+</style>
+<script id="jadwal-custom-date-picker-v1">
+(function(){
+const MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'],WEEK=['Sen','Sel','Rab','Kam','Jum','Sab','Min'];
+const key=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const parse=k=>{const [y,m,d]=String(k).split('-').map(Number);return new Date(y,m-1,d)};
+let cal=new Date();
+window.bukaPemilihTanggalJadwalHariIni=()=>{const k=window.__todayScheduleSelectedDate||(typeof getLocalDateString==='function'?getLocalDateString():key(new Date()));window.__todayScheduleSelectedDate=k;cal=parse(k);render()};
+window.tutupPemilihTanggalJadwalHariIni=()=>document.getElementById('today-schedule-date-modal')?.remove();
+window.ubahBulanPemilihTanggalJadwal=n=>{cal=new Date(cal.getFullYear(),cal.getMonth()+Number(n),1);render()};
+window.pilihTanggalJadwalHariIni=k=>{window.__todayScheduleSelectedDate=k;tutupPemilihTanggalJadwalHariIni();if(typeof window.renderTodaySchedule==='function')window.renderTodaySchedule()};
+function render(){document.getElementById('today-schedule-date-modal')?.remove();const selected=window.__todayScheduleSelectedDate||(typeof getLocalDateString==='function'?getLocalDateString():key(new Date())),today=typeof getLocalDateString==='function'?getLocalDateString():key(new Date()),y=cal.getFullYear(),m=cal.getMonth(),first=new Date(y,m,1),last=new Date(y,m+1,0),off=(first.getDay()+6)%7;let g='';for(let i=0;i<off;i++)g+='<button type="button" class="jadwal-day is-empty" tabindex="-1"></button>';for(let d=1;d<=last.getDate();d++){const k=key(new Date(y,m,d)),c=['jadwal-day',k===selected?'is-selected':'',k===today?'is-today':''].filter(Boolean).join(' ');g+=`<button type="button" class="${c}" onclick="pilihTanggalJadwalHariIni('${k}')">${d}</button>`}for(let i=0;i<(7-(off+last.getDate())%7)%7;i++)g+='<button type="button" class="jadwal-day is-empty" tabindex="-1"></button>';const modal=document.createElement('div');modal.id='today-schedule-date-modal';modal.innerHTML=`<div class="jadwal-date-card" role="dialog" aria-modal="true"><div class="jadwal-date-head"><h3 class="jadwal-date-title">PILIH TANGGAL JADWAL</h3><button type="button" class="jadwal-date-close" onclick="tutupPemilihTanggalJadwalHariIni()">×</button></div><div class="jadwal-date-monthbar"><button type="button" class="jadwal-date-nav" onclick="ubahBulanPemilihTanggalJadwal(-1)">‹</button><div class="jadwal-date-month">${MONTHS[m]} ${y}</div><button type="button" class="jadwal-date-nav" onclick="ubahBulanPemilihTanggalJadwal(1)">›</button></div><div class="jadwal-date-weekdays">${WEEK.map(x=>`<span>${x}</span>`).join('')}</div><div class="jadwal-date-grid">${g}</div><div class="jadwal-date-footer">Tanggal dipilih: <b>${parse(selected).toLocaleDateString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric'})}</b></div></div>`;modal.onclick=e=>{if(e.target===modal)tutupPemilihTanggalJadwalHariIni()};document.body.appendChild(modal)}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')tutupPemilihTanggalJadwalHariIni()});if(!window.__todayScheduleSelectedDate)window.__todayScheduleSelectedDate=typeof getLocalDateString==='function'?getLocalDateString():key(new Date());
+})();
+</script>
+
+
+<style id="jadwal-date-history-layout-final-v2">
+/* FINAL V2 — tanggal kiri, riwayat kanan, satu baris.
+   Keduanya mengikuti ukuran/tema tombol RIWAYAT. */
+#page-jadwal #today-schedule-panel > .today-schedule-head-actions{
+  position:absolute !important;
+  top:12px !important;
+  right:12px !important;
+  left:12px !important;
+  bottom:auto !important;
+  transform:none !important;
+  width:auto !important;
+  height:44px !important;
+  min-height:44px !important;
+  margin:0 !important;
+  padding:0 !important;
+  display:flex !important;
+  flex-direction:row !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  gap:8px !important;
+  z-index:99999 !important;
+  pointer-events:none !important;
+  box-sizing:border-box !important;
+}
+
+#page-jadwal #today-schedule-panel > .today-schedule-head-actions .today-date-picker-btn,
+#page-jadwal #today-schedule-panel > .today-schedule-head-actions .today-history-btn{
+  pointer-events:auto !important;
+  box-sizing:border-box !important;
+  flex:0 0 auto !important;
+  height:44px !important;
+  min-height:44px !important;
+  max-height:44px !important;
+  border:1.5px solid rgba(255,255,255,.82) !important;
+  border-radius:13px !important;
+  background:linear-gradient(145deg,#2563a8,#0f3d75) !important;
+  color:#fff !important;
+  box-shadow:0 5px 14px rgba(15,23,42,.25),inset 0 1px 2px rgba(255,255,255,.35) !important;
+  font-weight:950 !important;
+  line-height:1 !important;
+  white-space:nowrap !important;
+}
+
+/* Tanggal: lebar mengikuti isi, bukan memaksa lebar tombol RIWAYAT. */
+#page-jadwal #today-schedule-panel > .today-schedule-head-actions .today-date-picker-btn{
+  width:auto !important;
+  min-width:0 !important;
+  max-width:none !important;
+  margin:0 !important;
+  padding:0 12px !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:6px !important;
+  color:#fff !important;
+  font-size:10px !important;
+}
+#page-jadwal #today-schedule-panel .today-date-picker-icon{
+  font-size:14px !important;
+  line-height:1 !important;
+}
+
+/* Riwayat kembali persis ke posisi pojok kanan seperti sebelum tanggal ditambahkan. */
+#page-jadwal #today-schedule-panel > .today-schedule-head-actions .today-history-btn{
+  width:44px !important;
+  min-width:44px !important;
+  max-width:44px !important;
+  margin:0 !important;
+  padding:0 !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+#page-jadwal #today-schedule-panel > .today-schedule-head-actions .today-date-picker-btn:hover,
+#page-jadwal #today-schedule-panel > .today-schedule-head-actions .today-history-btn:hover{
+  filter:brightness(1.08) !important;
+}
+#page-jadwal #today-schedule-panel > .today-schedule-head-actions .today-date-picker-btn:active{
+  transform:scale(.96) !important;
+}
+
+@media(max-width:640px){
+  #page-jadwal #today-schedule-panel > .today-schedule-head-actions{
+    top:8px !important;
+    right:8px !important;
+    left:8px !important;
+    height:44px !important;
+    min-height:44px !important;
+  }
+  #page-jadwal #today-schedule-panel > .today-schedule-head-actions .today-date-picker-btn{
+    height:44px !important;
+    min-height:44px !important;
+    max-height:44px !important;
+    padding:0 10px !important;
+    font-size:9px !important;
+    border-radius:13px !important;
+  }
+  #page-jadwal #today-schedule-panel > .today-schedule-head-actions .today-history-btn{
+    width:44px !important;
+    min-width:44px !important;
+    max-width:44px !important;
+    height:44px !important;
+    min-height:44px !important;
+    max-height:44px !important;
+  }
+}
+</style>
+
 </body>
 
 <style id="FINAL_FIX_UANG_KELUAR_ONE_BIG_GLASS_CARD">
@@ -37947,6 +38134,8 @@ body:has(#modal-edit-booking) {
       'in-tambahan-waktu':'Tambahan Waktu',
       'in-jenis-pembayaran':'Jumlah Tim Bayar',
       'in-status-2':'Status Tim 2',
+      'edit-in-status1':'Status Tim 1',
+      'edit-in-status2':'Status Tim 2',
       'in-metode-1':'Metode Pembayaran Tim 1',
       'in-metode-1b':'Metode Kedua Tim 1',
       'in-metode-2':'Metode Pembayaran Tim 2',
@@ -38001,30 +38190,50 @@ body:has(#modal-edit-booking) {
     document.body.style.overflow='hidden';
   }
 
-  // Klik kartu field Uang Masuk: buka modal custom, bukan native select.
-  // Capture=true membuat handler ini berjalan sebelum listener lama yang
-  // memanggil showPicker()/click() pada kontrol transparan.
+  function isTargetArea(el){
+    const page=document.getElementById('page-masuk');
+    const editModal=document.getElementById('modal-edit-pemasukan');
+    return !!((page && page.contains(el)) || (editModal && editModal.contains(el)));
+  }
+
+  function interceptNativeSelect(e){
+    if(suppressNextClick) return;
+    if(!isTargetArea(e.target)) return;
+
+    let sel=e.target.closest?.('select');
+    const field=e.target.closest?.('.masuk-field-card');
+    if(!sel && field){
+      const id=field.getAttribute('data-control');
+      sel=id ? document.getElementById(id) : null;
+    }
+    if(!sel || sel.tagName!=='SELECT' || sel.disabled) return;
+
+    // Native picker dibuka pada pointerdown/touchstart, sebelum click.
+    // Hentikan sejak capture agar hanya popup custom yang tampil.
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    openDropdown(sel);
+  }
+
+  // Cegah popup SELECT bawaan Windows/HP sejak pointerdown.
+  document.addEventListener('pointerdown',interceptNativeSelect,true);
+  document.addEventListener('touchstart',interceptNativeSelect,{capture:true,passive:false});
+  document.addEventListener('mousedown',interceptNativeSelect,true);
+
+  // Click tetap dicegat sebagai pengaman tambahan.
   document.addEventListener('click',function(e){
     if(suppressNextClick){ suppressNextClick=false; return; }
-    const page=document.getElementById('page-masuk');
-    if(!page) return;
+    if(!isTargetArea(e.target)) return;
+    let sel=e.target.closest?.('select');
     const field=e.target.closest?.('.masuk-field-card');
-    if(field && page.contains(field)){
+    if(!sel && field){
       const id=field.getAttribute('data-control');
-      const sel=document.getElementById(id);
-      if(sel && sel.tagName==='SELECT'){
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        openDropdown(sel);
-        return;
-      }
+      sel=id ? document.getElementById(id) : null;
     }
-    // SELECT lain di Uang Masuk (metode pembayaran, status, jumlah kaos kaki, dll).
-    const sel=e.target.closest?.('select');
-    if(sel && page.contains(sel)){
+    if(sel && sel.tagName==='SELECT'){
       e.preventDefault();
       e.stopImmediatePropagation();
-      openDropdown(sel);
+      if(!overlay()?.classList.contains('is-open')) openDropdown(sel);
     }
   },true);
 
@@ -41759,42 +41968,24 @@ body > header .admin-global-header-brand-title{
 </style>
 <script id="desktop-riwayat-hard-fix-v2-script">
 (function(){
-  function syncRiwayatPosition(){
+  // DINONAKTIFKAN: skrip ini dulu memindahkan .today-schedule-head-actions
+  // keluar dari .today-schedule-head secara paksa (posisi absolute di
+  // pojok panel), sehingga tombol tanggal & riwayat "menyendiri keluar"
+  // dari baris header. Layout sekarang murni memakai flexbox pada
+  // #today-schedule-header-row-final-fix (lihat style di akhir file),
+  // jadi kedua tombol tetap berada di dalam baris header.
+  // Fungsi ini hanya memastikan elemen tidak "nyangkut" di luar header
+  // akibat pemindahan skrip lama pada sesi sebelumnya.
+  function ensureActionsInsideHeader(){
     const panel=document.getElementById('today-schedule-panel');
     const actions=document.querySelector('#page-jadwal .today-schedule-head-actions');
     const head=panel?.querySelector('.today-schedule-head');
     if(!panel || !actions || !head) return;
-
-    if(window.innerWidth >= 641){
-      /* Pindahkan secara fisik menjadi anak langsung panel desktop. */
-      if(actions.parentElement !== panel) panel.appendChild(actions);
-      panel.style.position='relative';
-      actions.style.position='absolute';
-      actions.style.top='12px';
-      actions.style.right='12px';
-      actions.style.left='auto';
-      actions.style.bottom='auto';
-      actions.style.transform='none';
-      actions.style.width='44px';
-      actions.style.height='44px';
-      actions.style.margin='0';
-      actions.style.padding='0';
-      actions.style.zIndex='99999';
-    }else{
-      /* Kembalikan ke header saat masuk mode HP agar layout HP tetap seperti semula. */
-      if(actions.parentElement !== head) head.appendChild(actions);
-      actions.removeAttribute('style');
-    }
+    if(actions.parentElement !== head) head.appendChild(actions);
+    actions.removeAttribute('style');
   }
-  function init(){
-    syncRiwayatPosition();
-    window.addEventListener('resize',syncRiwayatPosition,{passive:true});
-    const observer=new MutationObserver(syncRiwayatPosition);
-    const panel=document.getElementById('today-schedule-panel');
-    if(panel) observer.observe(panel,{childList:true,subtree:true});
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true});
-  else init();
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',ensureActionsInsideHeader,{once:true});
+  else ensureActionsInsideHeader();
 })();
 </script>
 
@@ -41850,6 +42041,135 @@ body > header .admin-global-header-brand-title{
   #page-daily-recap .glass-btn{
     min-width:0 !important;
     box-sizing:border-box !important;
+  }
+}
+</style>
+
+<style id="today-schedule-header-row-final-fix">
+/* =========================================================
+   PERAPIAN HEADER JADWAL HARI INI — FINAL
+   Tombol tanggal rata kiri header, tombol riwayat rata kanan
+   header, keduanya sejajar satu baris dengan judul di tengah.
+   Menggantikan seluruh aturan posisi absolute/pemindahan node
+   dari revisi-revisi sebelumnya (yang menyebabkan tombol
+   "menyendiri keluar" dari baris header). Berlaku untuk semua
+   ukuran layar.
+   ========================================================= */
+#page-jadwal #today-schedule-panel .today-schedule-head{
+  position: relative !important;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 6px !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 0 12px 0 !important;
+}
+
+#page-jadwal #today-schedule-panel .today-date-picker-btn{
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+  order: -1 !important;
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+  background: linear-gradient(145deg,#2563a8,#0f3d75) !important;
+  color: #fff !important;
+  border: 1.5px solid rgba(255,255,255,.82) !important;
+  box-shadow: 0 5px 14px rgba(15,23,42,.25), inset 0 1px 2px rgba(255,255,255,.35) !important;
+}
+#page-jadwal #today-schedule-panel .today-date-picker-btn:hover{
+  filter: brightness(1.08) !important;
+  transform: translateY(-1px) !important;
+}
+#page-jadwal #today-schedule-panel .today-date-picker-btn:active{
+  transform: scale(.96) !important;
+}
+
+#page-jadwal #today-schedule-panel .today-title-wrap{
+  position: static !important;
+  order: 0 !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0 !important;
+  margin: 0 !important;
+}
+
+#page-jadwal #today-schedule-panel .today-schedule-head-actions{
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+  order: 1 !important;
+  flex: 0 0 auto !important;
+  width: auto !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  z-index: 2 !important;
+}
+
+#page-jadwal #today-schedule-panel .today-history-btn{
+  position: relative !important;
+  inset: auto !important;
+  transform: none !important;
+  margin: 0 !important;
+}
+
+@media (max-width: 640px){
+  #page-jadwal #today-schedule-panel .today-schedule-head{
+    gap: 6px !important;
+  }
+  #page-jadwal #today-schedule-panel .today-date-picker-btn{
+    min-width: 0 !important;
+  }
+  #page-jadwal #today-schedule-panel .today-title-wrap h3{
+    font-size: 12px !important;
+  }
+}
+</style>
+
+<style id="today-schedule-list-center-remainder-desktop-final">
+/* =========================================================
+   JADWAL HARI INI — PERAPIAN KARTU KHUSUS DESKTOP
+   1 kartu  -> rata tengah
+   2 kartu  -> berjejer 2 (memenuhi baris)
+   3 kartu  -> 2 di atas, sisa 1 di bawah rata tengah
+   Kartu "SEMUA TAGIHAN SUDAH LUNAS" -> selebar penuh (mengikuti
+   lebar header), tetap rata tengah.
+   Hanya berlaku untuk desktop; tampilan HP tidak diubah.
+   ========================================================= */
+@media (min-width: 641px) {
+  #today-schedule-panel #today-schedule-list.today-schedule-list-modern {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  #today-schedule-panel #today-schedule-list.today-schedule-list-modern > .schedule-card {
+    flex: 0 1 calc(50% - 5px) !important;
+    max-width: calc(50% - 5px) !important;
+    min-width: 0 !important;
+    width: auto !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+  }
+
+  /* Kartu pemberitahuan lunas selalu penuh satu baris, rata tengah. */
+  #today-schedule-panel #today-schedule-list.today-schedule-list-modern > .today-all-paid-card {
+    flex: 0 1 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
   }
 }
 </style>
