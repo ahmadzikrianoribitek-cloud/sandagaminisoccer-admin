@@ -11516,6 +11516,7 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
     <button type="button" class="uang-masuk-method-option selected" data-value="Cash" onclick="selectUangMasukMethod(1,'Cash')"><span>💵</span><span>Cash</span></button>
     <button type="button" class="uang-masuk-method-option" data-value="QRIS" onclick="selectUangMasukMethod(1,'QRIS')"><span>▣</span><span>QRIS</span></button>
     <button type="button" class="uang-masuk-method-option" data-value="Transfer" onclick="selectUangMasukMethod(1,'Transfer')"><span>🏦</span><span>Transfer</span></button>
+    <button type="button" class="uang-masuk-method-option" data-value="Free" onclick="selectUangMasukMethod(1,'Free')"><span>🎁</span><span>Free / Gratis</span></button>
   </div>
   <select class="uang-masuk-method-native" id="in-metode-1" onchange="toggleFreePaymentInput(1)" aria-hidden="true" tabindex="-1">
     <option value="Cash">Cash</option>
@@ -11554,6 +11555,7 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
     <button type="button" class="uang-masuk-method-option selected" data-value="Cash" onclick="selectUangMasukMethod(2,'Cash')"><span>💵</span><span>Cash</span></button>
     <button type="button" class="uang-masuk-method-option" data-value="QRIS" onclick="selectUangMasukMethod(2,'QRIS')"><span>▣</span><span>QRIS</span></button>
     <button type="button" class="uang-masuk-method-option" data-value="Transfer" onclick="selectUangMasukMethod(2,'Transfer')"><span>🏦</span><span>Transfer</span></button>
+    <button type="button" class="uang-masuk-method-option" data-value="Free" onclick="selectUangMasukMethod(2,'Free')"><span>🎁</span><span>Free / Gratis</span></button>
   </div>
   <select class="uang-masuk-method-native" id="in-metode-2" onchange="toggleFreePaymentInput(2)" aria-hidden="true" tabindex="-1">
     <option value="Cash">Cash</option>
@@ -13768,7 +13770,9 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
         const UANG_MASUK_METHOD_META = {
             Cash:     { icon: '💵', label: 'Cash' },
             QRIS:     { icon: '▣',  label: 'QRIS' },
-            Transfer: { icon: '🏦', label: 'Transfer' }
+            Transfer: { icon: '🏦', label: 'Transfer' },
+            Free:     { icon: '🎁', label: 'Free / Gratis' },
+            'Belum Bayar': { icon: '⏳', label: 'Belum Bayar' }
         };
 
         window.closeUangMasukMethodDropdowns = function(exceptNo = null){
@@ -30730,6 +30734,239 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')tutupPemilihTanggalJ
 }
 </style>
 
+
+
+<!-- FINAL FIX: dropdown metode pembayaran dari Jadwal Hari Ini dibuat portal/fixed
+     agar tidak terpotong oleh overflow/stacking context modal. -->
+<style id="jadwal-uang-masuk-method-dropdown-final-fix">
+  #uang-masuk-method-portal {
+    position: fixed !important;
+    z-index: 2147483647 !important;
+    display: none;
+    min-width: 180px;
+    box-sizing: border-box;
+    padding: 5px;
+    border: 1px solid #dbeafe;
+    border-radius: 13px;
+    background: rgba(255,255,255,.99);
+    box-shadow: 0 16px 35px rgba(15,23,42,.20);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  #uang-masuk-method-portal.is-open {
+    display: block !important;
+  }
+  #uang-masuk-method-portal .uang-masuk-method-option {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: #172033;
+    font-size: 16px;
+    font-weight: 850;
+    text-align: left;
+    cursor: pointer;
+  }
+  #uang-masuk-method-portal .uang-masuk-method-option:hover,
+  #uang-masuk-method-portal .uang-masuk-method-option.selected {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+  #uang-masuk-method-portal .uang-masuk-method-option > span:first-child {
+    width: 27px;
+    text-align: center;
+    font-size: 15px;
+  }
+</style>
+<script id="jadwal-uang-masuk-method-dropdown-final-fix-script">
+(function(){
+  'use strict';
+
+  let activeNo = null;
+  let activeMenu = null;
+  let activeOwner = null;
+  let activeNextSibling = null;
+
+  function closePortal(){
+    if(!activeMenu) {
+      document.getElementById('uang-masuk-method-portal')?.classList.remove('is-open');
+      activeNo = null;
+      return;
+    }
+
+    const portal = document.getElementById('uang-masuk-method-portal');
+    if(portal) portal.classList.remove('is-open');
+
+    // Kembalikan menu ke posisi semula agar DOM tetap konsisten.
+    if(activeOwner && activeMenu.parentNode === document.body){
+      if(activeNextSibling && activeNextSibling.parentNode === activeOwner){
+        activeOwner.insertBefore(activeMenu, activeNextSibling);
+      } else {
+        activeOwner.appendChild(activeMenu);
+      }
+    }
+
+    activeMenu.classList.add('hidden');
+    activeMenu.style.cssText = '';
+    activeNo = null;
+    activeMenu = null;
+    activeOwner = null;
+    activeNextSibling = null;
+  }
+
+  function positionPortal(portal, trigger){
+    const r = trigger.getBoundingClientRect();
+    const margin = 10;
+    const gap = 6;
+    const width = Math.max(r.width, 180);
+    const maxWidth = Math.max(180, window.innerWidth - margin * 2);
+    const finalWidth = Math.min(width, maxWidth);
+
+    portal.style.width = finalWidth + 'px';
+
+    let left = r.left;
+    if(left + finalWidth > window.innerWidth - margin){
+      left = window.innerWidth - margin - finalWidth;
+    }
+    left = Math.max(margin, left);
+
+    // Utamakan tampil di bawah trigger; bila ruang bawah sempit,
+    // tampilkan di atas trigger.
+    const estimatedHeight = Math.min(190, portal.scrollHeight || 180);
+    const below = window.innerHeight - r.bottom;
+    const above = r.top;
+
+    let top;
+    if(below >= estimatedHeight + gap || below >= above){
+      top = r.bottom + gap;
+    } else {
+      top = Math.max(margin, r.top - estimatedHeight - gap);
+    }
+
+    portal.style.left = left + 'px';
+    portal.style.top = Math.max(margin, top) + 'px';
+  }
+
+  window.toggleUangMasukMethodDropdown = function(no){
+    const page = document.getElementById('page-masuk');
+    const owner = page?.querySelector(`.uang-masuk-method-custom[data-method="${no}"]`);
+    const menu = document.getElementById(`in-metode-menu-${no}`);
+    const trigger = document.getElementById(`in-metode-trigger-${no}`);
+
+    if(!owner || !menu || !trigger) return;
+
+    if(activeNo === no && activeMenu === menu){
+      closePortal();
+      trigger.setAttribute('aria-expanded','false');
+      return;
+    }
+
+    closePortal();
+
+    let portal = document.getElementById('uang-masuk-method-portal');
+    if(!portal){
+      portal = document.createElement('div');
+      portal.id = 'uang-masuk-method-portal';
+      portal.setAttribute('role','presentation');
+      document.body.appendChild(portal);
+    }
+
+    activeNo = no;
+    activeMenu = menu;
+    activeOwner = owner;
+    activeNextSibling = menu.nextSibling;
+
+    // Salin isi menu ke portal fixed agar tidak terpotong
+    // oleh #page-masuk yang memakai overflow-y:auto.
+    // PENTING: jangan memindahkan node asli dari menu. Jika node asli
+    // dipindahkan ke portal, setelah pilihan pertama menu menjadi kosong
+    // dan dropdown tidak bisa dibuka/diisi lagi pada pembukaan berikutnya.
+    portal.innerHTML = menu.innerHTML;
+    document.body.appendChild(portal);
+
+    portal.classList.add('is-open');
+    // Menu asli tetap utuh di tempatnya sebagai sumber state/selected.
+    menu.classList.add('hidden');
+
+    positionPortal(portal, trigger);
+    trigger.setAttribute('aria-expanded','true');
+
+    // Rebind selection secara event delegation pada portal.
+    portal.querySelectorAll('.uang-masuk-method-option').forEach(btn => {
+      btn.onclick = function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        const value = this.dataset.value || 'Cash';
+        if(typeof window.selectUangMasukMethod === 'function'){
+          window.selectUangMasukMethod(no, value);
+        } else {
+          const select = document.getElementById(`in-metode-${no}`);
+          if(select) {
+            select.value = value;
+            select.dispatchEvent(new Event('change', {bubbles:true}));
+          }
+        }
+        closePortal();
+        trigger.setAttribute('aria-expanded','false');
+      };
+    });
+  };
+
+  // Override close helper supaya selalu menutup portal juga.
+  const oldClose = window.closeUangMasukMethodDropdowns;
+  window.closeUangMasukMethodDropdowns = function(exceptNo = null){
+    if(exceptNo === null || String(activeNo) !== String(exceptNo)){
+      closePortal();
+    }
+    if(typeof oldClose === 'function') oldClose(exceptNo);
+  };
+
+  // Override select agar sinkronisasi label tetap berjalan walau menu sedang di body.
+  const oldSelect = window.selectUangMasukMethod;
+  window.selectUangMasukMethod = function(no, value){
+    const result = typeof oldSelect === 'function' ? oldSelect(no, value) : undefined;
+    const trigger = document.getElementById(`in-metode-trigger-${no}`);
+    if(trigger) trigger.setAttribute('aria-expanded','false');
+    if(activeNo === no) closePortal();
+    return result;
+  };
+
+  document.addEventListener('click', function(e){
+    if(activeNo === null) return;
+    const trigger = document.getElementById(`in-metode-trigger-${activeNo}`);
+    const portal = document.getElementById('uang-masuk-method-portal');
+    if(!trigger?.contains(e.target) && !portal?.contains(e.target)){
+      closePortal();
+    }
+  }, true);
+
+  window.addEventListener('resize', function(){
+    if(activeNo !== null){
+      const trigger = document.getElementById(`in-metode-trigger-${activeNo}`);
+      const portal = document.getElementById('uang-masuk-method-portal');
+      if(trigger && portal) positionPortal(portal, trigger);
+    }
+  }, {passive:true});
+
+  window.addEventListener('scroll', function(){
+    if(activeNo !== null){
+      const trigger = document.getElementById(`in-metode-trigger-${activeNo}`);
+      const portal = document.getElementById('uang-masuk-method-portal');
+      if(trigger && portal) positionPortal(portal, trigger);
+    }
+  }, {passive:true, capture:true});
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && activeNo !== null) closePortal();
+  });
+})();
+</script>
+
 </body>
 
 <style id="FINAL_FIX_UANG_KELUAR_ONE_BIG_GLASS_CARD">
@@ -42065,6 +42302,13 @@ body > header .admin-global-header-brand-title{
   function isInsideVisibleModal(target){
     if(!(target instanceof Element)) return false;
 
+    // Dropdown metode pembayaran Uang Masuk dibuat sebagai portal fixed
+    // di <body>. Portal ini tetap merupakan bagian dari popup yang sedang
+    // aktif. Jika dianggap berada di luar modal, handler pointerdown global
+    // akan memanggil preventDefault() dan klik QRIS/Transfer tidak pernah
+    // sampai ke tombol pilihannya.
+    if(target.closest('#uang-masuk-method-reliable-portal, #uang-masuk-method-portal')) return true;
+
     // Uang Masuk / Uang Keluar dipindahkan langsung ke <body>,
     // sehingga card modal-nya bukan anak backdrop.
     if(getActiveModalPages().some(page=>page.contains(target))) return true;
@@ -42798,3 +43042,207 @@ body > header .admin-global-header-brand-title{
   box-shadow: none !important;
 }
 </style>
+
+<!-- UANG MASUK PAYMENT METHOD: FINAL RELIABLE SELECTOR -->
+<style id="uang-masuk-method-reliable-final-css">
+#uang-masuk-method-reliable-portal{
+  position:fixed!important;
+  display:none!important;
+  z-index:2147483647!important;
+  box-sizing:border-box!important;
+  padding:5px!important;
+  border:1px solid #dbeafe!important;
+  border-radius:13px!important;
+  background:rgba(255,255,255,.99)!important;
+  box-shadow:0 16px 35px rgba(15,23,42,.20)!important;
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
+}
+#uang-masuk-method-reliable-portal.is-open{display:block!important}
+#uang-masuk-method-reliable-portal .reliable-payment-option{
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  width:100%!important;
+  min-height:44px!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:10px!important;
+  padding:9px 10px!important;
+  margin:0!important;
+  border:0!important;
+  border-radius:9px!important;
+  background:transparent!important;
+  color:#172033!important;
+  font:900 16px/1.2 inherit!important;
+  text-align:left!important;
+  cursor:pointer!important;
+  pointer-events:auto!important;
+  user-select:none!important;
+  -webkit-tap-highlight-color:transparent!important;
+}
+#uang-masuk-method-reliable-portal .reliable-payment-option:hover,
+#uang-masuk-method-reliable-portal .reliable-payment-option:focus,
+#uang-masuk-method-reliable-portal .reliable-payment-option.selected{
+  background:#dbeafe!important;
+  color:#1e40af!important;
+  outline:none!important;
+}
+#uang-masuk-method-reliable-portal .reliable-payment-option .r-icon{
+  width:27px!important;
+  min-width:27px!important;
+  text-align:center!important;
+  font-size:15px!important;
+}
+</style>
+<script id="uang-masuk-method-reliable-final-script">
+(function(){
+  'use strict';
+
+  const META={
+    Cash:{icon:'💵',label:'Cash'},
+    QRIS:{icon:'▣',label:'QRIS'},
+    Transfer:{icon:'🏦',label:'Transfer'},
+    Free:{icon:'🎁',label:'Free / Gratis'},
+    'Belum Bayar':{icon:'⏳',label:'Belum Bayar'}
+  };
+
+  let activeNo=null;
+  let activeTrigger=null;
+
+  function getPortal(){
+    let p=document.getElementById('uang-masuk-method-reliable-portal');
+    if(!p){
+      p=document.createElement('div');
+      p.id='uang-masuk-method-reliable-portal';
+      p.setAttribute('role','listbox');
+      document.body.appendChild(p);
+    }
+    return p;
+  }
+
+  function close(){
+    const p=document.getElementById('uang-masuk-method-reliable-portal');
+    if(p){p.classList.remove('is-open');p.innerHTML='';}
+    if(activeTrigger) activeTrigger.setAttribute('aria-expanded','false');
+    activeNo=null;
+    activeTrigger=null;
+  }
+
+  function position(p,btn){
+    const r=btn.getBoundingClientRect();
+    const margin=10,gap=6;
+    const width=Math.min(Math.max(r.width,220),window.innerWidth-margin*2);
+    let left=Math.max(margin,Math.min(r.left,window.innerWidth-margin-width));
+    const rowH=44, count=4, height=10+rowH*count;
+    const below=window.innerHeight-r.bottom;
+    let top;
+    if(below>=height+gap || below>=r.top) top=r.bottom+gap;
+    else top=Math.max(margin,r.top-height-gap);
+    p.style.width=width+'px';
+    p.style.left=left+'px';
+    p.style.top=Math.max(margin,top)+'px';
+  }
+
+  function setMethod(no,value){
+    const select=document.getElementById('in-metode-'+no);
+    const trigger=document.getElementById('in-metode-trigger-'+no);
+    const label=document.getElementById('in-metode-label-'+no);
+    const icon=trigger?.querySelector('.uang-masuk-method-icon');
+    const meta=META[value]||META.Cash;
+
+    if(!select) return;
+    select.value=value;
+    if(label) label.textContent=meta.label;
+    if(icon) icon.textContent=meta.icon;
+
+    // Jalankan logika lama tanpa bergantung pada custom dropdown lama.
+    try{
+      if(typeof window.toggleFreePaymentInput==='function') window.toggleFreePaymentInput(no);
+    }catch(e){console.error('toggleFreePaymentInput:',e)}
+    try{
+      select.dispatchEvent(new Event('change',{bubbles:true}));
+    }catch(e){}
+    try{
+      if(typeof window.hitungOtomatisBiaya==='function') window.hitungOtomatisBiaya();
+    }catch(e){console.error('hitungOtomatisBiaya:',e)}
+
+    // Sinkronkan status selected pada menu asli untuk kompatibilitas.
+    const original=document.getElementById('in-metode-menu-'+no);
+    original?.querySelectorAll('.uang-masuk-method-option').forEach(b=>{
+      b.classList.toggle('selected',b.dataset.value===value);
+    });
+    close();
+  }
+
+  window.toggleUangMasukMethodDropdown=function(no){
+    const btn=document.getElementById('in-metode-trigger-'+no);
+    const select=document.getElementById('in-metode-'+no);
+    if(!btn||!select) return;
+
+    if(activeNo===no){close();return;}
+    close();
+
+    const p=getPortal();
+    const current=select.value||'Cash';
+    const values=['Cash','QRIS','Transfer','Free'];
+    p.innerHTML=values.map(v=>{
+      const m=META[v];
+      return '<button type="button" class="reliable-payment-option'+(v===current?' selected':'')+'" data-value="'+v+'" role="option" aria-selected="'+(v===current?'true':'false')+'"><span class="r-icon">'+m.icon+'</span><span>'+m.label+'</span></button>';
+    }).join('');
+
+    p.querySelectorAll('.reliable-payment-option').forEach(option=>{
+      // Jangan membatalkan pointerdown. Pada beberapa browser/WebView,
+      // preventDefault() di pointerdown mencegah event click tercipta.
+      option.addEventListener('click',function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        setMethod(no,this.dataset.value||'Cash');
+      },true);
+    });
+
+    activeNo=no;
+    activeTrigger=btn;
+    p.classList.add('is-open');
+    position(p,btn);
+    btn.setAttribute('aria-expanded','true');
+  };
+
+  window.syncUangMasukMethodDropdown=function(no,value){
+    const safe=META[value]?value:'Cash';
+    const select=document.getElementById('in-metode-'+no);
+    if(select) select.value=safe;
+    const btn=document.getElementById('in-metode-trigger-'+no);
+    const label=document.getElementById('in-metode-label-'+no);
+    const icon=btn?.querySelector('.uang-masuk-method-icon');
+    const m=META[safe];
+    if(label) label.textContent=m.label;
+    if(icon) icon.textContent=m.icon;
+    document.getElementById('in-metode-menu-'+no)?.querySelectorAll('.uang-masuk-method-option').forEach(b=>b.classList.toggle('selected',b.dataset.value===safe));
+  };
+
+  // Tutup menu hanya setelah click selesai diproses oleh pilihan.
+  // Jangan gunakan capture=true di sini: listener capture pada document
+  // berjalan SEBELUM listener click pada tombol pilihan, sehingga portal
+  // terhapus dulu dan pilihan QRIS/Transfer tidak pernah menerima click.
+  document.addEventListener('click',function(e){
+    if(activeNo===null) return;
+    const p=document.getElementById('uang-masuk-method-reliable-portal');
+    const btn=activeTrigger;
+    if(!p?.contains(e.target) && !btn?.contains(e.target)) close();
+  });
+
+  window.addEventListener('resize',function(){
+    if(activeNo!==null){
+      const p=document.getElementById('uang-masuk-method-reliable-portal');
+      if(p&&activeTrigger) position(p,activeTrigger);
+    }
+  },{passive:true});
+  window.addEventListener('scroll',function(){
+    if(activeNo!==null){
+      const p=document.getElementById('uang-masuk-method-reliable-portal');
+      if(p&&activeTrigger) position(p,activeTrigger);
+    }
+  },{passive:true,capture:true});
+})();
+</script>
