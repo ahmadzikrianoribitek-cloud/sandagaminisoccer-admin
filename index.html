@@ -11518,7 +11518,7 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 </div>
 <label class="flex items-center gap-2 text-[10px] font-black text-emerald-900 cursor-pointer"><input id="in-campuran-1" type="checkbox" class="w-4 h-4" onchange="toggleMixedPayment(1)"> Bayar dengan 2 metode</label>
 <div id="in-campuran-box-1" class="hidden grid grid-cols-2 gap-2">
-  <input id="in-jumlah-1b" type="text" inputmode="numeric" oninput="formatNominalInput(this)" min="0" placeholder="Nominal metode 2 (Rp)" class="w-full p-2 rounded text-sm glass-input font-bold">
+  <input id="in-jumlah-1b" type="text" inputmode="numeric" oninput="formatNominalInput(this); if(typeof hitungOtomatisBiaya==='function') hitungOtomatisBiaya();" min="0" placeholder="Nominal metode 2 (Rp)" class="w-full p-2 rounded text-sm glass-input font-bold">
   <select id="in-metode-1b" class="w-full p-2 rounded text-sm glass-input font-bold"><option value="QRIS">QRIS</option><option value="Cash">Cash</option><option value="Transfer">Transfer</option></select>
 </div>
 </div>
@@ -11556,7 +11556,7 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 </div>
 <label class="flex items-center gap-2 text-[10px] font-black text-emerald-900 cursor-pointer"><input id="in-campuran-2" type="checkbox" class="w-4 h-4" onchange="toggleMixedPayment(2)"> Bayar dengan 2 metode</label>
 <div id="in-campuran-box-2" class="hidden grid grid-cols-2 gap-2">
-  <input id="in-jumlah-2b" type="text" inputmode="numeric" oninput="formatNominalInput(this)" min="0" placeholder="Nominal metode 2 (Rp)" class="w-full p-2 rounded text-sm glass-input font-bold">
+  <input id="in-jumlah-2b" type="text" inputmode="numeric" oninput="formatNominalInput(this); if(typeof hitungOtomatisBiaya==='function') hitungOtomatisBiaya();" min="0" placeholder="Nominal metode 2 (Rp)" class="w-full p-2 rounded text-sm glass-input font-bold">
   <select id="in-metode-2b" class="w-full p-2 rounded text-sm glass-input font-bold"><option value="QRIS">QRIS</option><option value="Cash">Cash</option><option value="Transfer">Transfer</option></select>
 </div>
 </div>
@@ -13305,8 +13305,19 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
 
             const modeInfo = document.getElementById('info-jenis-pembayaran');
             if (modeInfo) modeInfo.textContent = isSparingPayment ? 'Mode Sparing: Tim 1 dan Tim 2 membayar masing-masing.' : 'Mode Tim Internal: hanya 1 tim yang membayar seluruh tagihan.';
-            if (pay1 && document.activeElement !== pay1 && document.getElementById('in-metode-1')?.value !== 'Free' && document.getElementById('in-metode-1')?.value !== 'Belum Bayar') pay1.value = sisa1;
-            if (pay2 && document.activeElement !== pay2 && document.getElementById('in-metode-2')?.value !== 'Free' && document.getElementById('in-metode-2')?.value !== 'Belum Bayar') pay2.value = sisa2;
+            if (pay1 && document.activeElement !== pay1 && document.getElementById('in-metode-1')?.value !== 'Free' && document.getElementById('in-metode-1')?.value !== 'Belum Bayar') {
+                // Jika Tim 1 bayar dengan 2 metode, nominal metode pertama (Cash)
+                // otomatis dikurangi nominal metode kedua, supaya totalnya pas
+                // dengan sisa tagihan (tidak lagi memaksa nominal lama/penuh).
+                const campur1Auto = !!document.getElementById('in-campuran-1')?.checked;
+                const jml1bAuto = campur1Auto ? parseNominalInputValue(document.getElementById('in-jumlah-1b')?.value || '') : 0;
+                pay1.value = Math.max(0, sisa1 - jml1bAuto);
+            }
+            if (pay2 && document.activeElement !== pay2 && document.getElementById('in-metode-2')?.value !== 'Free' && document.getElementById('in-metode-2')?.value !== 'Belum Bayar') {
+                const campur2Auto = !!document.getElementById('in-campuran-2')?.checked;
+                const jml2bAuto = campur2Auto ? parseNominalInputValue(document.getElementById('in-jumlah-2b')?.value || '') : 0;
+                pay2.value = Math.max(0, sisa2 - jml2bAuto);
+            }
         };
 
         window.closeSuccessPopupAndReturnToJadwal = () => {
@@ -13732,7 +13743,9 @@ kaosKakiTerjual: jumlahKaosKaki,
                         const dibayarSekarang = parseNominalInputValue(document.getElementById("in-jumlah-1")?.value || "");
                         return dpBayar + dibayarSekarang >= totalTagihanPenyesuaian;
                     })(),
-                    jumlah: totalTim1 + (campur1 ? jml1b : 0) + jml2 + (isSparingPayment && campur2 ? jml2b : 0) + totalKaosKaki,
+                    // Catatan: totalTim1 = jml1 + jml1b (lihat definisi di atas),
+                    // jadi jml1b TIDAK ditambahkan lagi di sini agar tidak dobel hitung.
+                    jumlah: totalTim1 + jml2 + (isSparingPayment && campur2 ? jml2b : 0) + totalKaosKaki,
                     tgl: tgl
                 };
             } else if(type === 'minuman') {
@@ -20592,26 +20605,37 @@ return;
                 if (isMemberStatus(status2)) member2 = 50000 * durasiDiskon;
                 else member2 = 0;
 
-                // SPARING lama diperbaiki saat ditampilkan: distribusi diskon ditentukan
-                // ulang dari nama Tim 1/Tim 2 dan data Member, bukan dari nominal lama.
+                // SPARING: gunakan status Tim 1/Tim 2 yang BENAR-BENAR tersimpan pada
+                // transaksi ini (termasuk saat admin mengubah status secara manual),
+                // supaya alokasi "dibagi rata"/"Tim 1"/"Tim 2" yang dipilih admin selalu
+                // sesuai keterangan di Daily Recap. Hanya untuk data SPARING lama yang
+                // belum punya status1/status2 tersimpan, cek ulang dari nama tim & data
+                // Member saat ini sebagai perbaikan otomatis.
                 if (String(data.jenisPembayaran || '').toLowerCase() === 'sparing') {
-                    const nama1 = String(data.timNamaBersih || '').trim();
-                    const nama2 = String(data.timNama2 || '').trim();
-                    const isRegisteredMember = (teamName) => {
-                        const target = String(teamName || '').trim().toLowerCase();
-                        if(!target) return false;
-                        return Object.values(globalCache.member || {}).some(perHari =>
-                            Object.values(perHari || {}).some(cell => {
-                                if(!cell || cell.type === 'off' || !cell.nama) return false;
-                                return String(cell.nama).trim().toLowerCase() === target && isMemberActiveOnDate(cell, filterTgl);
-                            })
-                        );
-                    };
-                    const m1 = isRegisteredMember(nama1);
-                    const m2 = isRegisteredMember(nama2);
-                    status1 = m1 ? 'Member' : 'Non-Member';
-                    status2 = m2 ? 'Member' : 'Non-Member';
                     const alokasiMember = data.diskonMemberAlokasi || 'rata';
+                    const punyaStatusTersimpan = String(data.status1 || '').trim() !== '' || String(data.status2 || '').trim() !== '';
+                    let m1, m2;
+                    if (punyaStatusTersimpan) {
+                        m1 = isMemberStatus(status1);
+                        m2 = isMemberStatus(status2);
+                    } else {
+                        const nama1 = String(data.timNamaBersih || '').trim();
+                        const nama2 = String(data.timNama2 || '').trim();
+                        const isRegisteredMember = (teamName) => {
+                            const target = String(teamName || '').trim().toLowerCase();
+                            if(!target) return false;
+                            return Object.values(globalCache.member || {}).some(perHari =>
+                                Object.values(perHari || {}).some(cell => {
+                                    if(!cell || cell.type === 'off' || !cell.nama) return false;
+                                    return String(cell.nama).trim().toLowerCase() === target && isMemberActiveOnDate(cell, filterTgl);
+                                })
+                            );
+                        };
+                        m1 = isRegisteredMember(nama1);
+                        m2 = isRegisteredMember(nama2);
+                        status1 = m1 ? 'Member' : 'Non-Member';
+                        status2 = m2 ? 'Member' : 'Non-Member';
+                    }
                     if (m1 && m2) {
                         if (alokasiMember === 'tim1') {
                             member1 = 50000 * durasiDiskon; member2 = 0;
@@ -42074,9 +42098,14 @@ body > header .admin-global-header-brand-title{
   order: -1 !important;
   flex: 0 0 auto !important;
   margin: 0 !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+  box-sizing: border-box !important;
   background: linear-gradient(145deg,#2563a8,#0f3d75) !important;
   color: #fff !important;
   border: 1.5px solid rgba(255,255,255,.82) !important;
+  border-radius: 13px !important;
   box-shadow: 0 5px 14px rgba(15,23,42,.25), inset 0 1px 2px rgba(255,255,255,.35) !important;
 }
 #page-jadwal #today-schedule-panel .today-date-picker-btn:hover{
@@ -42128,6 +42157,9 @@ body > header .admin-global-header-brand-title{
   }
   #page-jadwal #today-schedule-panel .today-date-picker-btn{
     min-width: 0 !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
   }
   #page-jadwal #today-schedule-panel .today-title-wrap h3{
     font-size: 12px !important;
