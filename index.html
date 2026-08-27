@@ -30967,6 +30967,147 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')tutupPemilihTanggalJ
 })();
 </script>
 
+
+<style id="minuman-mobile-exact-jadwal-width-final">
+/* =========================================================
+   FINAL — MINUMAN KHUSUS HP
+   1. Tombol tanggal + riwayat memakai geometri Jadwal Hari Ini.
+   2. Isi Minuman memakai garis kiri/kanan yang sama dengan
+      header global dan quick bottom dock.
+   3. Tidak berlaku untuk desktop.
+   ========================================================= */
+@media (max-width:640px){
+
+  /* Halaman Minuman mengikuti lebar area aplikasi yang sama. */
+  body:has(#page-minuman:not(.hidden)) main,
+  body:has(#page-minuman:not(.hidden)) #page-minuman{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+  }
+
+  /* Hilangkan inset/margin tambahan pada holder Minuman. */
+  body:has(#page-minuman:not(.hidden)) #page-minuman.sub-menu-modern{
+    margin:0 !important;
+    padding:0 !important;
+    border:0 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    overflow:visible !important;
+  }
+
+  /* Kepala Minuman persis memakai ruang horizontal halaman Jadwal. */
+  #page-minuman .minuman-schedule-head{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    height:44px !important;
+    min-height:44px !important;
+    margin:0 0 12px !important;
+    padding:0 !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    box-sizing:border-box !important;
+  }
+
+  /* Tanggal: ukuran, tinggi, radius dan posisi kiri sama dengan Jadwal. */
+  #page-minuman .minuman-date-picker-btn{
+    flex:0 0 auto !important;
+    width:auto !important;
+    height:44px !important;
+    min-height:44px !important;
+    max-height:44px !important;
+    margin:0 !important;
+    padding:0 10px !important;
+    box-sizing:border-box !important;
+    border-radius:13px !important;
+  }
+
+  /* Riwayat tetap tepat di ujung kanan seperti Jadwal Hari Ini. */
+  #page-minuman .minuman-schedule-head-actions{
+    flex:0 0 44px !important;
+    width:44px !important;
+    min-width:44px !important;
+    height:44px !important;
+    margin:0 !important;
+    padding:0 !important;
+  }
+  #page-minuman .minuman-history-btn{
+    width:44px !important;
+    min-width:44px !important;
+    height:44px !important;
+    min-height:44px !important;
+    margin:0 !important;
+    padding:0 !important;
+    box-sizing:border-box !important;
+    border-radius:13px !important;
+  }
+
+  /* Semua isi mengikuti satu garis kiri-kanan yang sama dengan header/dock. */
+  #page-minuman .minuman-sales-card,
+  #page-minuman .minuman-sales-card > form,
+  #page-minuman .minuman-grid,
+  #page-minuman .minuman-payment-select,
+  #page-minuman .minuman-sales-summary,
+  #page-minuman .minuman-action-row{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    margin-left:0 !important;
+    margin-right:0 !important;
+    box-sizing:border-box !important;
+  }
+
+  #page-minuman .minuman-sales-card,
+  #page-minuman .minuman-sales-card > form{
+    padding-left:0 !important;
+    padding-right:0 !important;
+  }
+}
+</style>
+
+<style id="final-mobile-jadwal-spacing-match-minuman-v2">
+/* =========================================================
+   FINAL — JADWAL HARI INI KHUSUS HP
+   Samakan jarak vertikal dengan halaman PENJUALAN MINUMAN.
+   Referensi Minuman: header global -> 14px -> kontrol tanggal -> 10px -> isi.
+   Desktop tidak disentuh. Tidak mengubah JS/ID/fungsi.
+   ========================================================= */
+@media (max-width: 640px) {
+  /* Jarak header global ke halaman: 14px, sama seperti Minuman. */
+  body:has(#page-jadwal:not(.hidden)) > header {
+    margin-bottom: 14px !important;
+  }
+
+  /* Jangan ada spacer/padding atas tambahan pada halaman Jadwal. */
+  body:has(#page-jadwal:not(.hidden)) #page-jadwal {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  /* Panel Jadwal tidak boleh menambah jarak di atas tombol tanggal.
+     Padding kiri/kanan/bawah tetap mengikuti desain yang sudah ada. */
+  body:has(#page-jadwal:not(.hidden)) #today-schedule-panel {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+  }
+
+  /* Tombol tanggal/riwayat -> isi jadwal = 10px, persis ritme Minuman HP. */
+  body:has(#page-jadwal:not(.hidden)) #today-schedule-panel .today-schedule-head {
+    margin-top: 0 !important;
+    margin-bottom: 10px !important;
+  }
+
+  /* Pastikan list tidak punya margin atas tersembunyi. */
+  body:has(#page-jadwal:not(.hidden)) #today-schedule-list {
+    margin-top: 0 !important;
+  }
+}
+</style>
+
 </body>
 
 <style id="FINAL_FIX_UANG_KELUAR_ONE_BIG_GLASS_CARD">
@@ -43246,3 +43387,170 @@ body > header .admin-global-header-brand-title{
   },{passive:true,capture:true});
 })();
 </script>
+
+
+<style id="minuman-mobile-exact-jadwal-width-final-v2">
+/* =========================================================
+   FINAL — MINUMAN KHUSUS HP
+   1. Tombol tanggal + riwayat memakai geometri Jadwal Hari Ini.
+   2. Isi Minuman memakai garis kiri/kanan yang sama dengan
+      header global dan quick bottom dock.
+   3. Tidak berlaku untuk desktop.
+   ========================================================= */
+@media (max-width:640px){
+
+  /* Halaman Minuman mengikuti lebar area aplikasi yang sama. */
+  body:has(#page-minuman:not(.hidden)) main,
+  body:has(#page-minuman:not(.hidden)) #page-minuman{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+  }
+
+  /* Hilangkan inset/margin tambahan pada holder Minuman. */
+  body:has(#page-minuman:not(.hidden)) #page-minuman.sub-menu-modern{
+    margin:0 !important;
+    padding:0 !important;
+    border:0 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    overflow:visible !important;
+  }
+
+  /* Kepala Minuman persis memakai ruang horizontal halaman Jadwal. */
+  #page-minuman .minuman-schedule-head{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    height:44px !important;
+    min-height:44px !important;
+    margin:0 0 12px !important;
+    padding:0 !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    box-sizing:border-box !important;
+  }
+
+  /* Tanggal: ukuran, tinggi, radius dan posisi kiri sama dengan Jadwal. */
+  #page-minuman .minuman-date-picker-btn{
+    flex:0 0 auto !important;
+    width:auto !important;
+    height:44px !important;
+    min-height:44px !important;
+    max-height:44px !important;
+    margin:0 !important;
+    padding:0 10px !important;
+    box-sizing:border-box !important;
+    border-radius:13px !important;
+  }
+
+  /* Riwayat tetap tepat di ujung kanan seperti Jadwal Hari Ini. */
+  #page-minuman .minuman-schedule-head-actions{
+    flex:0 0 44px !important;
+    width:44px !important;
+    min-width:44px !important;
+    height:44px !important;
+    margin:0 !important;
+    padding:0 !important;
+  }
+  #page-minuman .minuman-history-btn{
+    width:44px !important;
+    min-width:44px !important;
+    height:44px !important;
+    min-height:44px !important;
+    margin:0 !important;
+    padding:0 !important;
+    box-sizing:border-box !important;
+    border-radius:13px !important;
+  }
+
+  /* Semua isi mengikuti satu garis kiri-kanan yang sama dengan header/dock. */
+  #page-minuman .minuman-sales-card,
+  #page-minuman .minuman-sales-card > form,
+  #page-minuman .minuman-grid,
+  #page-minuman .minuman-payment-select,
+  #page-minuman .minuman-sales-summary,
+  #page-minuman .minuman-action-row{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    margin-left:0 !important;
+    margin-right:0 !important;
+    box-sizing:border-box !important;
+  }
+
+  #page-minuman .minuman-sales-card,
+  #page-minuman .minuman-sales-card > form{
+    padding-left:0 !important;
+    padding-right:0 !important;
+  }
+}
+</style>
+
+
+<style id="FINAL_JADWAL_HP_MATCH_MINUMAN_REAL_V4">
+/* =========================================================
+   V4 — JADWAL HP BENAR-BENAR DISAMAKAN DENGAN MINUMAN
+   Fokus hanya jarak vertikal. Desktop tidak disentuh.
+   ========================================================= */
+@media (max-width:640px){
+  /* Global header -> kontrol tanggal: sama dengan Minuman (10px). */
+  body:has(#page-jadwal:not(.hidden)) > header{
+    margin-bottom:10px !important;
+  }
+
+  /* Panel Jadwal tidak boleh punya inset vertikal sebelum tanggal. */
+  body:has(#page-jadwal:not(.hidden)) #today-schedule-panel{
+    padding-top:0 !important;
+    padding-bottom:0 !important;
+    margin-top:0 !important;
+  }
+
+  /* Baris kontrol hanya setinggi tombol 44px.
+     Ini menghapus spacer 78px dari CSS lama. */
+  body:has(#page-jadwal:not(.hidden)) #today-schedule-panel .today-schedule-head{
+    height:44px !important;
+    min-height:44px !important;
+    max-height:44px !important;
+    padding:0 !important;
+    margin:0 0 10px 0 !important;
+    border:0 !important;
+    box-sizing:border-box !important;
+    display:flex !important;
+    align-items:center !important;
+  }
+
+  /* Elemen tengah yang sebelumnya dapat membuat head ikut membesar. */
+  body:has(#page-jadwal:not(.hidden)) #today-schedule-panel .today-title-wrap{
+    height:44px !important;
+    min-height:0 !important;
+    max-height:44px !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow:hidden !important;
+    display:flex !important;
+    align-items:center !important;
+  }
+
+  body:has(#page-jadwal:not(.hidden)) #today-schedule-panel .today-title-wrap > div,
+  body:has(#page-jadwal:not(.hidden)) #today-schedule-panel .today-title-wrap h3{
+    margin:0 !important;
+    padding:0 !important;
+  }
+
+  /* Pastikan daftar benar-benar dimulai 10px setelah tombol tanggal. */
+  body:has(#page-jadwal:not(.hidden)) #today-schedule-panel #today-schedule-list{
+    margin-top:0 !important;
+    padding-top:0 !important;
+    box-sizing:border-box !important;
+  }
+
+  /* Jangan ada margin/padding tersembunyi dari kartu pertama. */
+  body:has(#page-jadwal:not(.hidden)) #today-schedule-panel #today-schedule-list > .schedule-card:first-child{
+    margin-top:0 !important;
+  }
+}
+</style>
