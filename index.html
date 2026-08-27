@@ -11836,7 +11836,19 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 <!-- FORM MINUMAN -->
 <div class="sub-menu-modern glass-panel p-4 sm:p-6 rounded-2xl hidden font-bold text-slate-900" id="page-minuman">
 
-<h2 class="text-base sm:text-lg font-black mb-4 text-amber-950 text-center uppercase w-full">PENJUALAN MINUMAN</h2>
+<div class="minuman-schedule-head">
+<button aria-label="Pilih tanggal penjualan" class="minuman-date-picker-btn" id="minuman-date-picker-btn" onclick="bukaPemilihTanggalMinuman()" title="Pilih tanggal penjualan" type="button"><span class="minuman-date-picker-icon">📅</span><span id="minuman-selected-date">--/--/----</span></button>
+<div class="minuman-title-wrap"></div>
+<div class="minuman-schedule-head-actions">
+<button type="button" class="minuman-history-btn" onclick="bukaRiwayatMinuman()" title="Lihat riwayat penjualan minuman" aria-label="Lihat riwayat minuman">
+  <svg class="minuman-history-icon" viewBox="0 0 48 48" aria-hidden="true">
+    <path d="M24 10a14 14 0 1 1-11.3 5.75" fill="none" stroke="currentColor" stroke-width="3.8" stroke-linecap="round"/>
+    <path d="M10.2 10.8v8.6h8.6" fill="none" stroke="currentColor" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M24 17v8l5.5 3.2" fill="none" stroke="currentColor" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</button>
+</div>
+</div>
 <div class="minuman-glass-card minuman-sales-card">
 <style>
                 .minuman-grid {
@@ -11968,9 +11980,8 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
     <strong id="minuman-summary-pcs">0 Pcs</strong>
   </div>
 </div>
-<div class="minuman-action-row grid grid-cols-2 gap-2 mt-2">
-  <button type="button" onclick="bukaRiwayatMinuman()" class="minuman-history-open-btn">📋 Riwayat</button>
-  <button class="bg-amber-700 hover:bg-amber-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold border border-amber-500/50 shadow-lg min-h-[44px] touch-manipulation" type="submit">💾 Simpan</button>
+<div class="minuman-action-row mt-2">
+  <button class="w-full bg-amber-700 hover:bg-amber-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold border border-amber-500/50 shadow-lg min-h-[44px] touch-manipulation" type="submit">💾 Simpan</button>
 </div>
 </form>
 </div>
@@ -11987,13 +11998,6 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 }
 #page-minuman .minuman-summary-label { font-size:9px; line-height:1; font-weight:900; color:#92400e; margin-bottom:5px; }
 #page-minuman .minuman-summary-card strong { font-size:14px; line-height:1.1; font-weight:950; color:#172033; }
-#page-minuman .minuman-history-open-btn {
-  min-height:44px; width:100%; border-radius:12px; padding:10px 12px;
-  font-size:12px; font-weight:900; color:#92400e;
-  background:rgba(255,255,255,.60); border:1px solid rgba(245,158,11,.48);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.78),0 7px 18px rgba(120,53,15,.10);
-}
-#page-minuman .minuman-history-open-btn:hover { background:rgba(255,255,255,.82); }
 #minuman-history-panel.is-open {
   position:fixed !important; inset:0 !important; z-index:9999 !important;
   width:min(92vw,680px) !important; height:min(82vh,700px) !important;
@@ -12043,6 +12047,218 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 }
 @media(max-width:640px){
   #page-minuman .minuman-payment-select { min-height:50px !important; padding:12px 40px 12px 13px !important; margin-bottom:10px !important; }
+}
+</style>
+
+<style id="minuman-date-picker-v1">
+#page-minuman .minuman-date-picker-btn{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:6px !important;
+  width:100% !important;
+  min-height:48px !important;
+  padding:12px 14px !important;
+  margin:0 0 12px !important;
+  border-radius:16px !important;
+  background:rgba(255,255,255,.30) !important;
+  border:1px solid rgba(255,255,255,.58) !important;
+  color:#0f172a !important;
+  font-size:13px !important;
+  font-weight:950 !important;
+  line-height:1 !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.60),0 6px 16px rgba(120,53,15,.08) !important;
+  backdrop-filter:blur(12px) saturate(125%) !important;
+  -webkit-backdrop-filter:blur(12px) saturate(125%) !important;
+  cursor:pointer !important;
+  box-sizing:border-box !important;
+}
+#page-minuman .minuman-date-picker-btn:hover{ background:rgba(255,255,255,.48) !important; }
+#page-minuman .minuman-date-picker-btn:active{ transform:scale(.985); }
+#page-minuman .minuman-date-picker-icon{ font-size:17px !important; line-height:1 !important; }
+#minuman-date-modal{
+  position:fixed; inset:0; z-index:2147483647;
+  display:flex; align-items:center; justify-content:center;
+  padding:18px; background:rgba(15,23,42,.48);
+  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+}
+@media(max-width:640px){
+  #page-minuman .minuman-date-picker-btn{ min-height:50px !important; padding:12px 13px !important; }
+  #minuman-date-modal{ padding:12px; }
+}
+</style>
+<script id="minuman-date-picker-v1">
+(function(){
+  const MONTHS=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'],WEEK=['Sen','Sel','Rab','Kam','Jum','Sab','Min'];
+  const key=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const parse=k=>{const [y,m,d]=String(k).split('-').map(Number);return new Date(y,m-1,d)};
+  let cal=new Date();
+
+  function currentValue(){
+    const input=document.getElementById('m-tgl');
+    return (input && input.value) || (typeof getLocalDateString==='function'?getLocalDateString():key(new Date()));
+  }
+
+  function syncLabel(){
+    const label=document.getElementById('minuman-selected-date');
+    if(!label) return;
+    const v=currentValue();
+    label.textContent = v ? parse(v).toLocaleDateString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric'}) : '--/--/----';
+  }
+  window.syncMinumanDateLabel = syncLabel;
+
+  window.bukaPemilihTanggalMinuman=()=>{
+    cal=parse(currentValue());
+    render();
+  };
+  window.tutupPemilihTanggalMinuman=()=>document.getElementById('minuman-date-modal')?.remove();
+  window.ubahBulanPemilihTanggalMinuman=n=>{cal=new Date(cal.getFullYear(),cal.getMonth()+Number(n),1);render();};
+  window.pilihTanggalMinuman=k=>{
+    const input=document.getElementById('m-tgl');
+    if(input){
+      input.value=k;
+      input.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+    syncLabel();
+    tutupPemilihTanggalMinuman();
+  };
+
+  function render(){
+    document.getElementById('minuman-date-modal')?.remove();
+    const selected=currentValue();
+    const today=typeof getLocalDateString==='function'?getLocalDateString():key(new Date());
+    const y=cal.getFullYear(), m=cal.getMonth();
+    const first=new Date(y,m,1), last=new Date(y,m+1,0);
+    const off=(first.getDay()+6)%7;
+    let g='';
+    for(let i=0;i<off;i++) g+='<button type="button" class="jadwal-day is-empty" tabindex="-1"></button>';
+    for(let d=1; d<=last.getDate(); d++){
+      const k=key(new Date(y,m,d));
+      const c=['jadwal-day', k===selected?'is-selected':'', k===today?'is-today':''].filter(Boolean).join(' ');
+      g+=`<button type="button" class="${c}" onclick="pilihTanggalMinuman('${k}')">${d}</button>`;
+    }
+    for(let i=0;i<(7-(off+last.getDate())%7)%7;i++) g+='<button type="button" class="jadwal-day is-empty" tabindex="-1"></button>';
+    const modal=document.createElement('div');
+    modal.id='minuman-date-modal';
+    modal.innerHTML=`<div class="jadwal-date-card" role="dialog" aria-modal="true"><div class="jadwal-date-head"><h3 class="jadwal-date-title">PILIH TANGGAL MINUMAN</h3><button type="button" class="jadwal-date-close" onclick="tutupPemilihTanggalMinuman()">×</button></div><div class="jadwal-date-monthbar"><button type="button" class="jadwal-date-nav" onclick="ubahBulanPemilihTanggalMinuman(-1)">‹</button><div class="jadwal-date-month">${MONTHS[m]} ${y}</div><button type="button" class="jadwal-date-nav" onclick="ubahBulanPemilihTanggalMinuman(1)">›</button></div><div class="jadwal-date-weekdays">${WEEK.map(x=>`<span>${x}</span>`).join('')}</div><div class="jadwal-date-grid">${g}</div><div class="jadwal-date-footer">Tanggal dipilih: <b>${parse(selected).toLocaleDateString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric'})}</b></div></div>`;
+    modal.onclick=e=>{ if(e.target===modal) tutupPemilihTanggalMinuman(); };
+    document.body.appendChild(modal);
+  }
+
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') tutupPemilihTanggalMinuman(); });
+  document.addEventListener('DOMContentLoaded', syncLabel);
+  setTimeout(syncLabel, 0);
+})();
+</script>
+
+<style id="minuman-schedule-head-v1">
+/* Header PENJUALAN MINUMAN meniru gaya header JADWAL HARI INI:
+   tombol tanggal (kiri, gradasi biru, ringkas/tidak melebar), judul (tengah),
+   tombol riwayat (kanan, bulat gradasi biru). Dibuat aman dari overflow:
+   judul dan tombol tanggal boleh menyusut/terpotong, tombol riwayat
+   tetap tepat 44x44 dan selalu berada di dalam batas lebar header. */
+#page-minuman .minuman-schedule-head{
+  display:flex !important;
+  flex-wrap:nowrap !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  gap:6px !important;
+  width:100% !important;
+  max-width:100% !important;
+  box-sizing:border-box !important;
+  margin:0 0 14px 0 !important;
+  overflow:hidden !important;
+}
+#page-minuman .minuman-title-wrap{
+  order:0 !important;
+  flex:1 1 auto !important;
+  min-width:0 !important;
+  max-width:100% !important;
+  overflow:hidden !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  margin:0 !important;
+}
+#page-minuman .minuman-date-picker-btn{
+  order:-1 !important;
+  flex:0 1 auto !important;
+  min-width:0 !important;
+  max-width:118px !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:5px !important;
+  height:44px !important;
+  min-height:44px !important;
+  max-height:44px !important;
+  padding:0 10px !important;
+  margin:0 !important;
+  box-sizing:border-box !important;
+  overflow:hidden !important;
+  background:linear-gradient(145deg,#2563a8,#0f3d75) !important;
+  color:#fff !important;
+  border:1.5px solid rgba(255,255,255,.82) !important;
+  border-radius:13px !important;
+  font-size:10px !important;
+  font-weight:950 !important;
+  line-height:1 !important;
+  box-shadow:0 5px 14px rgba(15,23,42,.25), inset 0 1px 2px rgba(255,255,255,.35) !important;
+  cursor:pointer !important;
+  white-space:nowrap !important;
+  transition:transform .12s ease, filter .12s ease !important;
+}
+#page-minuman .minuman-date-picker-btn:hover{ filter:brightness(1.08) !important; transform:translateY(-1px) !important; }
+#page-minuman .minuman-date-picker-btn:active{ transform:scale(.96) !important; }
+#page-minuman .minuman-date-picker-icon{ font-size:15px !important; flex:0 0 auto !important; }
+#page-minuman #minuman-selected-date{
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+  white-space:nowrap !important;
+  min-width:0 !important;
+}
+
+#page-minuman .minuman-schedule-head-actions{
+  order:1 !important;
+  flex:0 0 auto !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:flex-end !important;
+  margin:0 !important;
+}
+#page-minuman .minuman-history-btn{
+  position:relative !important;
+  flex:0 0 auto !important;
+  width:44px !important;
+  min-width:44px !important;
+  max-width:44px !important;
+  height:44px !important;
+  min-height:44px !important;
+  max-height:44px !important;
+  margin:0 !important;
+  padding:0 !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  box-sizing:border-box !important;
+  border:1.5px solid rgba(255,255,255,.82) !important;
+  border-radius:13px !important;
+  background:linear-gradient(145deg,#2563a8,#0f3d75) !important;
+  color:#fff !important;
+  box-shadow:0 5px 14px rgba(15,23,42,.25), inset 0 1px 2px rgba(255,255,255,.35) !important;
+  cursor:pointer !important;
+  transition:transform .12s ease, filter .12s ease !important;
+}
+#page-minuman .minuman-history-icon{
+  width:28px !important; height:28px !important; display:block !important; color:#fff !important; flex:0 0 auto !important;
+}
+#page-minuman .minuman-history-btn:hover{ filter:brightness(1.08) !important; transform:translateY(-1px) !important; }
+#page-minuman .minuman-history-btn:active{ transform:scale(.92) !important; }
+
+@media (max-width:640px){
+  #page-minuman .minuman-schedule-head{ gap:5px !important; margin-bottom:10px !important; }
+  #page-minuman .minuman-date-picker-btn{ max-width:96px !important; padding:0 8px !important; font-size:9px !important; }
+  #page-minuman .minuman-date-picker-icon{ font-size:13px !important; }
 }
 </style>
 
@@ -12350,6 +12566,7 @@ window.__APP_FIREBASE_GET__ = get;
                 updateDropdownTimMasuk();
             }
             if(document.getElementById('m-tgl')) document.getElementById('m-tgl').value = todayStr;
+            if(typeof window.syncMinumanDateLabel === 'function') window.syncMinumanDateLabel();
             if(document.getElementById('m-mulai')) document.getElementById('m-mulai').value = todayStr;
             if(document.getElementById('a-tanggal')) document.getElementById('a-tanggal').value = todayStr;
             if(document.getElementById('k-tgl')) {
