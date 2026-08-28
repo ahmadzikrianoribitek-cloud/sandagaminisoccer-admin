@@ -20932,12 +20932,32 @@ return;
                         else if(met1 !== 'Free' && met1 !== 'Belum Bayar') totalLapanganQrif += nilaiKaosKakiKeuangan;
                     }
 
-                    let detailTxt = `Tim 1 <span class=\"status-badge-inline ${String(status1Daily).toLowerCase().includes('member') && !String(status1Daily).toLowerCase().includes('non') ? 'status-member-inline' : 'status-nonmember-inline'}\">${status1Daily.toUpperCase()}</span>: Rp ${jml1.toLocaleString('id-ID')} (${met1 === 'Campuran' ? ((item.metode1a||'Cash')+' + '+(item.jumlah1b||0).toLocaleString('id-ID')+' '+(item.metode1b||'QRIS')) : met1})`;
-                    if(jml2 > 0 || String(item.jenisPembayaran || '').toLowerCase() === 'sparing' || String(item.timNama2 || '').trim()) {
-                        detailTxt += `<br>Tim 2 <span class=\"status-badge-inline ${String(status2Daily).toLowerCase().includes('member') && !String(status2Daily).toLowerCase().includes('non') ? 'status-member-inline' : 'status-nonmember-inline'}\">${status2Daily.toUpperCase()}</span>: Rp ${jml2.toLocaleString('id-ID')} (${met2 === 'Campuran' ? ((item.metode2a||'Cash')+' + '+(item.jumlah2b||0).toLocaleString('id-ID')+' '+(item.metode2b||'QRIS')) : met2})`;
+                    // UANG MASUK manual (mis. Penjualan Kaos Kaki) bukan transaksi tim.
+                    // Di Daily Recap cukup tampilkan metode pembayarannya saja, tanpa
+                    // keterangan Tim 1, MEMBER/NON-MEMBER, Tim 2, atau diskon.
+                    // Semua transaksi yang berasal dari input manual "Uang Masuk"
+                    // harus tampil sebagai pemasukan biasa, bukan sebagai Tim 1.
+                    // Aplikasi memiliki beberapa format data manual lama:
+                    // jenisPembayaran=manual, manual=true, atau sumber=manual-uang-masuk.
+                    const isManualUangMasuk =
+                        String(item.jenisPembayaran || '').trim().toLowerCase() === 'manual' ||
+                        item.manual === true ||
+                        String(item.sumber || '').trim().toLowerCase() === 'manual-uang-masuk' ||
+                        (
+                            String(item.kategori || '').trim().toLowerCase() === 'uang masuk' &&
+                            !String(item.timNamaBersih || '').trim() &&
+                            !String(item.timNama2 || '').trim()
+                        );
+                    let detailTxt;
+                    if(isManualUangMasuk) {
+                        detailTxt = `<span class=\"font-black\">${met1}</span>`;
+                    } else {
+                        detailTxt = `Tim 1 <span class=\"status-badge-inline ${String(status1Daily).toLowerCase().includes('member') && !String(status1Daily).toLowerCase().includes('non') ? 'status-member-inline' : 'status-nonmember-inline'}\">${status1Daily.toUpperCase()}</span>: Rp ${jml1.toLocaleString('id-ID')} (${met1 === 'Campuran' ? ((item.metode1a||'Cash')+' + '+(item.jumlah1b||0).toLocaleString('id-ID')+' '+(item.metode1b||'QRIS')) : met1})`;
+                        if(jml2 > 0 || String(item.jenisPembayaran || '').toLowerCase() === 'sparing' || String(item.timNama2 || '').trim()) {
+                            detailTxt += `<br>Tim 2 <span class=\"status-badge-inline ${String(status2Daily).toLowerCase().includes('member') && !String(status2Daily).toLowerCase().includes('non') ? 'status-member-inline' : 'status-nonmember-inline'}\">${status2Daily.toUpperCase()}</span>: Rp ${jml2.toLocaleString('id-ID')} (${met2 === 'Campuran' ? ((item.metode2a||'Cash')+' + '+(item.jumlah2b||0).toLocaleString('id-ID')+' '+(item.metode2b||'QRIS')) : met2})`;
+                        }
+                        detailTxt += formatDiskonDaily(item);
                     }
-
-                    detailTxt += formatDiskonDaily(item);
 
                     if(tbodyLapangan) {
                         tbodyLapangan.innerHTML += `<tr class="border-b border-slate-900/40 text-center font-bold">
