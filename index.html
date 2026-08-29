@@ -43850,7 +43850,11 @@ body > header .admin-global-header-brand-title{
     const cur=parseDate(mulai),end=parseDate(akhir);let lapTotal=0,minTotal=0,rows='';
     while(cur<=end){const tgl=dateKey(cur),sisa=cashSisaSetor(tgl),lap=sisa.lapangan,min=sisa.minuman;lapTotal+=lap;minTotal+=min;rows+=`<tr><td>${formatDate(tgl)}</td><td>${money(lap)}</td><td>${money(min)}</td></tr>`;cur.setDate(cur.getDate()+1)}
     tbody.innerHTML=rows||'<tr><td colspan="3" style="text-align:center;padding:16px">Belum ada data.</td></tr>';
-    document.getElementById('setor-tunai-total-lapangan').textContent=money(lapTotal);document.getElementById('setor-tunai-total-minuman').textContent=money(minTotal);document.getElementById('setor-tunai-grand-total').textContent=money(lapTotal+minTotal);
+    // TOTAL SETOR TUNAI = SISA CASH LAPANGAN + SISA CASH MINUMAN.
+    // Tidak menggunakan total pemasukan/cash kotor sebelum pengeluaran.
+    document.getElementById('setor-tunai-total-lapangan').textContent=money(lapTotal);
+    document.getElementById('setor-tunai-total-minuman').textContent=money(minTotal);
+    document.getElementById('setor-tunai-grand-total').textContent=money(lapTotal+minTotal);
   };
   function init(){
     const today=typeof getLocalDateString==='function'?getLocalDateString():dateKey(new Date());
