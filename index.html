@@ -15474,8 +15474,12 @@ kaosKakiTerjual: jumlahKaosKaki,
             if(!item) return;
 
             const namaTim = item.timNamaBersih || String(item.ket || '').replace(/^Pelunasan\s+/i, '').replace(/\s*\(.*$/, '').trim();
-            const jamMatch = String(item.ket || '').match(/\(([^)]+)\)/);
-            const jamMain = jamMatch ? jamMatch[1] : '';
+            // Ambil kurung yang isinya benar-benar format jam (mis. "07:00", "07.00", atau "07:00-08:00"),
+            // bukan kurung pertama yang ditemukan. Terima pemisah titik dua ATAU titik, karena admin
+            // kadang mengetik jam dengan titik (contoh: 20.00). Ini mencegah catatan tambahan yang diketik
+            // di "Nama Tim" (yang juga memakai tanda kurung) tertangkap keliru sebagai jam main.
+            const jamMatch = String(item.ket || '').match(/\((\d{1,2}[:.]\d{2}(?:\s*-\s*\d{1,2}[:.]\d{2})?)\)/);
+            const jamMain = jamMatch ? jamMatch[1].replace(/\./g, ':') : '';
             const tgl = item.tgl || getLocalDateString();
             const jml1 = Number(item.jumlah1 ?? item.jumlah ?? 0);
             const jml2 = Number(item.jumlah2 ?? 0);
@@ -15495,16 +15499,16 @@ kaosKakiTerjual: jumlahKaosKaki,
 
             const modal = document.createElement('div');
             modal.id = 'modal-edit-pemasukan';
-            modal.className = 'fixed inset-0 z-[2147483646] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4';
+            modal.className = 'fixed inset-0 z-[2147483646] flex items-start sm:items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 overflow-y-auto';
             modal.innerHTML = `
-                <div class="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-blue-100 overflow-hidden">
-                    <div class="bg-gradient-to-r from-blue-950 to-blue-700 px-5 py-4 text-white">
+                <div class="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-blue-100 overflow-hidden my-auto flex flex-col max-h-[calc(100vh-2rem)]">
+                    <div class="bg-gradient-to-r from-blue-950 to-blue-700 px-5 py-4 text-white shrink-0">
                         <div class="flex items-center justify-between gap-3">
                             <div><h3 class="font-black text-lg">Edit Uang Lapangan</h3><p class="text-xs text-blue-100">Perbarui data pemasukan tanpa mengubah fungsi lainnya.</p></div>
                             <button type="button" onclick="document.getElementById('modal-edit-pemasukan')?.remove()" class="text-white/80 hover:text-white text-xl font-black">×</button>
                         </div>
                     </div>
-                    <div class="p-5 space-y-3">
+                    <div class="p-5 space-y-3 overflow-y-auto">
                         <div><label class="text-xs font-black text-slate-700">Nama Tim</label><input id="edit-in-tim" value="${namaTim.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" class="w-full mt-1 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900"></div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div><label class="text-xs font-black text-slate-700">Jam Main</label><input id="edit-in-jam" value="${jamMain.replace(/"/g,'&quot;')}" class="w-full mt-1 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900"></div>
@@ -15521,10 +15525,10 @@ kaosKakiTerjual: jumlahKaosKaki,
                             <div><label class="text-xs font-black text-slate-700">Jumlah Tim 2</label><input id="edit-in-jml2" type="text" inputmode="numeric" oninput="formatNominalInput(this)" min="0" value="${formatNominalInputValue(jml2)}" class="w-full mt-1 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900"></div>
                             <div><label class="text-xs font-black text-slate-700">Metode Tim 2</label><select id="edit-in-met2" onchange="toggleEditFreePaymentInput(2)" class="w-full mt-1 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900"><option value="Cash" ${met2==='Cash'?'selected':''}>Cash</option><option value="QRIS" ${met2==='QRIS'?'selected':''}>QRIS</option><option value="Transfer" ${met2==='Transfer'?'selected':''}>Transfer</option><option value="Free" ${met2==='Free'?'selected':''}>Free / Gratis</option><option value="Campuran" ${mixed2?'selected':''}>Campuran (2 Metode)</option></select><label class="flex items-center gap-2 text-[10px] font-black text-slate-700 mt-1"><input id="edit-in-campuran-2" type="checkbox" ${mixed2?'checked':''} onchange="toggleEditMixedPayment(2)"> Bayar dengan 2 metode</label><div id="edit-in-campuran-box-2" class="${mixed2?'':'hidden '}grid grid-cols-2 gap-2 mt-1"><input id="edit-in-jml2b" type="text" inputmode="numeric" oninput="formatNominalInput(this)" min="0" value="${formatNominalInputValue(jml2b)}" class="w-full border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900"><select id="edit-in-met2b" class="w-full border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900"><option value="QRIS" ${met2b==='QRIS'?'selected':''}>QRIS</option><option value="Cash" ${met2b==='Cash'?'selected':''}>Cash</option><option value="Transfer" ${met2b==='Transfer'?'selected':''}>Transfer</option></select></div></div>
                         </div>
-                        <div class="flex gap-2 pt-2">
-                            <button type="button" onclick="simpanEditDataKeuangan('pemasukan','${key}')" class="flex-1 bg-blue-700 hover:bg-blue-800 text-white px-4 py-2.5 rounded-xl font-black shadow">Simpan Perubahan</button>
-                            <button type="button" onclick="document.getElementById('modal-edit-pemasukan')?.remove()" class="bg-slate-200 hover:bg-slate-300 text-slate-900 px-4 py-2.5 rounded-xl font-black">Batal</button>
-                        </div>
+                    </div>
+                    <div class="flex gap-2 p-4 border-t border-slate-200 shrink-0 bg-white">
+                        <button type="button" onclick="simpanEditDataKeuangan('pemasukan','${key}')" class="flex-1 bg-blue-700 hover:bg-blue-800 text-white px-4 py-2.5 rounded-xl font-black shadow">Simpan Perubahan</button>
+                        <button type="button" onclick="document.getElementById('modal-edit-pemasukan')?.remove()" class="bg-slate-200 hover:bg-slate-300 text-slate-900 px-4 py-2.5 rounded-xl font-black">Batal</button>
                     </div>
                 </div>`;
             document.body.appendChild(modal);
