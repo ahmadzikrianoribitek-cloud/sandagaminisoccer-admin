@@ -11987,6 +11987,32 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
                     .minuman-btn img { width: 68px; height: 68px; }
                     .minuman-btn.selected::after { right: 6px; top: 6px; width: 22px; height: 22px; font-size: 13px; }
                 }
+                .minuman-size-cap {
+                    position: absolute;
+                    top: 8px;
+                    left: 8px;
+                    min-width: 22px;
+                    height: 22px;
+                    padding: 0 6px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 999px;
+                    background: #1d4ed8;
+                    color: #fff;
+                    font-size: 12px;
+                    font-weight: 900;
+                    line-height: 1;
+                    box-shadow: 0 2px 6px rgba(0,0,0,.22);
+                    z-index: 1;
+                }
+                .minuman-btn.selected .minuman-size-cap {
+                    background: #fff;
+                    color: #c2410c;
+                }
+                @media (max-width: 640px) {
+                    .minuman-size-cap { top: 6px; left: 6px; width: 19px; height: 19px; min-width: 19px; font-size: 10px; padding: 0; }
+                }
             </style>
 <style id="minuman-qty-control-v2">
 #page-minuman #minuman-qty-control { width:100%; min-height:48px; }
@@ -12006,9 +12032,11 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 </style>
 <form onsubmit="submitData(event, 'minuman')">
 <div class="minuman-grid grid gap-2 mb-3">
+<button aria-label="Simpan" class="minuman-btn minuman-save-btn rounded-xl glass-input font-bold border-2 border-transparent" title="Simpan" type="submit"><span class="minuman-save-icon">💾</span><span class="minuman-save-label">SIMPAN</span></button>
 <button aria-label="Air Mineral" class="minuman-btn rounded-xl glass-input font-bold border-2 border-transparent" data-nama="Air Mineral" onclick="pilihMinumanCepat('Air Mineral', 4000)" title="Air Mineral" type="button"><img alt="Air Mineral" src="mineral.png"/></button>
 <button aria-label="Air Mineral + 3 Permen" class="minuman-btn rounded-xl glass-input font-bold border-2 border-transparent" data-nama="Air Mineral + 3 Permen" onclick="pilihMinumanCepat('Air Mineral + 3 Permen', 5000)" title="Air Mineral + 3 Permen" type="button"><img alt="Air Mineral + 3 Permen" src="mineralpermen.png"/></button>
-<button aria-label="Pocari Sweat" class="minuman-btn rounded-xl glass-input font-bold border-2 border-transparent" data-nama="Pocari Sweat" onclick="pilihMinumanCepat('Pocari Sweat', 10000)" title="Pocari Sweat" type="button"><img alt="Pocari Sweat" src="pocari.png"/></button>
+<button aria-label="Pocari Sweat" class="minuman-btn rounded-xl glass-input font-bold border-2 border-transparent" data-nama="Pocari Sweat" onclick="pilihMinumanCepat('Pocari Sweat', 10000)" title="Pocari Sweat" type="button"><span class="minuman-size-cap">B</span><img alt="Pocari Sweat" src="pocari.png"/></button>
+<button aria-label="Pocari Sweat Kecil" class="minuman-btn rounded-xl glass-input font-bold border-2 border-transparent" data-nama="Pocari Sweat Kecil" onclick="pilihMinumanCepat('Pocari Sweat Kecil', 8000)" title="Pocari Sweat Kecil" type="button"><span class="minuman-size-cap">K</span><img alt="Pocari Sweat Kecil" src="pocari.png"/></button>
 <button aria-label="Fanta" class="minuman-btn rounded-xl glass-input font-bold border-2 border-transparent" data-nama="Fanta" onclick="pilihMinumanCepat('Fanta', 5000)" title="Fanta" type="button"><img alt="Fanta" src="fanta.png"/></button>
 <button aria-label="Sprite" class="minuman-btn rounded-xl glass-input font-bold border-2 border-transparent" data-nama="Sprite" onclick="pilihMinumanCepat('Sprite', 5000)" title="Sprite" type="button"><img alt="Sprite" src="sprite.png"/></button>
 <button aria-label="Coca Cola" class="minuman-btn rounded-xl glass-input font-bold border-2 border-transparent" data-nama="Coca Cola" onclick="pilihMinumanCepat('Coca Cola', 5000)" title="Coca Cola" type="button"><img alt="Coca Cola" src="cocacola.png"/></button>
@@ -12020,6 +12048,7 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 <option data-harga="4000" value="Air Mineral">Air Mineral (Rp 4.000)</option>
 <option data-harga="5000" value="Air Mineral + 3 Permen">Air Mineral + 3 Permen (Rp 5.000)</option>
 <option data-harga="10000" value="Pocari Sweat">Pocari Sweat (Rp 10.000)</option>
+<option data-harga="8000" value="Pocari Sweat Kecil">Pocari Sweat Kecil (Rp 8.000)</option>
 <option data-harga="5000" value="Fanta">Fanta (Rp 5.000)</option>
 <option data-harga="5000" value="Sprite">Sprite (Rp 5.000)</option>
 <option data-harga="5000" value="Coca Cola">Coca Cola (Rp 5.000)</option>
@@ -12051,12 +12080,38 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
     <strong id="minuman-summary-pcs">0 Pcs</strong>
   </div>
 </div>
-<div class="minuman-action-row mt-2">
-  <button class="w-full bg-amber-700 hover:bg-amber-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold border border-amber-500/50 shadow-lg min-h-[44px] touch-manipulation" type="submit">💾 Simpan</button>
-</div>
 </form>
 </div>
 
+<style id="minuman-save-card-style">
+/* Tombol Simpan sekarang berbentuk kartu yang sama persis dengan
+   kartu minuman lainnya, ditempatkan sebagai kartu pertama di grid
+   supaya selalu terlihat tanpa perlu scroll ke bawah. */
+#page-minuman .minuman-save-btn {
+    background: linear-gradient(135deg, #b45309 0%, #7c2d12 100%) !important;
+    border-color: rgba(255,255,255,.55) !important;
+    color: #fff !important;
+    flex-direction: column;
+    gap: 4px;
+}
+#page-minuman .minuman-save-btn:hover {
+    background: linear-gradient(135deg, #c2650b 0%, #8a3413 100%) !important;
+    border-color: rgba(255,255,255,.75) !important;
+}
+#page-minuman .minuman-save-btn .minuman-save-icon {
+    font-size: 34px;
+    line-height: 1;
+}
+#page-minuman .minuman-save-btn .minuman-save-label {
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: .04em;
+}
+@media (max-width: 640px) {
+    #page-minuman .minuman-save-btn .minuman-save-icon { font-size: 26px; }
+    #page-minuman .minuman-save-btn .minuman-save-label { font-size: 10px; }
+}
+</style>
 <style id="minuman-sales-summary-history-v1">
 /* Ringkasan cepat + tombol riwayat untuk admin minuman. */
 #page-minuman .minuman-sales-summary { width:100% !important; }
@@ -22447,12 +22502,13 @@ window.downloadDailyRecapJPGFull = async function() {
         clone.querySelectorAll('[style*="display:none"], [style*="display: none"]').forEach(el => el.remove());
 
         // Versi lengkap tetap mempertahankan detail transaksi, tetapi juga
-        // memastikan 8 pilihan minuman selalu terlihat dalam rekap produk.
+        // memastikan 9 pilihan minuman selalu terlihat dalam rekap produk.
         if (item.key === 'minuman') {
             const daftarMinuman = [
                 'Air Mineral',
                 'Air Mineral + 3 Permen',
                 'Pocari Sweat',
+                'Pocari Sweat Kecil',
                 'Fanta',
                 'Sprite',
                 'Coca Cola',
@@ -27213,11 +27269,12 @@ window.dailyReportSaveFile=function(dataUrl,fileName){if(!isIOS()){const a=docum
       const cashMin=moneyValue('rekap-sisa-cash-minuman');
       const cashTotal=moneyValue('rekap-total-sisa-cash');
 
-      // Seluruh 8 pilihan minuman selalu ditampilkan, termasuk yang terjual 0 pcs.
+      // Seluruh 9 pilihan minuman selalu ditampilkan, termasuk yang terjual 0 pcs.
       const daftarMinuman=[
         'Air Mineral',
         'Air Mineral + 3 Permen',
         'Pocari Sweat',
+        'Pocari Sweat Kecil',
         'Fanta',
         'Sprite',
         'Coca Cola',
