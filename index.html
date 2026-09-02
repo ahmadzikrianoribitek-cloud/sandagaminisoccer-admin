@@ -12522,11 +12522,26 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
       </div>
     </div>
     <div class="setor-tunai-period" id="setor-tunai-period">PERIODE: -</div>
+    <div class="setor-tunai-sisa-card">
+      <div class="setor-tunai-sisa-copy">
+        <span class="setor-tunai-sisa-icon">💵</span>
+        <div>
+          <b>UANG SISA DIPEGANG ADMIN</b>
+          <small>Untuk kembalian / kas kecil yang tidak ikut disetor</small>
+        </div>
+      </div>
+      <div class="setor-tunai-sisa-input-wrap">
+        <span>Rp</span>
+        <input id="setor-tunai-uang-sisa" type="text" inputmode="numeric" autocomplete="off" placeholder="0" aria-label="Nominal uang sisa yang dipegang admin" oninput="window.recalcSetorTunaiKembalian&&window.recalcSetorTunaiKembalian()" onchange="window.recalcSetorTunaiKembalian&&window.recalcSetorTunaiKembalian()">
+      </div>
+      <div class="setor-tunai-sisa-note" id="setor-tunai-sisa-note">Uang sisa belum diisi. Seluruh saldo cash akan dihitung sebagai setor tunai.</div>
+    </div>
     <div class="setor-tunai-table-wrap">
       <table class="setor-tunai-table">
         <thead><tr><th>TANGGAL</th><th>LAPANGAN</th><th>MINUMAN</th></tr></thead>
         <tbody id="setor-tunai-tbody"></tbody>
         <tfoot>
+          <tr class="setor-tunai-kembalian-row"><td colspan="2">UANG UNTUK KEMBALIAN</td><td id="setor-tunai-kembalian">Rp0</td></tr>
           <tr><td>TOTAL</td><td id="setor-tunai-total-lapangan">Rp0</td><td id="setor-tunai-total-minuman">Rp0</td></tr>
           <tr class="setor-tunai-grand-row"><td colspan="2">JUMLAH SETOR TUNAI</td><td id="setor-tunai-grand-total">Rp0</td></tr>
         </tfoot>
@@ -43789,6 +43804,16 @@ body > header .admin-global-header-brand-title{
 .setor-tunai-filter-item input{height:42px!important;padding:0 10px!important;border-radius:12px!important;color:#0f2344!important;background:rgba(255,255,255,.70)!important;border:1px solid rgba(148,163,184,.42)!important}
 .setor-tunai-range-arrow{display:grid;place-items:center;height:42px;color:#1d4ed8;font-size:18px;font-weight:950}
 .setor-tunai-period{margin:0 0 10px;padding:8px 11px;border-radius:11px;background:rgba(239,246,255,.78);border:1px solid #dbeafe;color:#1e3a8a;text-align:center;font-size:9px;font-weight:950;letter-spacing:.05em}
+.setor-tunai-sisa-card{display:flex;align-items:center;gap:12px;margin:0 0 10px;padding:11px 12px;border:1px solid rgba(148,163,184,.35);border-radius:15px;background:rgba(255,255,255,.62);box-shadow:0 8px 22px rgba(8,20,45,.08),inset 0 1px 0 rgba(255,255,255,.65);backdrop-filter:blur(14px) saturate(135%);-webkit-backdrop-filter:blur(14px) saturate(135%)}
+.setor-tunai-sisa-copy{display:flex;align-items:center;gap:9px;min-width:0;flex:1}
+.setor-tunai-sisa-icon{width:34px;height:34px;display:grid;place-items:center;flex:0 0 auto;border-radius:10px;background:#eff6ff;border:1px solid #dbeafe;font-size:16px}
+.setor-tunai-sisa-copy b{display:block;color:#102a56;font-size:9px;font-weight:950;letter-spacing:.04em}
+.setor-tunai-sisa-copy small{display:block;margin-top:2px;color:#64748b;font-size:8px;font-weight:700;line-height:1.3}
+.setor-tunai-sisa-input-wrap{display:flex;align-items:center;flex:0 0 190px;height:40px;border:1px solid #bfdbfe;border-radius:11px;background:#fff;box-shadow:inset 0 1px 2px rgba(15,23,42,.04);overflow:hidden}
+.setor-tunai-sisa-input-wrap>span{padding-left:10px;color:#64748b;font-size:10px;font-weight:900}
+#setor-tunai-uang-sisa{width:100%;height:100%;min-width:0;padding:0 10px 0 5px;border:0;outline:none;background:transparent;color:#0f2344;font-size:12px;font-weight:950;text-align:right}
+#setor-tunai-uang-sisa::placeholder{color:#94a3b8}
+.setor-tunai-sisa-note{display:none}
 .setor-tunai-table-wrap{overflow:hidden;border-radius:17px;border:1px solid rgba(255,255,255,.58);background:rgba(255,255,255,.38);box-shadow:0 16px 35px rgba(8,20,45,.12),inset 0 1px 0 rgba(255,255,255,.58);backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%)}
 .setor-tunai-table{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;color:#0f2344}
 .setor-tunai-table th{padding:11px 8px;background:linear-gradient(135deg,#102a56,#173f78);color:#fff;border-right:1px solid rgba(255,255,255,.18);font-size:10px;font-weight:950;letter-spacing:.04em;text-align:center}
@@ -43801,13 +43826,16 @@ body > header .admin-global-header-brand-title{
 .setor-tunai-table tbody tr:hover td{background:rgba(239,246,255,.86)}
 .setor-tunai-table tfoot td{font-weight:950;background:rgba(241,245,249,.92);color:#0f2344}
 .setor-tunai-table tfoot tr:first-child td{border-top:2px solid #94a3b8}
+.setor-tunai-table .setor-tunai-kembalian-row td{background:rgba(255,255,255,.86);color:#0f2344;font-weight:950}
+.setor-tunai-table .setor-tunai-kembalian-row td:first-child{text-align:left;padding-left:12px}
+.setor-tunai-table .setor-tunai-kembalian-row td:last-child{color:#b45309}
 .setor-tunai-table .setor-tunai-grand-row td{background:linear-gradient(135deg,#102a56,#173f78);color:#fff;border-top:0;font-size:12px}
 .setor-tunai-table .setor-tunai-grand-row td:first-child{text-align:left;padding-left:12px}
 .setor-tunai-download-button{width:100%;margin-top:12px;padding:10px 14px;border:1px solid rgba(255,255,255,.68);border-radius:13px;background:linear-gradient(135deg,#173f78,#102a56);color:#fff;font-size:10px;font-weight:950;letter-spacing:.06em;cursor:pointer;box-shadow:0 10px 24px rgba(8,20,45,.16),inset 0 1px 0 rgba(255,255,255,.18);transition:transform .14s ease,filter .14s ease,box-shadow .14s ease}
 .setor-tunai-download-button:hover{filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 13px 28px rgba(8,20,45,.20)}
 .setor-tunai-download-button:active{transform:translateY(0) scale(.99)}
 .setor-tunai-download-button:disabled{opacity:.65;cursor:wait}
-@media(max-width:640px){.setor-tunai-page{width:calc(100% - 24px);padding:20px 0 24px}.setor-tunai-head{padding-top:4px;padding-bottom:8px}.setor-tunai-head h2{font-size:1.05rem}.setor-tunai-head p{font-size:.59rem}.setor-tunai-filter{grid-template-columns:1fr;gap:8px;padding:10px;border-radius:15px}.setor-tunai-range-arrow{display:none}.setor-tunai-filter-item input{height:40px!important}.setor-tunai-table th{padding:9px 4px;font-size:8px}.setor-tunai-table td{padding:7px 5px;font-size:9px}.setor-tunai-table td:first-child{width:22%}.setor-tunai-table .setor-tunai-grand-row td{font-size:10px}.setor-tunai-download-button{margin-top:12px;padding:10px 12px;font-size:9px}}
+@media(max-width:640px){.setor-tunai-page{width:calc(100% - 24px);padding:20px 0 24px}.setor-tunai-head{padding-top:4px;padding-bottom:8px}.setor-tunai-head h2{font-size:1.05rem}.setor-tunai-head p{font-size:.59rem}.setor-tunai-filter{grid-template-columns:1fr;gap:8px;padding:10px;border-radius:15px}.setor-tunai-range-arrow{display:none}.setor-tunai-filter-item input{height:40px!important}.setor-tunai-sisa-card{display:block;padding:10px}.setor-tunai-sisa-copy{margin-bottom:8px}.setor-tunai-sisa-input-wrap{width:100%;height:40px;box-sizing:border-box}.setor-tunai-table th{padding:9px 4px;font-size:8px}.setor-tunai-table td{padding:7px 5px;font-size:9px}.setor-tunai-table td:first-child{width:22%}.setor-tunai-table .setor-tunai-grand-row td{font-size:10px}.setor-tunai-download-button{margin-top:12px;padding:10px 12px;font-size:9px}}
 </style>
 <style id="setor-tunai-custom-calendar-ui-v1">
 .setor-tunai-date-button{width:100%;height:42px;padding:0 10px;border-radius:12px;border:1px solid rgba(148,163,184,.42);background:rgba(255,255,255,.70);color:#0f2344;display:flex;align-items:center;gap:8px;cursor:pointer;font:inherit;font-size:11px;font-weight:900;box-shadow:inset 0 1px 0 rgba(255,255,255,.75);transition:.14s ease}
@@ -43899,6 +43927,35 @@ body > header .admin-global-header-brand-title{
       dateEl.textContent=d.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}).toUpperCase();
     }
   }
+  let setorTunaiLastPeriod='';
+  function updateSetorTunaiGrandTotal(totalCash){
+    const input=document.getElementById('setor-tunai-uang-sisa');
+    const grand=document.getElementById('setor-tunai-grand-total');
+    const kembalianEl=document.getElementById('setor-tunai-kembalian');
+    const note=document.getElementById('setor-tunai-sisa-note');
+    if(!grand)return;
+    totalCash=Math.max(0,Number(totalCash)||0);
+    let rawSisa=String(input?.value||'').replace(/\D/g,'');
+    let sisa=Math.max(0,Number(rawSisa)||0);
+    if(sisa>totalCash){sisa=totalCash;}
+    if(input)input.value=sisa>0?Number(sisa).toLocaleString('id-ID'):'';
+    const setor=Math.max(0,totalCash-sisa);
+    if(kembalianEl)kembalianEl.textContent=money(sisa);
+    grand.textContent=money(setor);
+    if(note){note.textContent=sisa>0?`Total cash ${money(totalCash)} − uang kembalian ${money(sisa)} = setor ${money(setor)}.`:'Uang kembalian belum diisi. Seluruh saldo cash akan dihitung sebagai setor tunai.';}
+  }
+
+  window.recalcSetorTunaiKembalian=function(){
+    const input=document.getElementById('setor-tunai-uang-sisa');
+    if(input){
+      const digits=String(input.value||'').replace(/\D/g,'');
+      input.value=digits?Number(digits).toLocaleString('id-ID'):'';
+    }
+    const lap=Number(String(document.getElementById('setor-tunai-total-lapangan')?.textContent||'').replace(/[^0-9]/g,''))||0;
+    const min=Number(String(document.getElementById('setor-tunai-total-minuman')?.textContent||'').replace(/[^0-9]/g,''))||0;
+    updateSetorTunaiGrandTotal(lap+min);
+  };
+
   window.renderSetorTunai=function(){
     const a=document.getElementById('setor-tunai-mulai'),b=document.getElementById('setor-tunai-akhir'),tbody=document.getElementById('setor-tunai-tbody');
     if(!a||!b||!tbody)return;
@@ -43907,16 +43964,26 @@ body > header .admin-global-header-brand-title{
     syncDateButtons();
     updateSetorTunaiHeaderDate();
     if(mulai>akhir){tbody.innerHTML='<tr><td colspan="3" style="text-align:center;color:#b91c1c;font-weight:900;padding:16px">Tanggal awal tidak boleh melebihi tanggal akhir.</td></tr>';document.getElementById('setor-tunai-total-lapangan').textContent='Rp0';document.getElementById('setor-tunai-total-minuman').textContent='Rp0';document.getElementById('setor-tunai-grand-total').textContent='Rp0';document.getElementById('setor-tunai-period').textContent='PERIODE: TANGGAL TIDAK VALID';return}
+    const periodKey=`${mulai}|${akhir}`;
+    const input=document.getElementById('setor-tunai-uang-sisa');
+    if(setorTunaiLastPeriod && setorTunaiLastPeriod!==periodKey && input)input.value='';
+    setorTunaiLastPeriod=periodKey;
     document.getElementById('setor-tunai-period').textContent=`PERIODE: ${formatDate(mulai)} — ${formatDate(akhir)}`;
     const cur=parseDate(mulai),end=parseDate(akhir);let lapTotal=0,minTotal=0,rows='';
     while(cur<=end){const tgl=dateKey(cur),sisa=cashSisaSetor(tgl),lap=sisa.lapangan,min=sisa.minuman;lapTotal+=lap;minTotal+=min;rows+=`<tr><td>${formatDate(tgl)}</td><td>${money(lap)}</td><td>${money(min)}</td></tr>`;cur.setDate(cur.getDate()+1)}
     tbody.innerHTML=rows||'<tr><td colspan="3" style="text-align:center;padding:16px">Belum ada data.</td></tr>';
-    // TOTAL SETOR TUNAI = SISA CASH LAPANGAN + SISA CASH MINUMAN.
-    // Tidak menggunakan total pemasukan/cash kotor sebelum pengeluaran.
     document.getElementById('setor-tunai-total-lapangan').textContent=money(lapTotal);
     document.getElementById('setor-tunai-total-minuman').textContent=money(minTotal);
-    document.getElementById('setor-tunai-grand-total').textContent=money(lapTotal+minTotal);
+    updateSetorTunaiGrandTotal(lapTotal+minTotal);
   };
+
+  document.addEventListener('input',function(e){
+    if(e.target&&e.target.id==='setor-tunai-uang-sisa') window.recalcSetorTunaiKembalian();
+  });
+  document.addEventListener('change',function(e){
+    if(e.target&&e.target.id==='setor-tunai-uang-sisa') window.recalcSetorTunaiKembalian();
+  });
+
   function init(){
     const today=typeof getLocalDateString==='function'?getLocalDateString():dateKey(new Date());
     const a=document.getElementById('setor-tunai-mulai'),b=document.getElementById('setor-tunai-akhir'),title=document.getElementById('setor-tunai-title');
