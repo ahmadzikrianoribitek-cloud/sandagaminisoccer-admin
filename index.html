@@ -10387,6 +10387,32 @@ body > header h1{
 }
 </style>
 
+<style id="global-header-sticky-scroll-fix">
+/* Header logo + judul selalu menempel di atas layar, tidak ikut
+   bergeser saat konten di bawahnya di-scroll. Hanya isi halaman
+   (kartu-kartu di dalam <main>) yang bergerak saat scroll. */
+body > header {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 500 !important;
+    background: rgba(238, 246, 255, .78) !important;
+    backdrop-filter: blur(14px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(140%) !important;
+    padding: 8px 10px 10px !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    border-radius: 0 0 20px 20px !important;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, .12) !important;
+}
+
+@media (max-width: 640px) {
+    body > header {
+        padding: 6px 8px 8px !important;
+        border-radius: 0 0 16px 16px !important;
+    }
+}
+</style>
+
 </head>
 <body class="min-h-screen p-2 sm:p-4 pt-4 sm:pt-6 flex flex-col items-center text-slate-900 font-medium">
 
@@ -10509,54 +10535,64 @@ body > header h1{
       <input type="hidden" id="sparring-edit-key" value="">
       <input type="hidden" id="sparring-tanggal" value="">
       <input type="hidden" id="sparring-jam" value="">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label class="sparring-label">Tim 1 / Tim yang Mencari Lawan</label>
-          <select id="sparring-tim-a" required class="sparring-input" onchange="updateSparingBookingOptions()">
-            <option value="">Pilih tim dari jadwal</option>
-            <option value="__manual__">✏️ Tim Tanpa Jadwal Tetap</option>
-          </select>
-          <label class="sparring-label sparring-status-label">Status Tim 1</label>
-          <select id="sparring-status-a" class="sparring-input sparring-status-select">
-            <option value="Member">Member</option>
-            <option value="Non Member">Non Member</option>
-          </select>
+      <input type="hidden" id="sparring-catatan" value="">
+
+      <!-- CARD TIM 1 -->
+      <div class="sparring-card">
+        <div class="sparring-card-head">
+          <span class="sparring-card-badge sparring-card-badge-a">1</span>
+          <span class="sparring-card-title">Tim yang Mencari Lawan</span>
         </div>
+        <label class="sparring-label">Tim 1 / Tim yang Mencari Lawan</label>
+        <select id="sparring-tim-a" required class="sparring-input" onchange="updateSparingBookingOptions()">
+          <option value="">Pilih tim dari jadwal</option>
+          <option value="__manual__">✏️ Tim Tanpa Jadwal Tetap</option>
+        </select>
+        <label class="sparring-label sparring-status-label">Status Tim 1</label>
+        <select id="sparring-status-a" class="sparring-input sparring-status-select">
+          <option value="Member">Member</option>
+          <option value="Non Member">Non Member</option>
+        </select>
         <div id="sparring-manual-wrap" class="hidden">
           <label class="sparring-label">Nama Tim Manual</label>
           <input id="sparring-tim-a-manual" class="sparring-input" placeholder="Ketik nama tim yang konfirmasi via WhatsApp">
         </div>
-        <div>
-          <label class="sparring-label">No. WhatsApp Tim yang Mencari Lawan</label>
-          <input id="sparring-wa" type="tel" inputmode="tel" autocomplete="tel" class="sparring-input" placeholder="Contoh: 081234567890">
-          <div class="text-[10px] text-slate-500 mt-1">Nomor ini ikut tersimpan ke data sparing agar dapat dibaca web customer.</div>
+        <div id="sparring-manual-date-wrap" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="sparring-label">Tanggal Main Tim Manual</label>
+            <input id="sparring-tanggal-manual" type="date" class="sparring-input">
+          </div>
+          <div>
+            <label class="sparring-label">Jam Main Tim Manual</label>
+            <input id="sparring-jam-manual" type="time" class="sparring-input">
+          </div>
         </div>
-        <div>
-          <label class="sparring-label">Tim 2 / Lawan Sparing <span class="text-slate-400">(boleh dikosongkan)</span></label>
-          <input id="sparring-tim-b" class="sparring-input" placeholder="Ketik nama tim lawan; kosongkan jika belum dapat lawan">
-          <label class="sparring-label sparring-status-label">Status Tim 2</label>
-          <select id="sparring-status-b" class="sparring-input sparring-status-select">
-            <option value="Member">Member</option>
-            <option value="Non Member" selected>Non Member</option>
-          </select>
-        </div>
+        <label class="sparring-label">No. WhatsApp Tim yang Mencari Lawan</label>
+        <input id="sparring-wa" type="tel" inputmode="tel" autocomplete="tel" class="sparring-input" placeholder="Contoh: 081234567890">
+        <div class="text-[10px] text-slate-500 mt-1">Nomor ini ikut tersimpan ke data sparing agar dapat dibaca web customer.</div>
+        <div id="sparring-booking-info" class="sparring-booking-info">Pilih tim dari jadwal, atau pilih <b>Tim Tanpa Jadwal Tetap</b> jika jadwal main ditentukan langsung oleh tim.</div>
       </div>
-      <div id="sparring-manual-date-wrap" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-        <div>
-          <label class="sparring-label">Tanggal Main Tim Manual</label>
-          <input id="sparring-tanggal-manual" type="date" class="sparring-input">
+
+      <!-- CARD TIM 2 -->
+      <div class="sparring-card">
+        <div class="sparring-card-head">
+          <span class="sparring-card-badge sparring-card-badge-b">2</span>
+          <span class="sparring-card-title">Lawan Sparing</span>
         </div>
-        <div>
-          <label class="sparring-label">Jam Main Tim Manual</label>
-          <input id="sparring-jam-manual" type="time" class="sparring-input">
-        </div>
+        <label class="sparring-label">Tim 2 / Lawan Sparing <span class="text-slate-400">(boleh dikosongkan)</span></label>
+        <input id="sparring-tim-b" class="sparring-input" placeholder="Ketik nama tim lawan; kosongkan jika belum dapat lawan">
+        <label class="sparring-label sparring-status-label">Status Tim 2</label>
+        <select id="sparring-status-b" class="sparring-input sparring-status-select">
+          <option value="Member">Member</option>
+          <option value="Non Member" selected>Non Member</option>
+        </select>
+        <label class="sparring-label">No. WhatsApp Tim 2 / Lawan Sparing <span class="text-slate-400">(boleh dikosongkan)</span></label>
+        <input id="sparring-wa-b" type="tel" inputmode="tel" autocomplete="tel" class="sparring-input" placeholder="Contoh: 081234567890">
+        <div class="text-[10px] text-slate-500 mt-1">Nomor ini ikut tersimpan ke data sparing agar bisa dipakai tombol Hubungi Tim 2.</div>
       </div>
-      <div id="sparring-booking-info" class="sparring-booking-info">Pilih tim dari jadwal, atau pilih <b>Tim Tanpa Jadwal Tetap</b> jika jadwal main ditentukan langsung oleh tim.</div>
-      <div>
-        <label class="sparring-label">Catatan</label>
-        <textarea id="sparring-catatan" rows="2" class="sparring-input" placeholder="Contoh: sudah konfirmasi via WhatsApp, minta jam 20.00, dll."></textarea>
-      </div>
-      <div class="flex justify-end mt-3">
+
+      <!-- CARD SIMPAN -->
+      <div class="sparring-card sparring-card-save">
         <button type="submit" class="sparring-save-btn" id="sparring-save-btn">Simpan Catatan</button>
       </div>
     </form>
@@ -11519,6 +11555,10 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
     </div>
   </div>
   <p id="info-diskon-manual" class="text-[10px] text-violet-800 font-black">Diskon tambahan tidak aktif</p>
+  <button type="button" onclick="simpanDiskonManualTersimpan()" class="w-full flex items-center justify-center gap-2 bg-violet-700 hover:bg-violet-800 text-white px-4 py-2 rounded-xl text-xs font-black shadow">
+    <span>💾</span><span>SIMPAN DISKON UNTUK NANTI</span>
+  </button>
+  <p class="text-[9px] text-violet-700 font-bold text-center">Diskon ini bisa disimpan lebih dulu meski jadwal masih Belum Bayar. Saat admin membuka jadwal ini lagi untuk pelunasan, diskon akan otomatis terisi ulang.</p>
 </div>
 
 <!-- Pilihan pembagian DISKON MEMBER khusus saat Tim 1 dan Tim 2 sama-sama Member -->
@@ -12032,7 +12072,6 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 </style>
 <form onsubmit="submitData(event, 'minuman')">
 <div class="minuman-grid grid gap-2 mb-3">
-<button aria-label="Simpan" class="minuman-btn minuman-save-btn rounded-xl glass-input font-bold border-2 border-transparent" title="Simpan" type="submit"><span class="minuman-save-icon">💾</span><span class="minuman-save-label">SIMPAN</span></button>
 <button aria-label="Air Mineral" class="minuman-btn rounded-xl glass-input font-bold border-2 border-transparent" data-nama="Air Mineral" onclick="pilihMinumanCepat('Air Mineral', 4000)" title="Air Mineral" type="button"><img alt="Air Mineral" src="mineral.png"/></button>
 <button aria-label="Air Mineral + 3 Permen" class="minuman-btn rounded-xl glass-input font-bold border-2 border-transparent" data-nama="Air Mineral + 3 Permen" onclick="pilihMinumanCepat('Air Mineral + 3 Permen', 5000)" title="Air Mineral + 3 Permen" type="button"><img alt="Air Mineral + 3 Permen" src="mineralpermen.png"/></button>
 <button aria-label="Pocari Sweat" class="minuman-btn rounded-xl glass-input font-bold border-2 border-transparent" data-nama="Pocari Sweat" onclick="pilihMinumanCepat('Pocari Sweat', 10000)" title="Pocari Sweat" type="button"><span class="minuman-size-cap">B</span><img alt="Pocari Sweat" src="pocari.png"/></button>
@@ -12042,6 +12081,7 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 <button aria-label="Coca Cola" class="minuman-btn rounded-xl glass-input font-bold border-2 border-transparent" data-nama="Coca Cola" onclick="pilihMinumanCepat('Coca Cola', 5000)" title="Coca Cola" type="button"><img alt="Coca Cola" src="cocacola.png"/></button>
 <button aria-label="Teh Pucuk Harum" class="minuman-btn rounded-xl glass-input font-bold border-2 border-transparent" data-nama="Teh Pucuk Harum" onclick="pilihMinumanCepat('Teh Pucuk Harum', 5000)" title="Teh Pucuk Harum" type="button"><img alt="Teh Pucuk Harum" src="tehpucuk.png"/></button>
 <button aria-label="Milo" class="minuman-btn rounded-xl glass-input font-bold border-2 border-transparent" data-nama="Milo" onclick="pilihMinumanCepat('Milo', 5000)" title="Milo" type="button"><img alt="Milo" src="milo.png"/></button>
+<button aria-label="Simpan" class="minuman-btn minuman-save-btn rounded-xl glass-input font-bold border-2 border-transparent" title="Simpan" type="submit"><span class="minuman-save-icon">💾</span><span class="minuman-save-label">SIMPAN</span></button>
 </div>
 <select class="hidden" id="m-select-pilihan" onchange="pilihMinuman(this)">
 <option data-harga="0" value="">-- Pilih Minuman --</option>
@@ -12067,6 +12107,7 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
   <option value="Cash" selected>METODE PEMBAYARAN: CASH</option>
   <option value="QRIS">METODE PEMBAYARAN: QRIS</option>
   <option value="Transfer">METODE PEMBAYARAN: TRANSFER</option>
+  <option value="Free">METODE PEMBAYARAN: FREE</option>
   <option value="Belum Bayar">METODE PEMBAYARAN: BELUM BAYAR</option>
 </select>
 <input class="hidden" id="m-tgl" required="" type="date" onchange="renderMinumanSummary()"/>
@@ -12091,8 +12132,11 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
     background: linear-gradient(135deg, #b45309 0%, #7c2d12 100%) !important;
     border-color: rgba(255,255,255,.55) !important;
     color: #fff !important;
-    flex-direction: column;
-    gap: 4px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    grid-column: 2 / -1 !important;
 }
 #page-minuman .minuman-save-btn:hover {
     background: linear-gradient(135deg, #c2650b 0%, #8a3413 100%) !important;
@@ -12560,7 +12604,31 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 .sparing-edit-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;padding-bottom:14px;border-bottom:1px solid #dbe3ea;}
 .sparing-edit-kicker{font-size:9px;font-weight:950;letter-spacing:.12em;color:#2e607a;margin-bottom:3px}.sparing-edit-head h3{margin:0;color:#0e2538;font-size:18px;font-weight:950}.sparing-edit-head p{margin:4px 0 0;color:#64748b;font-size:10px;font-weight:750}.sparing-edit-close{width:36px;height:36px;border:1px solid #dbe3ea;border-radius:11px;background:#fff;color:#475569;font-size:23px;font-weight:900;cursor:pointer}.sparing-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.sparing-edit-team-card{background:rgba(255,255,255,.82);border:1px solid #dbe3ea;border-radius:17px;padding:13px}.sparing-edit-team-title,.sparing-edit-section-title{font-size:10px;font-weight:950;letter-spacing:.06em;color:#0e2538;margin-bottom:9px}.sparing-edit-logo-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}.sparing-edit-logo-preview{width:68px;height:68px;flex:0 0 68px;border-radius:14px;border:1px solid #cbd5e1;background:#f8fafc;display:grid;place-items:center;overflow:hidden;font-size:28px}.sparing-edit-logo-preview img{width:100%;height:100%;object-fit:contain}.sparing-edit-logo-tools{display:flex;flex-direction:column;gap:6px}.sparing-edit-upload,.sparing-edit-remove-logo{display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:6px 9px;border-radius:9px;font-size:9px;font-weight:900;cursor:pointer;border:1px solid #dbe3ea}.sparing-edit-upload{background:#163b55;color:#fff}.sparing-edit-upload input{display:none}.sparing-edit-remove-logo{background:#f8fafc;color:#64748b}.sparing-edit-input{width:100%;min-height:40px;border:1px solid #cbd5e1;border-radius:11px;background:#fff;color:#0e2538;padding:8px 10px;font-size:12px;font-weight:800;outline:none}.sparing-edit-input:focus{border-color:#2e607a;box-shadow:0 0 0 3px rgba(46,96,122,.10)}.sparing-edit-schedule{margin-top:11px;padding:13px;background:rgba(233,240,244,.58);border:1px solid #dbe3ea;border-radius:17px}.sparing-edit-schedule-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.sparing-edit-schedule-grid label span{display:block;font-size:9px;color:#64748b;font-weight:900;margin:0 0 4px}.sparing-edit-note{margin-top:10px;padding:9px 10px;border-radius:11px;background:#eef6fa;color:#456579;font-size:9px;font-weight:750;line-height:1.4}.sparing-edit-footer{display:flex;gap:8px;margin-top:14px}.sparing-edit-footer button{min-height:42px;border-radius:12px;border:0;font-size:10px;font-weight:950;cursor:pointer}.sparing-edit-cancel{width:34%;background:#e9f0f4;color:#0e2538}.sparing-edit-save{flex:1;background:#163b55;color:#fff;box-shadow:0 8px 18px rgba(22,59,85,.18)}.sparing-edit-save:disabled{opacity:.55;cursor:wait}@media(max-width:640px){.sparing-edit-overlay{padding:8px}.sparing-edit-modal{padding:13px;border-radius:19px;max-height:94vh}.sparing-edit-grid{grid-template-columns:1fr}.sparing-edit-schedule-grid{grid-template-columns:1fr 1fr}.sparing-edit-head h3{font-size:15px}.sparing-edit-logo-preview{width:58px;height:58px;flex-basis:58px}.sparing-edit-footer{position:sticky;bottom:0;background:rgba(248,250,252,.98);padding-top:8px}}
 </style>
+<style id="sparing-edit-modal-wa-dan-fix-logo-v2">
+/* Label nomor WA di modal Edit Sparing, ditaruh di atas masing-masing input WA. */
+.sparing-edit-wa-label{display:block;margin:9px 0 4px;font-size:9px;font-weight:950;letter-spacing:.04em;color:#456579;text-transform:uppercase}
+/* FIX tombol "Ganti Logo": sebelumnya <input type=file> disisipkan DI DALAM
+   <label>, yang di sebagian WebView Android tidak selalu memicu file
+   picker. Sekarang input dipisah sebagai elemen tersendiri dan dihubungkan
+   memakai atribut for=, persis seperti pola Upload Logo pada menu lain yang
+   sudah terbukti berfungsi. Input tetap disembunyikan secara visual saja
+   (bukan display:none) supaya klik programatik tetap konsisten di semua
+   browser/WebView.
+   */
+.sparing-edit-file-input{
+  position:absolute !important;
+  width:1px !important;
+  height:1px !important;
+  padding:0 !important;
+  margin:-1px !important;
+  overflow:hidden !important;
+  clip:rect(0,0,0,0) !important;
+  white-space:nowrap !important;
+  border:0 !important;
+}
+</style>
 <style id="sparing-chooser-ui-v1">
+
 .sparing-chooser-overlay{position:fixed;inset:0;z-index:2147483646;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(15,23,42,.42);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);animation:sparingChooserFade .16s ease-out}
 .sparing-chooser-overlay.is-open{display:flex!important}
 .sparing-chooser{width:min(100%,470px);max-height:min(90vh,620px);overflow:auto;background:rgba(255,255,255,.98);border:1px solid rgba(255,255,255,.95);border-radius:22px;padding:20px;box-shadow:0 25px 70px rgba(15,23,42,.24);animation:sparingChooserIn .2s cubic-bezier(.2,.8,.2,1)}
@@ -13769,6 +13837,67 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
         function getBookingForPaymentTeam(nama,tgl,jam){const target=String(nama||'').trim().toLowerCase(),j=String(jam||'').substring(0,5);if(!target||!tgl)return null;return Object.entries(globalCache.booking||{}).find(([k,b])=>b&&String(b.tgl||'').split('T')[0]===String(tgl)&&String(b.tgl||'').split('T')[1]?.substring(0,5)===j&&String(b.nama||'').trim().toLowerCase()===target)||null;}
         function getSparingTeamNamesForPayment(nama,tgl,jam){const cur=String(nama||'').trim(),rec=getSparingForTeam(cur,tgl,String(jam||'').substring(0,5)),s=rec?.[1];if(!s||String(s.status||'').toLowerCase()!=='matched')return {tim1:cur,tim2:''};const a=String(s.timA||'').trim(),b=String(s.timB||'').trim(),x=cur.toLowerCase();return {tim1:a.toLowerCase()===x?a:(b.toLowerCase()===x?b:cur),tim2:a.toLowerCase()===x?b:(b.toLowerCase()===x?a:b)};}
         function loadManualDpFields(nama,tgl,jam){const n=getSparingTeamNamesForPayment(nama,tgl,jam),b1=getBookingForPaymentTeam(n.tim1,tgl,jam),b2=n.tim2?getBookingForPaymentTeam(n.tim2,tgl,jam):null;const d1=document.getElementById('in-dp-1'),d2=document.getElementById('in-dp-2'),t1=document.getElementById('in-tgl-dp-1'),t2=document.getElementById('in-tgl-dp-2');if(d1)d1.value=formatNominalInputValue(Number(b1?.[1]?.dp||0));if(t1)t1.value=b1?.[1]?.tglDp||'';if(d2)d2.value=formatNominalInputValue(Number(b2?.[1]?.dp||0));if(t2)t2.value=b2?.[1]?.tglDp||'';}
+
+        // DISKON MANUAL TERSIMPAN: memungkinkan admin menyimpan nominal diskon
+        // lebih dulu saat jadwal masih "Belum Bayar", supaya nanti saat admin
+        // benar-benar mencatat pelunasan, diskon tidak perlu diketik ulang.
+        // Disimpan menempel pada booking Tim 1 dari jadwal tersebut (identik
+        // dengan cara DP Manual disimpan di atas), tidak mengubah kalkulasi
+        // pembayaran yang sudah ada — hanya mengisi ulang form saat dibuka.
+        function loadDiskonManualTersimpan(nama,tgl,jam){
+            const n=getSparingTeamNamesForPayment(nama,tgl,jam);
+            const f=getBookingForPaymentTeam(n.tim1,tgl,jam);
+            const data=f?.[1]||null;
+            const nominalEl=document.getElementById('in-diskon-manual');
+            const tim1El=document.getElementById('in-diskon-manual-tim1-nominal');
+            const tim2El=document.getElementById('in-diskon-manual-tim2-nominal');
+            const berbedaWrap=document.getElementById('in-diskon-manual-berbeda-wrap');
+            const alokasi=String(data?.diskonManualAlokasiTersimpan||'tim1');
+            if(nominalEl) nominalEl.value=formatNominalInputValue(Number(data?.diskonManualTersimpan||0));
+            if(tim1El) tim1El.value=formatNominalInputValue(Number(data?.diskonManualTim1NominalTersimpan||0));
+            if(tim2El) tim2El.value=formatNominalInputValue(Number(data?.diskonManualTim2NominalTersimpan||0));
+            const radioAktif=document.querySelector(`input[name="diskon-manual-alokasi"][value="${alokasi}"]`);
+            if(radioAktif) radioAktif.checked=true;
+            if(berbedaWrap) berbedaWrap.classList.toggle('hidden', alokasi!=='berbeda');
+            if(typeof hitungOtomatisBiaya==='function') hitungOtomatisBiaya();
+        }
+        window.simpanDiskonManualTersimpan = async function(){
+            const nama=document.getElementById('in-tim')?.value||'';
+            const tgl=document.getElementById('in-tgl')?.value||'';
+            const jamMainEl=document.getElementById('in-jam-main');
+            const jam=jamMainEl?.getAttribute('data-base-jam-main')||jamMainEl?.value||'';
+            const jamMain=String(jam||'').substring(0,5);
+            if(!nama||!tgl||!jamMain){
+                alert('Pilih tim, tanggal, dan jam terlebih dahulu sebelum menyimpan diskon.');
+                return;
+            }
+            const n=getSparingTeamNamesForPayment(nama,tgl,jamMain);
+            const f=getBookingForPaymentTeam(n.tim1,tgl,jamMain);
+            if(!f){
+                alert('Data jadwal untuk booking ini belum ditemukan, diskon belum bisa disimpan.');
+                return;
+            }
+            const[k,b]=f;
+            const nominalInput=parseNominalInputValue(document.getElementById('in-diskon-manual')?.value||'');
+            const tim1Input=parseNominalInputValue(document.getElementById('in-diskon-manual-tim1-nominal')?.value||'');
+            const tim2Input=parseNominalInputValue(document.getElementById('in-diskon-manual-tim2-nominal')?.value||'');
+            const alokasi=document.querySelector('input[name="diskon-manual-alokasi"]:checked')?.value||'tim1';
+            const patch={
+                diskonManualTersimpan: Math.max(0, Number.isFinite(nominalInput)?nominalInput:0),
+                diskonManualAlokasiTersimpan: alokasi,
+                diskonManualTim1NominalTersimpan: Math.max(0, Number.isFinite(tim1Input)?tim1Input:0),
+                diskonManualTim2NominalTersimpan: Math.max(0, Number.isFinite(tim2Input)?tim2Input:0)
+            };
+            try{
+                await update(ref(db,'booking/'+k),patch);
+                globalCache.booking[k]={...b,...patch};
+                if(typeof window.showSuccessPopup==='function') window.showSuccessPopup('Diskon berhasil disimpan untuk jadwal ini.');
+                else alert('Diskon berhasil disimpan untuk jadwal ini.');
+            }catch(err){
+                alert('Gagal menyimpan diskon: '+err.message);
+            }
+        };
+
         async function simpanDpManualPembayaran(nama,tgl,jam,isSparing){
             // DP Manual bersifat OPSIONAL / darurat.
             // Kosong = jangan mengubah DP booking yang sudah ada, tetapi proses
@@ -17266,6 +17395,10 @@ kaosKakiTerjual: jumlahKaosKaki,
             // Muat DP yang sudah tercatat; admin bisa mengisi/mengoreksinya manual.
             loadManualDpFields(nama, tgl, jamMain);
 
+            // Muat diskon manual yang sudah disimpan admin sebelumnya (saat
+            // jadwal ini masih Belum Bayar), agar tidak perlu diketik ulang.
+            loadDiskonManualTersimpan(nama, tgl, jamMain);
+
             // Dari kartu Jadwal Hari Ini, default metode adalah Cash dan nominal
             // otomatis terisi sebesar SISA TAGIHAN. Admin tetap bisa mengeditnya.
             const metodePembayaran1 = document.getElementById('in-metode-1');
@@ -17551,6 +17684,30 @@ kaosKakiTerjual: jumlahKaosKaki,
             }
 
             return getMemberWhatsAppFromSchedule(target, tanggal, jam);
+        }
+
+        // Nomor WA khusus TIM 2 / lawan pada kartu SPARING (Jadwal Hari Ini).
+        // Prioritas sama seperti Tim 1: Booking Tim 2 (jika ada) -> waB yang
+        // diisi admin di form Sparing -> data Member dengan nama Tim 2.
+        function getSparingOpponentWhatsApp(sparingItem, tanggal, jam) {
+            const timB = String(sparingItem?.timB || '').trim();
+            if(!timB) return '';
+
+            const target = timB.toLowerCase();
+            const cleanJam = String(jam || '').replace('.', ':').substring(0, 5);
+            const booking = Object.values(globalCache.booking || {}).find(b => {
+                if(!b || !b.tgl) return false;
+                const btgl = String(b.tgl).split('T')[0];
+                const bjam = String(b.tgl).split('T')[1]?.substring(0, 5) || '';
+                return btgl === tanggal && bjam === cleanJam && String(b.nama || '').trim().toLowerCase() === target;
+            });
+            const bookingWa = String(booking?.wa || '').trim();
+            if(bookingWa) return bookingWa;
+
+            const direct = String(sparingItem?.waB || '').trim();
+            if(direct) return direct;
+
+            return getMemberWhatsAppFromSchedule(timB, tanggal, cleanJam);
         }
 
         function getScheduleWhatsAppSource(item) {
@@ -18852,6 +19009,27 @@ return;
                 const jamChips = aktif.map(item => `<span class="schedule-time shrink-0 inline-flex items-center justify-center px-2 py-1 rounded-lg border font-black text-xs sm:text-sm shadow-sm">⏰ ${String(item.jam).replace(':','.')}</span>`).join('');
                 const lateTimers = aktif.map(item => getLateTimerHtml(today, item.jam)).join('');
 
+                // Untuk kartu SPARING (2 tim), tombol Ingatkan dipecah jadi 2 tombol
+                // kecil berjejer ("1" untuk Tim 1, "2" untuk Tim 2), masing-masing
+                // langsung membuka WA milik timnya sendiri dengan isi pesan otomatis
+                // yang sama seperti sebelumnya. Untuk kartu 1 tim, tombol tetap sama
+                // seperti semula (ikon WA + tulisan "Ingatkan").
+                const jamLabelUntukWa = aktif.map(x => x.jam.replace(':','.')).join(' & ');
+                let remindButtonHtml = '';
+                if(isSparing) {
+                    const scheduleWaB = getSparingOpponentWhatsApp(sparingItem, today, jamPertama);
+                    const hasWaB = !!scheduleWaB;
+                    const btn1 = hasWa
+                        ? `<button type="button" onclick="event.stopPropagation(); return hubungiJadwalHariIni(decodeURIComponent('${encodeURIComponent(String(scheduleWa))}'), decodeURIComponent('${encodeURIComponent(String(sparingItem.timA || first.nama || ''))}'), decodeURIComponent('${encodeURIComponent(jamLabelUntukWa)}'))" class="today-remind-half-btn" aria-label="Hubungi Tim 1 via WhatsApp" title="Hubungi Tim 1 via WhatsApp"><img src="ikonwa.png" alt="WA" class="today-remind-icon"><span>1</span></button>`
+                        : '';
+                    const btn2 = hasWaB
+                        ? `<button type="button" onclick="event.stopPropagation(); return hubungiJadwalHariIni(decodeURIComponent('${encodeURIComponent(String(scheduleWaB))}'), decodeURIComponent('${encodeURIComponent(String(sparingItem.timB || ''))}'), decodeURIComponent('${encodeURIComponent(jamLabelUntukWa)}'))" class="today-remind-half-btn" aria-label="Hubungi Tim 2 via WhatsApp" title="Hubungi Tim 2 via WhatsApp"><img src="ikonwa.png" alt="WA" class="today-remind-icon"><span>2</span></button>`
+                        : '';
+                    if(btn1 || btn2) remindButtonHtml = `<div class="today-remind-btn today-remind-btn-pair">${btn1}${btn2}</div>`;
+                } else if(hasWa) {
+                    remindButtonHtml = `<button type="button" onclick="event.stopPropagation(); return hubungiJadwalHariIni(decodeURIComponent('${encodeURIComponent(String(scheduleWa))}'), decodeURIComponent('${encodeURIComponent(String(first.nama || ''))}'), decodeURIComponent('${encodeURIComponent(jamLabelUntukWa)}'))" class="today-remind-btn" aria-label="Ingatkan via WhatsApp" title="Ingatkan via WhatsApp"><img src="ikonwa.png" alt="WA" class="today-remind-icon"><span>Ingatkan</span></button>`;
+                }
+
                 return `<div class="schedule-card rounded-xl border p-2.5 shadow-sm cursor-pointer" role="button" tabindex="0" title="Klik untuk mencatat uang masuk / pelunasan" onclick="bukaUangMasukDariJadwal(decodeURIComponent('${encodeURIComponent(String(first.nama || '')).replace("'", "%27")}'), '${jamPertama}', '${today}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();bukaUangMasukDariJadwal(decodeURIComponent('${encodeURIComponent(String(first.nama || '')).replace("'", "%27")}'), '${jamPertama}', '${today}')}"">
                     <div class="today-schedule-main-row">
                         ${isSparing ? renderSparingLogoHtml(sparingItem.timA, sparingItem.timB) : renderTeamLogoHtml(namaTampil)}
@@ -18865,7 +19043,7 @@ return;
                             ${isFirstConsecutiveTeamSchedule(schedules, jamList, jamPertama, first) ? getAdminReminderTimerHtml(today, jamPertama, hasWa) : ''}
                             ${lateTimers}
                         </div>
-                        ${hasWa ? `<button type="button" onclick="event.stopPropagation(); return hubungiJadwalHariIni(decodeURIComponent('${encodeURIComponent(String(scheduleWa))}'), decodeURIComponent('${encodeURIComponent(String(first.nama || ''))}'), decodeURIComponent('${encodeURIComponent(String(aktif.map(x => x.jam.replace(':','.')).join(' & ')))}'))" class="today-remind-btn" aria-label="Ingatkan via WhatsApp" title="Ingatkan via WhatsApp"><img src="ikonwa.png" alt="WA" class="today-remind-icon"><span>Ingatkan</span></button>` : ''}
+                        ${remindButtonHtml}
                     </div>
                     <div class="grid grid-cols-3 gap-1.5 mt-2 text-center text-[9px] sm:text-[10px] font-black">
                         <div class="schedule-money rounded-lg border p-1.5">
@@ -19360,6 +19538,7 @@ return;
             const statusA = document.getElementById('sparring-status-a')?.value || (isManual ? 'Non Member' : 'Member');
             const statusB = document.getElementById('sparring-status-b')?.value || 'Non Member';
             const wa = document.getElementById('sparring-wa')?.value.trim() || '';
+            const waB = document.getElementById('sparring-wa-b')?.value.trim() || '';
             const catatan = document.getElementById('sparring-catatan')?.value.trim() || '';
             const bookingKeyA = !isManual && selectedOption?.dataset?.source === 'Booking'
                 ? (selectedOption?.dataset?.bookingKey || '') : '';
@@ -19402,6 +19581,7 @@ return;
 
                 const sparringDataBase = {
                     tanggal, jam, timA, timB, wa,
+                    waB: timB ? waB : '',
                     statusA,
                     statusB: timB ? statusB : '',
                     source: isManual ? 'Manual' : (selectedOption?.dataset?.source || ''),
@@ -19429,6 +19609,7 @@ return;
                             timA: existingTeam,
                             timB: otherTeam,
                             wa: wa || pendingItem.wa || '',
+                            waB: waB || pendingItem.waB || '',
                             catatan: catatan || pendingItem.catatan || ''
                         });
                     } else {
@@ -19625,6 +19806,8 @@ return;
 
             const timA = document.getElementById('sparing-edit-tim-a')?.value.trim() || '';
             const timB = document.getElementById('sparing-edit-tim-b')?.value.trim() || '';
+            const waA = document.getElementById('sparing-edit-wa-a')?.value.trim() || '';
+            const waB = document.getElementById('sparing-edit-wa-b')?.value.trim() || '';
             const tanggal = document.getElementById('sparing-edit-tanggal')?.value || '';
             const jam = document.getElementById('sparing-edit-jam')?.value || '';
             const logoA = document.getElementById('sparing-edit-logo-a')?.value || '';
@@ -19666,6 +19849,8 @@ return;
                     jam,
                     timA,
                     timB,
+                    wa: waA,
+                    waB: timB ? waB : '',
                     status: timB ? 'matched' : 'pending',
                     statusB: timB ? (current.statusB || 'Non Member') : ''
                 };
@@ -19689,6 +19874,7 @@ return;
                     if(booking?.sparringOpponent === true) continue;
                     const bookingPatch = {
                         nama: timA,
+                        wa: waA,
                         tgl: `${tanggal}T${jam.substring(0,5)}`,
                         sparringKey: key,
                         sparringSource: true,
@@ -19743,6 +19929,8 @@ return;
                 globalCache.sparring[key] = {
                     ...current,
                     tanggal, jam, timA, timB,
+                    wa: waA,
+                    waB: timB ? waB : '',
                     status: timB ? 'matched' : 'pending',
                     statusB: timB ? (current.statusB || 'Non Member') : '',
                     updatedAt: Date.now()
@@ -19775,12 +19963,16 @@ return;
             document.getElementById('modal-sparing-edit')?.remove();
             const timA = String(item.timA || '').trim();
             const timB = String(item.timB || '').trim();
+            const waA = String(item.wa || '').trim();
+            const waB = String(item.waB || '').trim();
             const tanggal = String(item.tanggal || '');
             const jam = String(item.jam || '').substring(0,5);
             const logoA = getTeamLogo(timA);
             const logoB = getTeamLogo(timB);
             const safeA = escapeHtmlSparing(timA);
             const safeB = escapeHtmlSparing(timB);
+            const safeWaA = escapeHtmlSparing(waA);
+            const safeWaB = escapeHtmlSparing(waB);
 
             document.body.insertAdjacentHTML('beforeend', `
                 <div id="modal-sparing-edit" class="sparing-edit-overlay" data-key="${escapeAttrLogo(key)}" role="dialog" aria-modal="true" aria-labelledby="sparing-edit-title">
@@ -19789,7 +19981,7 @@ return;
                             <div>
                                 <div class="sparing-edit-kicker">🤝 SPARING</div>
                                 <h3 id="sparing-edit-title">✏️ Edit Data Sparing</h3>
-                                <p>Ubah nama tim, logo, tanggal, atau jam main.</p>
+                                <p>Ubah nama tim, logo, nomor WA, tanggal, atau jam main.</p>
                             </div>
                             <button type="button" class="sparing-edit-close" onclick="closeSparingEditModal()">×</button>
                         </div>
@@ -19800,11 +19992,14 @@ return;
                                 <div class="sparing-edit-logo-row">
                                     <div id="sparing-edit-logo-preview-a" class="sparing-edit-logo-preview">${logoA ? `<img src="${escapeAttrLogo(logoA)}" alt="Logo Tim 1">` : '<span>⚽</span>'}</div>
                                     <div class="sparing-edit-logo-tools">
-                                        <label class="sparing-edit-upload">🖼️ Ganti Logo<input type="file" accept="image/*" onchange="sparingEditUploadLogo('a',this)"></label>
+                                        <label for="sparing-edit-file-a" class="sparing-edit-upload">🖼️ Ganti Logo</label>
+                                        <input id="sparing-edit-file-a" type="file" accept="image/*" class="sparing-edit-file-input" onchange="sparingEditUploadLogo('a',this)">
                                         <button type="button" class="sparing-edit-remove-logo" onclick="sparingEditRemoveLogo('a')">Hapus Logo</button>
                                     </div>
                                 </div>
                                 <input id="sparing-edit-tim-a" class="sparing-edit-input" type="text" value="${safeA}" placeholder="Nama Tim 1">
+                                <label class="sparing-edit-wa-label">No. WhatsApp Tim 1</label>
+                                <input id="sparing-edit-wa-a" class="sparing-edit-input" type="tel" inputmode="tel" autocomplete="tel" value="${safeWaA}" placeholder="Contoh: 081234567890">
                                 <input id="sparing-edit-logo-a" type="hidden" value="${escapeAttrLogo(logoA)}">
                                 <input id="sparing-edit-logo-a-removed" type="hidden" value="">
                             </section>
@@ -19814,11 +20009,14 @@ return;
                                 <div class="sparing-edit-logo-row">
                                     <div id="sparing-edit-logo-preview-b" class="sparing-edit-logo-preview">${logoB ? `<img src="${escapeAttrLogo(logoB)}" alt="Logo Tim 2">` : '<span>⚽</span>'}</div>
                                     <div class="sparing-edit-logo-tools">
-                                        <label class="sparing-edit-upload">🖼️ Ganti Logo<input type="file" accept="image/*" onchange="sparingEditUploadLogo('b',this)"></label>
+                                        <label for="sparing-edit-file-b" class="sparing-edit-upload">🖼️ Ganti Logo</label>
+                                        <input id="sparing-edit-file-b" type="file" accept="image/*" class="sparing-edit-file-input" onchange="sparingEditUploadLogo('b',this)">
                                         <button type="button" class="sparing-edit-remove-logo" onclick="sparingEditRemoveLogo('b')">Hapus Logo</button>
                                     </div>
                                 </div>
                                 <input id="sparing-edit-tim-b" class="sparing-edit-input" type="text" value="${safeB}" placeholder="Nama Tim 2 / kosongkan jika belum ada lawan">
+                                <label class="sparing-edit-wa-label">No. WhatsApp Tim 2</label>
+                                <input id="sparing-edit-wa-b" class="sparing-edit-input" type="tel" inputmode="tel" autocomplete="tel" value="${safeWaB}" placeholder="Contoh: 081234567890">
                                 <input id="sparing-edit-logo-b" type="hidden" value="${escapeAttrLogo(logoB)}">
                                 <input id="sparing-edit-logo-b-removed" type="hidden" value="">
                             </section>
@@ -19832,7 +20030,7 @@ return;
                             </div>
                         </div>
 
-                        <div class="sparing-edit-note">💡 Perubahan jadwal Tim 1 juga akan memperbarui jadwal booking yang terhubung dengan sparing ini.</div>
+                        <div class="sparing-edit-note">💡 Perubahan jadwal & WA Tim 1 juga akan memperbarui jadwal booking yang terhubung dengan sparing ini.</div>
                         <div class="sparing-edit-footer">
                             <button type="button" class="sparing-edit-cancel" onclick="closeSparingEditModal()">BATAL</button>
                             <button type="button" id="sparing-edit-save-btn" class="sparing-edit-save" onclick="simpanEditSparingModal()">💾 SIMPAN PERUBAHAN</button>
@@ -19960,7 +20158,7 @@ return;
             if(matchedEl) matchedEl.textContent = matchedCount;
 
             const filtered = entries.filter(([key,item])=>{
-                const hay = `${item?.timA||''} ${item?.timB||''} ${item?.wa||''} ${item?.catatan||''}`.toLowerCase();
+                const hay = `${item?.timA||''} ${item?.timB||''} ${item?.wa||''} ${item?.waB||''} ${item?.catatan||''}`.toLowerCase();
                 if(search && !hay.includes(search)) return false;
                 if(statusFilter === 'pending' && item?.status === 'matched') return false;
                 if(statusFilter === 'matched' && item?.status !== 'matched') return false;
@@ -21278,8 +21476,11 @@ return;
                     let tot = Number(item.total || 0);
                     let pcs = Number(item.jumlahPcs || 0);
                     let met = item.metode || 'Cash';
-                    totalMinuman += tot;
-                    if(met === 'Cash') totalMinumanCash += tot; else totalMinumanQrif += tot;
+                    // Minuman Free/Gratis tidak punya nilai uang, jadi tidak masuk
+                    // ke total maupun ditampilkan dengan harga aslinya.
+                    let totTampil = (met === 'Free') ? 0 : tot;
+                    totalMinuman += totTampil;
+                    if(met === 'Cash') totalMinumanCash += totTampil; else if(met !== 'Free') totalMinumanQrif += totTampil;
 
                     if(!rekapProdukQty[item.produk]) rekapProdukQty[item.produk] = 0;
                     rekapProdukQty[item.produk] += pcs;
@@ -21288,7 +21489,7 @@ return;
                         tbodyMinuman.innerHTML += `<tr class="border-b border-slate-900/40 text-center font-bold">
                             <td class="p-2 border border-slate-900/40 text-left">${item.produk}</td>
                             <td class="p-2 border border-slate-900/40">${pcs} Pcs</td>
-                            <td class="p-2 border border-slate-900/40 text-amber-900 font-black">Rp ${tot.toLocaleString('id-ID')} (${met})</td>
+                            <td class="p-2 border border-slate-900/40 text-amber-900 font-black">Rp ${totTampil.toLocaleString('id-ID')} (${met})</td>
                             <td class="p-2 border border-slate-900/40 text-center"><button type="button" onclick="hapusDataKeuangan('minuman', '${key}')" class="bg-rose-700 hover:bg-rose-800 text-white px-2 py-1 rounded text-xs">Hapus</button></td>
                         </tr>`;
                     }
@@ -25621,6 +25822,162 @@ window.downloadDailyRecapJPGFull = async function() {
 #page-sparring .sparring-status-select:focus {
     border-color: #2e607a !important;
     box-shadow: 0 0 0 3px rgba(46,96,122,.12) !important;
+}
+</style>
+
+
+<style id="SPARING-FORM-SPLIT-CARDS">
+/* =========================================================================
+   CATAT PERMINTAAN SPARING — DIPECAH JADI 3 CARD TERPISAH
+   Sebelumnya seluruh field (Tim 1, Tim 2, tombol Simpan) berada dalam
+   satu panel form. Sekarang tiap bagian punya card putih sendiri supaya
+   lebih rapi dan mudah dibaca: Card Tim 1, Card Tim 2, Card Simpan.
+   Panel <form> lama dibuat transparan (bukan panel lagi) karena
+   pembungkusnya sekarang adalah masing-masing .sparring-card.
+   ========================================================================= */
+#page-sparring .sparring-form-wrap > form {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+#page-sparring .sparring-card {
+    background: rgba(255,255,255,.96) !important;
+    border: 1px solid rgba(148,163,184,.28) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 5px 18px rgba(15,23,42,.055) !important;
+    padding: 14px !important;
+    margin-bottom: 12px !important;
+}
+
+#page-sparring .sparring-card:last-child {
+    margin-bottom: 0 !important;
+}
+
+#page-sparring .sparring-card > .sparring-label:first-of-type {
+    margin-top: 0 !important;
+}
+
+#page-sparring .sparring-card-head {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin-bottom: 12px !important;
+    padding-bottom: 10px !important;
+    border-bottom: 1px solid rgba(148,163,184,.28) !important;
+}
+
+#page-sparring .sparring-card-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 22px !important;
+    border-radius: 7px !important;
+    font-size: 11px !important;
+    font-weight: 950 !important;
+    color: #fff !important;
+}
+
+#page-sparring .sparring-card-badge-a { background: #163B55 !important; }
+#page-sparring .sparring-card-badge-b { background: #c9852b !important; }
+
+#page-sparring .sparring-card-title {
+    font-size: 12.5px !important;
+    font-weight: 950 !important;
+    color: #172033 !important;
+}
+
+#page-sparring .sparring-card-save {
+    display: flex !important;
+}
+
+#page-sparring .sparring-card-save .sparring-save-btn {
+    width: 100% !important;
+    padding: .8rem 1rem !important;
+    font-size: 12px !important;
+    text-align: center !important;
+}
+
+@media (max-width:640px) {
+    #page-sparring .sparring-card {
+        padding: 12px !important;
+    }
+}
+</style>
+
+
+<style id="SPARING-HIDE-FORM-HEADER-ROW">
+/* =========================================================================
+   Menyembunyikan baris judul "➕ Catat Permintaan Sparing" beserta tombol
+   "BATAL EDIT" di atas form, supaya tampilan lebih clean setelah form
+   dipecah jadi card-card terpisah. Elemennya TIDAK dihapus dari DOM
+   (hanya disembunyikan) karena skrip masih membaca/mengubah teksnya saat
+   reset & mode edit — menghapusnya bisa membuat skrip error.
+   ========================================================================= */
+#page-sparring .sparring-form-wrap > div:first-child {
+    display: none !important;
+}
+</style>
+
+
+<style id="sparring-width-match-header-dock-final">
+/* =========================================================================
+   SPARING — SAMAKAN LEBAR DENGAN HEADER & DOCK
+   Sebelumnya halaman ini memakai margin kiri/kanan 12px (aturan umum
+   .sub-menu-modern di HP), sedikit lebih sempit daripada header dan dock
+   yang insetnya 8px. Di sini margin dihapus supaya lebar halaman Sparing
+   persis sama dengan header & dock bar, sama seperti pola yang sudah
+   dipakai di halaman Minuman / Daily Recap. Hanya visual — JS/ID/handler
+   tidak disentuh.
+   ========================================================= */
+@media (max-width: 767px) {
+    #page-sparring.sub-menu-modern {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        box-sizing: border-box !important;
+    }
+}
+</style>
+
+
+<style id="sparring-form-typography-consistency">
+/* =========================================================================
+   SPARING — KONSISTENSI UKURAN TEKS DI FORM
+   Sebelumnya label (10px) jauh lebih kecil daripada isi input/select
+   (16px, dipaksa besar di HP supaya iOS tidak auto-zoom saat fokus).
+   Perbedaan drastis itu yang membuat form terlihat "besar-kecil" tidak
+   rapi. Di sini label, judul card, dan teks keterangan dinaikkan ke
+   ukuran yang lebih seimbang, sementara ukuran input/select TIDAK
+   diperkecil (tetap >=16px) supaya proteksi anti-zoom iOS tetap aman.
+   ========================================================= */
+#page-sparring .sparring-card-title {
+    font-size: 13.5px !important;
+}
+
+#page-sparring .sparring-label {
+    font-size: 12.5px !important;
+    font-weight: 800 !important;
+    margin-bottom: 6px !important;
+}
+
+#page-sparring .sparring-label.sparring-status-label {
+    margin-top: 12px !important;
+}
+
+#page-sparring .sparring-booking-info {
+    font-size: 11.5px !important;
+    line-height: 1.45 !important;
+}
+
+#page-sparring .sparring-card .text-\[10px\] {
+    font-size: 11.5px !important;
+    line-height: 1.4 !important;
 }
 </style>
 
@@ -30547,8 +30904,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
       if(section==='form'){
         if(typeof window.batalEditSparing==='function') window.batalEditSparing();
-        const first=document.getElementById('sparring-tim-a');
-        if(first) first.scrollIntoView({behavior:'smooth',block:'start'});
+        window.scrollTo({top:0,left:0,behavior:'auto'});
       }else{
         if(typeof window.renderSparing==='function') window.renderSparing();
         const list=document.getElementById('sparring-list');
@@ -35705,12 +36061,14 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')tutupPemilihTanggalJ
 
     Object.values(globalCache.minuman || {}).forEach(item => {
       if(!laporanDateInRange(item.tgl, mulai, akhir)) return;
-      const total = Number(item.total || 0);
+      const metodeMinuman = item.metode || 'Cash';
+      // Minuman Free/Gratis tidak dihitung sebagai pemasukan.
+      const total = (metodeMinuman === 'Free') ? 0 : Number(item.total || 0);
       totalMinuman += total;
       minumanRows.push({
         tanggal:String(item.tgl).split('T')[0],
         keterangan:item.produk || 'Minuman',
-        metode:item.metode || 'Cash',
+        metode:metodeMinuman,
         jumlahPcs:Number(item.jumlahPcs || 0),
         jumlah:total
       });
@@ -36455,6 +36813,13 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')tutupPemilihTanggalJ
   overflow:auto !important;
   padding:10px !important;
   overscroll-behavior:contain !important;
+  scrollbar-width:none !important; /* Firefox: tetap bisa discroll, batang scroll disembunyikan */
+  -ms-overflow-style:none !important; /* Edge/IE lama */
+}
+#daily-sub-modal-glass-v6 .daily-v6-body::-webkit-scrollbar{
+  display:none !important; /* Chrome/Safari/WebKit: sembunyikan batang scroll */
+  width:0 !important;
+  height:0 !important;
 }
 #daily-sub-modal-glass-v6 .daily-v6-body > .space-y-6{
   display:block !important;
@@ -44207,5 +44572,493 @@ body > header .admin-global-header-brand-title{
 .setor-tunai-period{
   margin-top:0 !important;
   margin-bottom:10px !important;
+}
+</style>
+
+<style id="final-unified-fixed-header-v1">
+/* =========================================================================
+   FINAL — HEADER TUNGGAL & IDENTIK DI SEMUA HALAMAN (Jadwal, Minuman,
+   Daily Recap, Lainnya, Setor Tunai, dll), SERTA TIDAK IKUT SCROLL.
+   Ditulis paling akhir dan dengan selector lebih spesifik agar
+   mengalahkan seluruh aturan header per-halaman sebelumnya, sehingga
+   header Jadwal/Lainnya dijamin sama persis (posisi & rounded) dengan
+   header Minuman, dan menempel di atas layar saat konten di-scroll.
+   ========================================================================= */
+
+html body > header,
+html body:has(#page-jadwal:not(.hidden)) > header,
+html body:has(#page-minuman:not(.hidden)) > header,
+html body:has(#page-daily-recap:not(.hidden)) > header,
+html body:has(#page-more:not(.hidden)) > header,
+html body:has(#page-setor-tunai:not(.hidden)) > header,
+html body:has(#page-keluar:not(.hidden)) > header,
+html body:has(#page-admin-jaga:not(.hidden)) > header {
+  display: flex !important;
+  position: fixed !important;
+  top: max(16px, env(safe-area-inset-top) + 10px) !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: auto !important;
+  margin: 0 auto !important;
+  width: min(100%, 780px) !important;
+  min-height: 96px !important;
+  padding: 13px 14px 13px 16px !important;
+  box-sizing: border-box !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 12px !important;
+  text-align: left !important;
+  border-radius: 22px !important;
+  background: linear-gradient(135deg,rgba(255,255,255,.68),rgba(231,242,255,.48)) !important;
+  border: 1px solid rgba(255,255,255,.86) !important;
+  box-shadow: 0 18px 48px rgba(2,6,23,.20), inset 0 1px 0 rgba(255,255,255,.92), inset 0 -1px 0 rgba(255,255,255,.28) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(155%) !important;
+  backdrop-filter: blur(28px) saturate(155%) !important;
+  overflow: visible !important;
+  z-index: 900 !important;
+}
+
+html body > header img,
+html body:has(#page-jadwal:not(.hidden)) > header img,
+html body:has(#page-minuman:not(.hidden)) > header img,
+html body:has(#page-daily-recap:not(.hidden)) > header img,
+html body:has(#page-more:not(.hidden)) > header img,
+html body:has(#page-setor-tunai:not(.hidden)) > header img,
+html body:has(#page-keluar:not(.hidden)) > header img,
+html body:has(#page-admin-jaga:not(.hidden)) > header img {
+  flex: 0 0 76px !important;
+  width: 76px !important;
+  height: 76px !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  object-fit: contain !important;
+  display: block !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+@media (min-width: 768px) {
+  html body > header,
+  html body:has(#page-jadwal:not(.hidden)) > header,
+  html body:has(#page-minuman:not(.hidden)) > header,
+  html body:has(#page-daily-recap:not(.hidden)) > header,
+  html body:has(#page-more:not(.hidden)) > header,
+  html body:has(#page-setor-tunai:not(.hidden)) > header,
+  html body:has(#page-keluar:not(.hidden)) > header,
+  html body:has(#page-admin-jaga:not(.hidden)) > header {
+    width: var(--desktop-app-width, min(1200px, calc(100vw - 32px))) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  html body > header,
+  html body:has(#page-jadwal:not(.hidden)) > header,
+  html body:has(#page-minuman:not(.hidden)) > header,
+  html body:has(#page-daily-recap:not(.hidden)) > header,
+  html body:has(#page-more:not(.hidden)) > header,
+  html body:has(#page-setor-tunai:not(.hidden)) > header,
+  html body:has(#page-keluar:not(.hidden)) > header,
+  html body:has(#page-admin-jaga:not(.hidden)) > header {
+    width: calc(100% - 20px) !important;
+    min-height: 88px !important;
+    padding: 11px 12px 11px 13px !important;
+    gap: 9px !important;
+    border-radius: 22px !important;
+  }
+
+  html body > header img,
+  html body:has(#page-jadwal:not(.hidden)) > header img,
+  html body:has(#page-minuman:not(.hidden)) > header img,
+  html body:has(#page-daily-recap:not(.hidden)) > header img,
+  html body:has(#page-more:not(.hidden)) > header img,
+  html body:has(#page-setor-tunai:not(.hidden)) > header img,
+  html body:has(#page-keluar:not(.hidden)) > header img,
+  html body:has(#page-admin-jaga:not(.hidden)) > header img {
+    flex-basis: 68px !important;
+    width: 68px !important;
+    height: 68px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  html body > header,
+  html body:has(#page-jadwal:not(.hidden)) > header,
+  html body:has(#page-minuman:not(.hidden)) > header,
+  html body:has(#page-daily-recap:not(.hidden)) > header,
+  html body:has(#page-more:not(.hidden)) > header,
+  html body:has(#page-setor-tunai:not(.hidden)) > header,
+  html body:has(#page-keluar:not(.hidden)) > header,
+  html body:has(#page-admin-jaga:not(.hidden)) > header {
+    top: max(12px, env(safe-area-inset-top) + 8px) !important;
+    min-height: 76px !important;
+    padding: 9px 11px !important;
+    gap: 9px !important;
+    border-radius: 20px !important;
+  }
+
+  html body > header img,
+  html body:has(#page-jadwal:not(.hidden)) > header img,
+  html body:has(#page-minuman:not(.hidden)) > header img,
+  html body:has(#page-daily-recap:not(.hidden)) > header img,
+  html body:has(#page-more:not(.hidden)) > header img,
+  html body:has(#page-setor-tunai:not(.hidden)) > header img,
+  html body:has(#page-keluar:not(.hidden)) > header img,
+  html body:has(#page-admin-jaga:not(.hidden)) > header img {
+    flex-basis: 56px !important;
+    width: 56px !important;
+    height: 56px !important;
+  }
+}
+
+/* Ruang aman di bawah header fixed agar konten tidak tertutup.
+   Nilai default (fallback) di sini, akan disempurnakan presisi oleh
+   script pengukur di bawah lewat --fixed-header-space. */
+:root {
+  --fixed-header-space: 150px;
+}
+@media (max-width: 640px) {
+  :root { --fixed-header-space: 122px; }
+}
+@media (max-width: 380px) {
+  :root { --fixed-header-space: 104px; }
+}
+
+html body > main {
+  padding-top: var(--fixed-header-space) !important;
+  margin-top: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Semua override lama yang pernah menyembunyikan/melepas header khusus
+   di halaman tertentu dinetralkan supaya header benar-benar satu bentuk.
+   Jarak atas sekarang murni diatur lewat padding-top pada <main> di atas,
+   jadi padding atas bawaan body dinolkan di SEMUA halaman (bukan hanya
+   Minuman) supaya tidak ada halaman yang mendapat spasi ganda. */
+html body {
+  padding-top: 0 !important;
+}
+</style>
+
+<script id="final-unified-fixed-header-v1-script">
+(function () {
+  'use strict';
+
+  function measureHeader() {
+    var header = document.querySelector('body > header');
+    if (!header) return;
+    var rect = header.getBoundingClientRect();
+    var gapBelow = window.innerWidth <= 380 ? 14 : (window.innerWidth <= 640 ? 16 : 20);
+    var space = Math.ceil(rect.top + rect.height + gapBelow);
+    if (space > 0) {
+      document.documentElement.style.setProperty('--fixed-header-space', space + 'px');
+    }
+  }
+
+  function scheduleMeasure() {
+    // Ukur beberapa kali agar tetap akurat walau font/logo baru selesai dimuat.
+    measureHeader();
+    requestAnimationFrame(measureHeader);
+    setTimeout(measureHeader, 150);
+    setTimeout(measureHeader, 500);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', scheduleMeasure, { once: true });
+  } else {
+    scheduleMeasure();
+  }
+
+  window.addEventListener('resize', measureHeader);
+  window.addEventListener('orientationchange', scheduleMeasure);
+
+  var headerLogo = document.querySelector('body > header img');
+  if (headerLogo) {
+    headerLogo.addEventListener('load', measureHeader, { once: true });
+  }
+
+  var mainEl = document.querySelector('body > main');
+  if (mainEl) {
+    var observer = new MutationObserver(scheduleMeasure);
+    observer.observe(mainEl, { subtree: true, attributes: true, attributeFilter: ['class'] });
+  }
+})();
+</script>
+
+<style id="more-menu-flat-cards-v1">
+/* =========================================================================
+   MENU LAINNYA — HILANGKAN KACA BESAR PEMBUNGKUS
+   Card-card menu berdiri sendiri (sudah punya kaca masing-masing lewat
+   .more-page-grid button), sementara wadah besar di belakangnya
+   ditransparankan total dan lebarnya disamakan dengan header & dock bar.
+   ========================================================================= */
+#page-more{
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+}
+
+#page-more .more-menu-page{
+  background: transparent !important;
+  background-image: none !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 auto !important;
+  border-radius: 0 !important;
+}
+
+#page-more .more-menu-page::before{
+  display: none !important;
+  content: none !important;
+}
+
+#page-more .more-page-grid{
+  width: 100% !important;
+}
+
+@media (max-width: 640px){
+  #page-more .more-menu-page{
+    width: 100% !important;
+    padding: 0 !important;
+  }
+}
+</style>
+
+<style id="more-menu-text-contrast-v1">
+/* =========================================================================
+   MENU LAINNYA — PERJELAS TEKS KETERANGAN DI SETIAP CARD
+   Latar foto di belakang membuat teks kecil (keterangan) jadi kurang
+   kontras di beberapa card. Warna teks dipertegas + latar card dibuat
+   sedikit lebih solid supaya kontras stabil di semua card.
+   ========================================================================= */
+#page-more .more-page-grid button{
+  background: linear-gradient(145deg, rgba(255,255,255,.82), rgba(255,255,255,.60)) !important;
+}
+#page-more .more-page-grid button:hover{
+  background: rgba(255,255,255,.88) !important;
+}
+#page-more .more-page-grid button b{
+  color: #0f172a !important;
+  text-shadow: none !important;
+}
+#page-more .more-page-grid button small{
+  color: #334155 !important;
+  font-weight: 850 !important;
+  text-shadow: none !important;
+  opacity: 1 !important;
+}
+</style>
+
+<style id="more-menu-last-item-full-width-v1">
+/* =========================================================================
+   MENU LAINNYA — 11 ITEM (GANJIL) DI GRID 2 KOLOM
+   Tombol terakhir (Setor Tunai) dibuat melebar 1 baris penuh supaya
+   tidak ada slot kosong di baris terakhir, sekaligus terlihat lebih rapi.
+   Tata letak isi tombol (ikon di atas, judul, keterangan) tetap sama
+   seperti tombol lain — hanya lebarnya yang menjadi satu baris penuh.
+   ========================================================================= */
+#page-more .more-page-grid button:last-child{
+  grid-column: 1 / -1 !important;
+}
+</style>
+
+<style id="header-dock-width-exact-match-v1">
+/* =========================================================================
+   HEADER — SAMAKAN LEBAR PERSIS DENGAN DOCK BAR DI SEMUA HALAMAN
+   Sebelumnya header pakai rumus lebar sendiri (beda ~2px per sisi dari
+   dock). Sekarang header memakai rumus & teknik penempatan yang PERSIS
+   SAMA dengan dock bar (.quick-bottom-nav) di setiap breakpoint, supaya
+   sisi kiri-kanan header dan dock benar-benar sejajar.
+   ========================================================================= */
+html body > header,
+html body:has(#page-jadwal:not(.hidden)) > header,
+html body:has(#page-minuman:not(.hidden)) > header,
+html body:has(#page-daily-recap:not(.hidden)) > header,
+html body:has(#page-more:not(.hidden)) > header,
+html body:has(#page-setor-tunai:not(.hidden)) > header,
+html body:has(#page-keluar:not(.hidden)) > header,
+html body:has(#page-admin-jaga:not(.hidden)) > header {
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%) !important;
+  margin: 0 !important;
+  width: min(760px, calc(100vw - 28px)) !important;
+}
+
+@media (min-width: 768px) {
+  html body > header,
+  html body:has(#page-jadwal:not(.hidden)) > header,
+  html body:has(#page-minuman:not(.hidden)) > header,
+  html body:has(#page-daily-recap:not(.hidden)) > header,
+  html body:has(#page-more:not(.hidden)) > header,
+  html body:has(#page-setor-tunai:not(.hidden)) > header,
+  html body:has(#page-keluar:not(.hidden)) > header,
+  html body:has(#page-admin-jaga:not(.hidden)) > header {
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    width: var(--desktop-app-width, min(1200px, calc(100vw - 32px))) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  html body > header,
+  html body:has(#page-jadwal:not(.hidden)) > header,
+  html body:has(#page-minuman:not(.hidden)) > header,
+  html body:has(#page-daily-recap:not(.hidden)) > header,
+  html body:has(#page-more:not(.hidden)) > header,
+  html body:has(#page-setor-tunai:not(.hidden)) > header,
+  html body:has(#page-keluar:not(.hidden)) > header,
+  html body:has(#page-admin-jaga:not(.hidden)) > header {
+    left: 8px !important;
+    right: 8px !important;
+    transform: none !important;
+    margin: 0 !important;
+    width: auto !important;
+  }
+}
+
+@media (max-width: 380px) {
+  html body > header,
+  html body:has(#page-jadwal:not(.hidden)) > header,
+  html body:has(#page-minuman:not(.hidden)) > header,
+  html body:has(#page-daily-recap:not(.hidden)) > header,
+  html body:has(#page-more:not(.hidden)) > header,
+  html body:has(#page-setor-tunai:not(.hidden)) > header,
+  html body:has(#page-keluar:not(.hidden)) > header,
+  html body:has(#page-admin-jaga:not(.hidden)) > header {
+    left: 5px !important;
+    right: 5px !important;
+  }
+}
+</style>
+
+<style id="samakan-jarak-header-minuman-final">
+/* =========================================================
+   FIX: jarak antara header global dan baris tanggal+riwayat
+   di halaman Minuman terlalu jauh dibanding Jadwal Hari Ini.
+   Penyebabnya: #page-minuman bukan anak pertama dari <main
+   class="space-y-6">, jadi otomatis kena margin-top ekstra
+   dari utility Tailwind space-y-6 (tidak pernah dihapus oleh
+   aturan-aturan sebelumnya). Disamakan menjadi 0, sama seperti
+   #page-jadwal yang merupakan anak pertama.
+   ========================================================= */
+main.space-y-6 > #page-minuman {
+  margin-top: 0 !important;
+}
+</style>
+
+<style id="jadwal-hari-ini-tombol-hubungi-2-tim">
+/* =========================================================
+   JADWAL HARI INI — KARTU SPARING (2 TIM):
+   Tombol "Ingatkan" yang tadinya satu dan lebar dipecah
+   menjadi 2 tombol kecil berjejer, masing-masing separuh
+   lebar tombol lama: tombol "1" untuk Tim 1, tombol "2"
+   untuk Tim 2. Isi/posisi tombol lama untuk kartu 1 tim
+   TIDAK disentuh sama sekali (masih ikon WA + tulisan
+   "Ingatkan" seperti sebelumnya).
+   Diletakkan paling akhir supaya menang dari seluruh aturan
+   .today-remind-btn di atas.
+   ========================================================= */
+#today-schedule-panel .today-schedule-main-row > .today-remind-btn.today-remind-btn-pair {
+  display: flex !important;
+  align-items: stretch !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  min-width: 0 !important;
+}
+
+#today-schedule-panel .today-remind-btn-pair .today-remind-half-btn {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 3px !important;
+  margin: 0 !important;
+  padding: 0 2px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: #334155 !important;
+  box-shadow: 0 2px 6px rgba(15,23,42,.10) !important;
+  cursor: pointer !important;
+  font-size: 10px !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+}
+
+#today-schedule-panel .today-remind-btn-pair .today-remind-half-btn:hover {
+  filter: brightness(.97) !important;
+}
+
+#today-schedule-panel .today-remind-btn-pair .today-remind-half-btn:active {
+  transform: scale(.96) !important;
+}
+
+#today-schedule-panel .today-remind-btn-pair .today-remind-half-btn .today-remind-icon {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  max-width: 16px !important;
+  flex: 0 0 16px !important;
+  display: block !important;
+  object-fit: contain !important;
+}
+
+#today-schedule-panel .today-remind-btn-pair .today-remind-half-btn span {
+  display: inline !important;
+  font-size: 11px !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  color: #334155 !important;
+}
+
+@media (max-width: 640px) {
+  #today-schedule-panel .today-remind-btn-pair .today-remind-half-btn {
+    border-radius: 7px !important;
+    gap: 2px !important;
+  }
+  #today-schedule-panel .today-remind-btn-pair .today-remind-half-btn .today-remind-icon {
+    width: 13px !important;
+    height: 13px !important;
+    min-width: 13px !important;
+    max-width: 13px !important;
+    flex: 0 0 13px !important;
+  }
+  #today-schedule-panel .today-remind-btn-pair .today-remind-half-btn span {
+    font-size: 9px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  #today-schedule-panel .today-remind-btn-pair .today-remind-half-btn .today-remind-icon {
+    width: 12px !important;
+    height: 12px !important;
+    min-width: 12px !important;
+    max-width: 12px !important;
+    flex: 0 0 12px !important;
+  }
+  #today-schedule-panel .today-remind-btn-pair .today-remind-half-btn span {
+    font-size: 8.5px !important;
+  }
 }
 </style>
