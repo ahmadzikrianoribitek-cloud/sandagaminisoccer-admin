@@ -14774,7 +14774,7 @@ kaosKakiTerjual: jumlahKaosKaki,
         };
 
         const ADMIN_ROSTER_ANCHOR = '2026-08-12';
-        let adminRosterMonth = new Date('2026-08-12T00:00:00');
+        let adminRosterMonth = (function(){ const n=new Date(); return new Date(n.getFullYear(), n.getMonth(), 1); })();
         const ADMIN_NAMES = ['Zikri', 'Alfi', 'Rama'];
 
         function adminDateKey(d){
