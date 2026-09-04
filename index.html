@@ -12603,6 +12603,12 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 .sparing-edit-modal{width:min(94vw,720px);max-height:min(92vh,760px);overflow:auto;background:rgba(248,250,252,.98);border:1px solid rgba(255,255,255,.9);border-radius:24px;box-shadow:0 30px 90px rgba(0,0,0,.30);padding:18px;}
 .sparing-edit-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;padding-bottom:14px;border-bottom:1px solid #dbe3ea;}
 .sparing-edit-kicker{font-size:9px;font-weight:950;letter-spacing:.12em;color:#2e607a;margin-bottom:3px}.sparing-edit-head h3{margin:0;color:#0e2538;font-size:18px;font-weight:950}.sparing-edit-head p{margin:4px 0 0;color:#64748b;font-size:10px;font-weight:750}.sparing-edit-close{width:36px;height:36px;border:1px solid #dbe3ea;border-radius:11px;background:#fff;color:#475569;font-size:23px;font-weight:900;cursor:pointer}.sparing-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.sparing-edit-team-card{background:rgba(255,255,255,.82);border:1px solid #dbe3ea;border-radius:17px;padding:13px}.sparing-edit-team-title,.sparing-edit-section-title{font-size:10px;font-weight:950;letter-spacing:.06em;color:#0e2538;margin-bottom:9px}.sparing-edit-logo-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}.sparing-edit-logo-preview{width:68px;height:68px;flex:0 0 68px;border-radius:14px;border:1px solid #cbd5e1;background:#f8fafc;display:grid;place-items:center;overflow:hidden;font-size:28px}.sparing-edit-logo-preview img{width:100%;height:100%;object-fit:contain}.sparing-edit-logo-tools{display:flex;flex-direction:column;gap:6px}.sparing-edit-upload,.sparing-edit-remove-logo{display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:6px 9px;border-radius:9px;font-size:9px;font-weight:900;cursor:pointer;border:1px solid #dbe3ea}.sparing-edit-upload{background:#163b55;color:#fff}.sparing-edit-upload input{display:none}.sparing-edit-remove-logo{background:#f8fafc;color:#64748b}.sparing-edit-input{width:100%;min-height:40px;border:1px solid #cbd5e1;border-radius:11px;background:#fff;color:#0e2538;padding:8px 10px;font-size:12px;font-weight:800;outline:none}.sparing-edit-input:focus{border-color:#2e607a;box-shadow:0 0 0 3px rgba(46,96,122,.10)}.sparing-edit-schedule{margin-top:11px;padding:13px;background:rgba(233,240,244,.58);border:1px solid #dbe3ea;border-radius:17px}.sparing-edit-schedule-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.sparing-edit-schedule-grid label span{display:block;font-size:9px;color:#64748b;font-weight:900;margin:0 0 4px}.sparing-edit-note{margin-top:10px;padding:9px 10px;border-radius:11px;background:#eef6fa;color:#456579;font-size:9px;font-weight:750;line-height:1.4}.sparing-edit-footer{display:flex;gap:8px;margin-top:14px}.sparing-edit-footer button{min-height:42px;border-radius:12px;border:0;font-size:10px;font-weight:950;cursor:pointer}.sparing-edit-cancel{width:34%;background:#e9f0f4;color:#0e2538}.sparing-edit-save{flex:1;background:#163b55;color:#fff;box-shadow:0 8px 18px rgba(22,59,85,.18)}.sparing-edit-save:disabled{opacity:.55;cursor:wait}@media(max-width:640px){.sparing-edit-overlay{padding:8px}.sparing-edit-modal{padding:13px;border-radius:19px;max-height:94vh}.sparing-edit-grid{grid-template-columns:1fr}.sparing-edit-schedule-grid{grid-template-columns:1fr 1fr}.sparing-edit-head h3{font-size:15px}.sparing-edit-logo-preview{width:58px;height:58px;flex-basis:58px}.sparing-edit-footer{position:sticky;bottom:0;background:rgba(248,250,252,.98);padding-top:8px}}
+/* FIX: aturan global "body > [id*='modal']{z-index:1000}" (lebih spesifik
+   dari .sparing-edit-overlay) membuat modal ini sebenarnya tampil di
+   z-index 1000, yaitu DI BAWAH dock bar #quick-bottom-nav (z-index 9998).
+   Akibatnya di HP tombol "SIMPAN PERUBAHAN" ikut tertutup dock bar dan
+   tidak bisa diklik walau sudah discroll. Dipaksa naik lagi di sini. */
+#modal-sparing-edit.sparing-edit-overlay{z-index:2147483647 !important;}
 </style>
 <style id="sparing-edit-modal-wa-dan-fix-logo-v2">
 /* Label nomor WA di modal Edit Sparing, ditaruh di atas masing-masing input WA. */
@@ -19992,8 +19998,6 @@ return;
                                 <div class="sparing-edit-logo-row">
                                     <div id="sparing-edit-logo-preview-a" class="sparing-edit-logo-preview">${logoA ? `<img src="${escapeAttrLogo(logoA)}" alt="Logo Tim 1">` : '<span>⚽</span>'}</div>
                                     <div class="sparing-edit-logo-tools">
-                                        <label for="sparing-edit-file-a" class="sparing-edit-upload">🖼️ Ganti Logo</label>
-                                        <input id="sparing-edit-file-a" type="file" accept="image/*" class="sparing-edit-file-input" onchange="sparingEditUploadLogo('a',this)">
                                         <button type="button" class="sparing-edit-remove-logo" onclick="sparingEditRemoveLogo('a')">Hapus Logo</button>
                                     </div>
                                 </div>
@@ -20009,8 +20013,6 @@ return;
                                 <div class="sparing-edit-logo-row">
                                     <div id="sparing-edit-logo-preview-b" class="sparing-edit-logo-preview">${logoB ? `<img src="${escapeAttrLogo(logoB)}" alt="Logo Tim 2">` : '<span>⚽</span>'}</div>
                                     <div class="sparing-edit-logo-tools">
-                                        <label for="sparing-edit-file-b" class="sparing-edit-upload">🖼️ Ganti Logo</label>
-                                        <input id="sparing-edit-file-b" type="file" accept="image/*" class="sparing-edit-file-input" onchange="sparingEditUploadLogo('b',this)">
                                         <button type="button" class="sparing-edit-remove-logo" onclick="sparingEditRemoveLogo('b')">Hapus Logo</button>
                                     </div>
                                 </div>
