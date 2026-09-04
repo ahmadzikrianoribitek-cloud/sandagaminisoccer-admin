@@ -12685,6 +12685,45 @@ window.__APP_FIREBASE_REMOVE__ = remove;
 window.__APP_FIREBASE_UPDATE__ = update;
 window.__APP_FIREBASE_GET__ = get;
 
+/* =========================================================
+   PENJADWAL RENDER (render batching) — PERBAIKAN PERFORMA
+   =========================================================
+   Halaman Admin punya banyak listener realtime (booking, sparring,
+   pemasukan, minuman, pengeluaran, member, dst). Saat halaman
+   pertama dibuka, Firebase mengirim data awal dari SEMUA listener
+   itu hampir bersamaan. Sebelumnya, setiap listener langsung
+   memanggil fungsi render (renderAll, renderTodaySchedule,
+   renderRekapHarian, dst) begitu datanya sampai — akibatnya tabel
+   dan grid yang sama bisa dirender ulang berkali-kali dalam
+   hitungan milidetik saat loading awal maupun saat banyak data
+   berubah sekaligus. Ini salah satu penyebab utama Admin terasa
+   berat dibanding Kasir, yang cuma sekali ambil data & sekali
+   render.
+
+   scheduleRender(fn) menampung semua permintaan render yang masuk
+   dalam 1 frame, lalu menjalankannya HANYA SATU KALI per fungsi
+   (bukan sekali per listener yang minta). Tidak mengubah logika
+   ambil-data sama sekali — cuma menggabungkan render yang tumpang
+   tindih menjadi satu render terakhir yang paling relevan. */
+window.__pendingRenderFns = new Set();
+window.__renderScheduled = false;
+function scheduleRender(fn) {
+    if (typeof fn !== 'function') return;
+    window.__pendingRenderFns.add(fn);
+    if (window.__renderScheduled) return;
+    window.__renderScheduled = true;
+    const runner = () => {
+        window.__renderScheduled = false;
+        const fns = Array.from(window.__pendingRenderFns);
+        window.__pendingRenderFns.clear();
+        fns.forEach(f => {
+            try { f(); } catch (error) { console.error('scheduleRender:', error); }
+        });
+    };
+    if (window.requestAnimationFrame) window.requestAnimationFrame(runner);
+    else setTimeout(runner, 0);
+}
+
         function getLocalDateString(date = new Date()) {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -16579,7 +16618,7 @@ kaosKakiTerjual: jumlahKaosKaki,
 
         onValue(ref(db, 'adminJaga'), (snapshot) => {
             globalCache.adminJaga = snapshot.val() || {};
-            renderJadwalAdmin();
+            scheduleRender(renderJadwalAdmin);
         });
 
         // =========================================================
@@ -16645,16 +16684,16 @@ kaosKakiTerjual: jumlahKaosKaki,
 
         onValue(ref(db, 'teamLogos'), (snapshot) => {
             globalCache.teamLogos = snapshot.val() || {};
-            renderTodaySchedule();
-            renderTabelBooking();
-            refreshTeamLogoIndicators();
-            if (typeof renderSparing === 'function') renderSparing();
+            scheduleRender(renderTodaySchedule);
+            scheduleRender(renderTabelBooking);
+            scheduleRender(refreshTeamLogoIndicators);
+            if (typeof renderSparing === 'function') scheduleRender(renderSparing);
         });
 
         // Profil tim untuk List Tim Main: nama/WA yang sudah diedit admin.
         onValue(ref(db, 'teamProfiles'), (snapshot) => {
             globalCache.teamProfiles = snapshot.val() || {};
-            if (typeof window.renderTeamList === 'function') window.renderTeamList();
+            if (typeof window.renderTeamList === 'function') scheduleRender(window.renderTeamList);
         });
 
         onValue(ref(db, 'member'), (snapshot) => {
@@ -17036,7 +17075,7 @@ kaosKakiTerjual: jumlahKaosKaki,
                 list.insertAdjacentHTML('beforeend', newCards.join(''));
             }
 
-            if (typeof refreshTeamLogoIndicators === 'function') refreshTeamLogoIndicators();
+            if (typeof refreshTeamLogoIndicators === 'function') scheduleRender(refreshTeamLogoIndicators);
 
             // Member adalah salah satu sumber utama Jadwal Hari Ini.
             // Tandai bahwa snapshot awal Firebase sudah selesai diterima,
@@ -17046,8 +17085,8 @@ kaosKakiTerjual: jumlahKaosKaki,
                 clearTimeout(window.__sandagaInitialLoadingFallbackTimer);
             }
             updateInitialLoadingPopup();
-            if (typeof renderAll === 'function') renderAll();
-            if (typeof window.renderTeamList === 'function') window.renderTeamList();
+            if (typeof renderAll === 'function') scheduleRender(renderAll);
+            if (typeof window.renderTeamList === 'function') scheduleRender(window.renderTeamList);
         }
         onValue(ref(db, 'memberTanpaJadwal'), (snapshot) => {
             _memberTanpaJadwalActiveCache = {};
@@ -17062,7 +17101,7 @@ kaosKakiTerjual: jumlahKaosKaki,
             }
             renderMemberTanpaJadwalKeListAktif();
             globalCache.memberTanpaJadwal = _memberTanpaJadwalActiveCache;
-            if (typeof window.renderTeamList === 'function') window.renderTeamList();
+            if (typeof window.renderTeamList === 'function') scheduleRender(window.renderTeamList);
         });
 
 
@@ -17074,29 +17113,29 @@ kaosKakiTerjual: jumlahKaosKaki,
                 clearTimeout(window.__sandagaInitialLoadingFallbackTimer);
             }
             updateInitialLoadingPopup();
-            renderAll();
-            if (typeof window.renderTeamList === 'function') window.renderTeamList();
+            scheduleRender(renderAll);
+            if (typeof window.renderTeamList === 'function') scheduleRender(window.renderTeamList);
         });
 
         // Penanda lunas darurat untuk jadwal yang tampil dari Member tetapi
         // belum memiliki record Booking. Tidak membuat transaksi pemasukan.
         onValue(ref(db, 'lunasDarurat'), (snapshot) => {
             globalCache.lunasDarurat = snapshot.val() || {};
-            renderTodaySchedule();
+            scheduleRender(renderTodaySchedule);
         });
 
         // Penanda pembatalan booking. Data tidak dihapus agar Monthly Recap
         // tetap dapat menghitung slot yang benar-benar dibatalkan.
         onValue(ref(db, 'bookingBatal'), (snapshot) => {
             globalCache.bookingBatal = snapshot.val() || {};
-            renderTodaySchedule();
-            renderMonthlyRecap();
+            scheduleRender(renderTodaySchedule);
+            scheduleRender(renderMonthlyRecap);
         });
 
         onValue(ref(db, 'pelunasanMember'), (snapshot) => {
             globalCache.pelunasanMember = snapshot.val() || {};
-            if (typeof renderPelunasanMember === 'function') renderPelunasanMember();
-            if (typeof renderRekapHarian === 'function') renderRekapHarian();
+            if (typeof renderPelunasanMember === 'function') scheduleRender(renderPelunasanMember);
+            if (typeof renderRekapHarian === 'function') scheduleRender(renderRekapHarian);
         });
 
         onValue(ref(db, 'sparring'), async (snapshot) => {
@@ -17105,26 +17144,35 @@ kaosKakiTerjual: jumlahKaosKaki,
             // berhasil dibuat. Setelah sinkron, semua tampilan dirender ulang.
             try { await syncManualSparingToBooking(); } catch(error) { console.error('Sync Sparing -> Booking:', error); }
             updateSparingBookingOptions();
-            renderSparing();
-            renderGridJadwal();
-            renderTodaySchedule();
-            renderTabelBooking();
-            if (typeof window.renderTeamList === 'function') window.renderTeamList();
+            scheduleRender(renderSparing);
+            scheduleRender(renderGridJadwal);
+            scheduleRender(renderTodaySchedule);
+            scheduleRender(renderTabelBooking);
+            if (typeof window.renderTeamList === 'function') scheduleRender(window.renderTeamList);
         });
 
         onValue(ref(db, 'pendingSparingNames'), (snapshot) => { globalCache.pendingSparingNames = snapshot.val() || {}; });
         onValue(ref(db, 'pemasukan'), (snapshot) => {
             globalCache.pemasukan = snapshot.val() || {};
-            if (typeof window.renderSetorTunai === 'function') window.renderSetorTunai();
+            if (typeof window.renderSetorTunai === 'function') scheduleRender(window.renderSetorTunai);
             // Pelunasan disimpan di node pemasukan. Karena jadwal halaman awal
             // membaca status lunas dari data pemasukan, jadwal WAJIB dirender ulang
             // setiap kali ada pemasukan/pelunasan baru atau diubah.
-            renderTodaySchedule();
-            renderRekapHarian();
-            renderMonthlyRecap();
+            scheduleRender(renderTodaySchedule);
+            scheduleRender(renderRekapHarian);
+            scheduleRender(renderMonthlyRecap);
         });
-        onValue(ref(db, 'minuman'), (snapshot) => { globalCache.minuman = snapshot.val() || {}; if (typeof window.renderSetorTunai === 'function') window.renderSetorTunai(); renderRekapHarian(); renderMinumanSummary(); if(document.getElementById('minuman-history-panel')?.classList.contains('is-open')) renderMinumanHistory(); });
-        onValue(ref(db, 'pengeluaran'), (snapshot) => { globalCache.pengeluaran = snapshot.val() || {}; renderRekapHarian(); });
+        onValue(ref(db, 'minuman'), (snapshot) => {
+            globalCache.minuman = snapshot.val() || {};
+            if (typeof window.renderSetorTunai === 'function') scheduleRender(window.renderSetorTunai);
+            scheduleRender(renderRekapHarian);
+            scheduleRender(renderMinumanSummary);
+            if (document.getElementById('minuman-history-panel')?.classList.contains('is-open')) scheduleRender(renderMinumanHistory);
+        });
+        onValue(ref(db, 'pengeluaran'), (snapshot) => {
+            globalCache.pengeluaran = snapshot.val() || {};
+            scheduleRender(renderRekapHarian);
+        });
 
         // Menentukan harga lapangan berdasarkan hari dan jam booking.
         function getHargaLapangan(tanggalStr, jamStr, status) {
