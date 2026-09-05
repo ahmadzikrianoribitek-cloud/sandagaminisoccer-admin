@@ -11695,6 +11695,16 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
   width:100%;
   z-index:20;
 }
+/* FIX: saat dropdown metode pembayaran dibuka, wrapper-nya harus naik di
+   atas tombol aksi bawah (Hapus/Harga Customer/Simpan) yang punya
+   z-index:125 lewat #uang-masuk-sticky-actions. Tanpa ini, wrapper dengan
+   z-index:20 tetap tertutup tombol meskipun menu di dalamnya memakai
+   z-index raksasa — karena z-index besar itu hanya berlaku di dalam
+   stacking context lokal wrapper, bukan dibandingkan langsung dengan
+   elemen lain di halaman. */
+#page-masuk .uang-masuk-method-custom.open{
+  z-index:200 !important;
+}
 #page-masuk .uang-masuk-method-native{
   position:absolute !important;
   width:1px !important;
@@ -13846,6 +13856,51 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 }
                 return;
             }
+
+            // Jika popup sukses muncul dari halaman Catatan Sparing, tekan OK
+            // langsung membawa admin kembali ke Jadwal Hari Ini, tanpa perlu
+            // menekan menu secara manual.
+            const sparringPage = document.getElementById('page-sparring');
+            if (sparringPage && !sparringPage.classList.contains('hidden')) {
+                if (typeof window.showPage === 'function') window.showPage('jadwal');
+                return;
+            }
+        };
+
+        // =========================================================
+        // PROGRESS BAR UMUM — dipakai saat proses simpan butuh jeda
+        // (misalnya beberapa panggilan Firebase berurutan), supaya admin
+        // tahu aplikasi sedang bekerja, bukan macet/nge-hang.
+        // Memakai gaya visual yang sama dengan progress download Daily
+        // Report (class daily-download-progress-*) agar konsisten.
+        // =========================================================
+        window.showAppProgress = (title = 'Menyimpan...', text = 'Mohon tunggu, data sedang diproses.') => {
+            document.getElementById('app-generic-progress-overlay')?.remove();
+            const o = document.createElement('div');
+            o.id = 'app-generic-progress-overlay';
+            o.className = 'daily-download-progress-overlay';
+            o.innerHTML = `
+                <div class="daily-download-progress-modal" role="dialog" aria-modal="true">
+                    <div class="daily-download-progress-icon" data-progress-icon>💾</div>
+                    <h3 class="daily-download-progress-title" data-progress-title>${title}</h3>
+                    <p class="daily-download-progress-text" data-progress-text>${text}</p>
+                    <div class="daily-download-progress-track"><div class="daily-download-progress-bar" data-progress-bar></div></div>
+                    <div class="daily-download-progress-percent" data-progress-percent>0%</div>
+                </div>`;
+            document.body.appendChild(o);
+            const m = o.querySelector('.daily-download-progress-modal');
+            const b = o.querySelector('[data-progress-bar]');
+            const pc = o.querySelector('[data-progress-percent]');
+            const tt = o.querySelector('[data-progress-title]');
+            const tx = o.querySelector('[data-progress-text]');
+            const ic = o.querySelector('[data-progress-icon]');
+            return {
+                o,
+                set(n, t, x) { b.style.width = n + '%'; pc.textContent = Math.round(n) + '%'; if (t) tt.textContent = t; if (x) tx.textContent = x; },
+                ok(msg) { m.classList.add('is-success'); ic.textContent = '✓'; this.set(100, 'Berhasil disimpan', msg || ''); },
+                err(msg) { m.classList.add('is-error'); ic.textContent = '!'; this.set(0, 'Gagal disimpan', msg || ''); },
+                remove() { o.remove(); }
+            };
         };
 
         window.showSuccessPopup = (message = 'Data berhasil disimpan!') => {
@@ -19620,6 +19675,15 @@ return;
                 return;
             }
 
+            // Tampilkan progress bar + kunci tombol Simpan supaya admin tahu
+            // proses penyimpanan sedang berjalan (bukan macet) selama jeda
+            // beberapa panggilan Firebase di bawah ini.
+            const sparringSaveBtn = document.getElementById('sparring-save-btn');
+            const sparringSaveBtnOriginalText = sparringSaveBtn?.textContent || 'Simpan Catatan';
+            if (sparringSaveBtn) { sparringSaveBtn.disabled = true; sparringSaveBtn.textContent = 'Menyimpan...'; }
+            const sparringProgress = window.showAppProgress('Menyimpan catatan sparing...', 'Mohon tunggu, data sedang disimpan.');
+            sparringProgress.set(12, null, 'Memvalidasi data tim...');
+
             try {
                 /*
                  * PENTING:
@@ -19643,6 +19707,8 @@ return;
                     catatan,
                     timestamp: Date.now()
                 };
+
+                sparringProgress.set(30, null, 'Menyimpan data pertandingan...');
 
                 // Simpan / update Sparing terlebih dahulu.
                 if(editKey) {
@@ -19676,6 +19742,8 @@ return;
                         return String(item.timA || '').trim().toLowerCase() === timA.toLowerCase();
                     });
                     if(duplicateRequest) {
+                        sparringProgress.remove();
+                        if (sparringSaveBtn) { sparringSaveBtn.disabled = false; sparringSaveBtn.textContent = sparringSaveBtnOriginalText; }
                         alert(`${timA} sudah tercatat sedang mencari lawan pada ${tanggal} ${jam}.`);
                         return;
                     }
@@ -19684,6 +19752,7 @@ return;
                 }
 
                 // Jika Tim A diketik manual, buat/update booking nyata.
+                sparringProgress.set(55, null, isManual ? 'Membuat booking otomatis untuk tim...' : 'Menyiapkan relasi booking...');
                 if(isManual) {
                     const manualBookingData = {
                         status: 'Non Member',
@@ -19779,15 +19848,25 @@ return;
                 }
 
                 batalEditSparing();
+                sparringProgress.set(85, null, 'Menyinkronkan ke Jadwal & Booking...');
                 // Listener Firebase biasanya akan merender ulang. Render manual juga
                 // supaya data langsung terlihat tanpa menunggu round-trip listener.
                 try { await syncManualSparingToBooking(); } catch(syncError) { console.error('Sync Sparing -> Booking:', syncError); }
                 if(typeof renderAll === 'function') renderAll();
                 if(typeof updateSparingBookingOptions === 'function') updateSparingBookingOptions();
                 if(typeof renderSparing === 'function') renderSparing();
-                showSuccessPopup(timB ? 'Pasangan sparing berhasil disimpan dan masuk ke Jadwal/Booking.' : 'Permintaan sparing berhasil disimpan dan masuk ke Jadwal/Booking.');
+
+                sparringProgress.ok('Data sparing tersimpan.');
+                if (sparringSaveBtn) { sparringSaveBtn.disabled = false; sparringSaveBtn.textContent = sparringSaveBtnOriginalText; }
+                setTimeout(() => {
+                    sparringProgress.remove();
+                    showSuccessPopup(timB ? 'Pasangan sparing berhasil disimpan dan masuk ke Jadwal/Booking.' : 'Permintaan sparing berhasil disimpan dan masuk ke Jadwal/Booking.');
+                }, 500);
             } catch(error) {
                 console.error(error);
+                sparringProgress.err(error.message || 'Terjadi kesalahan saat menyimpan.');
+                if (sparringSaveBtn) { sparringSaveBtn.disabled = false; sparringSaveBtn.textContent = sparringSaveBtnOriginalText; }
+                setTimeout(() => sparringProgress.remove(), 2200);
                 alert('Gagal menyimpan data sparing/booking: ' + error.message);
             }
         };
