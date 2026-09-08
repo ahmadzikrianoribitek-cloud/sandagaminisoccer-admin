@@ -11079,8 +11079,8 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 <h3 class="font-black text-sm sm:text-base text-amber-900 text-center mb-2 p-2 rounded-xl border border-amber-500/40 bg-amber-500/10">📝 TIDAK ADA DP (DP Rp0)</h3>
 <div class="booking-history-list" id="tabel-booking-nodp"></div>
 </div>
-<!-- BOOKING TANGGAL SUDAH LEWAT -->
-<div class="mb-5 booking-history-section">
+<!-- BOOKING TANGGAL SUDAH LEWAT (tidak dirender lagi agar loading lebih ringan) -->
+<div class="mb-5 booking-history-section hidden">
 <h3 class="font-black text-sm sm:text-base text-slate-900 text-center mb-2 p-2 rounded-xl border border-slate-500/40 bg-slate-500/10">✅ TANGGAL SUDAH LEWAT (SELESAI)</h3>
 <div class="booking-history-list" id="tabel-booking-selesai"></div>
 </div>
@@ -21256,12 +21256,14 @@ return;
 
             const rowsDp = [];
             const rowsNoDp = [];
-            const rowsSelesai = [];
 
             bookingEntries.forEach(([key, item]) => {
                 // Lawan sparing bukan booking dan tidak boleh dihitung di History.
                 if(item?.sparringOpponent === true) return;
                 let tanggalBooking = item.tgl ? item.tgl.split('T')[0] : "";
+                // Booking yang tanggal mainnya sudah lewat tidak perlu dirender lagi di History,
+                // supaya daftar tidak terus membengkak dan loading tetap ringan.
+                if(tanggalBooking && tanggalBooking < today) return;
                 let dpVal = Number(item.dp || 0);
                 let row = `<div class="booking-history-card">
                     <div class="booking-history-card-top">
@@ -21291,10 +21293,7 @@ return;
                         <button type="button" onclick="hapusBooking('${key}')" class="booking-history-action booking-history-delete-action" title="Hapus booking">🗑️ <span>Hapus</span></button>
                     </div>
                  </div>`;
-// Booking yang tanggal mainnya sudah lewat selalu masuk bagian selesai.
-                if(tanggalBooking && tanggalBooking < today) {
-                    rowsSelesai.push({ tanggal: tanggalBooking, jam: item.tgl || '', row });
-                } else if(dpVal > 0) {
+                if(dpVal > 0) {
                     rowsDp.push({ tanggal: tanggalBooking, jam: item.tgl || '', row });
                 } else {
                     rowsNoDp.push({ tanggal: tanggalBooking, jam: item.tgl || '', row });
@@ -21305,12 +21304,10 @@ return;
             const sortRows = (a, b) => String(a.jam || a.tanggal || '').localeCompare(String(b.jam || b.tanggal || ''));
             rowsDp.sort(sortRows);
             rowsNoDp.sort(sortRows);
-            // Booking selesai: yang terbaru dari yang sudah lewat tampil paling atas.
-            rowsSelesai.sort((a, b) => String(b.jam || b.tanggal || '').localeCompare(String(a.jam || a.tanggal || '')));
 
             tbodyDp.innerHTML = rowsDp.map(x => x.row).join('');
             tbodyNoDp.innerHTML = rowsNoDp.map(x => x.row).join('');
-            tbodySelesai.innerHTML = rowsSelesai.map(x => x.row).join('');
+            tbodySelesai.innerHTML = '';
         }
 
         function formatRupiahDaily(nominal){
