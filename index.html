@@ -18958,17 +18958,40 @@ return;
             // Jika nama tim sama di beberapa jam pada hari yang sama, gabungkan
             // menjadi satu kartu. Contoh: POLRES jam 16.00 dan 17.00 hanya
             // tampil satu kartu, lalu jamnya ditampilkan sebagai beberapa badge.
+            //
+            // PENGECUALIAN PENTING: jika sebuah tim punya 2 pertandingan SPARING
+            // yang BERBEDA di jam berbeda pada hari yang sama (mis. DINSOS FC
+            // vs PGRI SIMPUR jam 16.00, lalu DINSOS FC vs DPRD jam 17.00),
+            // keduanya TIDAK boleh digabung jadi satu kartu — karena lawannya
+            // berbeda. Sebelumnya penggabungan hanya berdasarkan nama tim,
+            // sehingga jam kedua "tertelan" ke kartu pertama dan lawannya
+            // (DPRD) hilang dari Jadwal Hari Ini. Sekarang setiap slot diberi
+            // kunci pertandingan: jika slot itu sudah dapat lawan sparing,
+            // kuncinya adalah pasangan tim (urut abjad) sehingga pasangan
+            // lawan yang berbeda otomatis jadi kartu terpisah. Jika slot itu
+            // bukan sparing (atau belum dapat lawan), kunci tetap nama tim
+            // seperti semula agar booking multi-jam biasa tidak berubah.
             const grouped = [];
             const groupMap = new Map();
             jamList.forEach(jam => {
                 const item = schedules[jam];
                 const nameKey = String(item?.nama || '-').trim().toLowerCase();
-                if(!groupMap.has(nameKey)) {
+                const sparingRecForSlot = getSparingForTeam(item?.nama, today, jam)?.[1] || null;
+                const isMatchedSparingSlot = !!(
+                    sparingRecForSlot &&
+                    String(sparingRecForSlot.status || '').toLowerCase() === 'matched' &&
+                    String(sparingRecForSlot.timA || '').trim() &&
+                    String(sparingRecForSlot.timB || '').trim()
+                );
+                const groupKey = isMatchedSparingSlot
+                    ? 'match:' + [String(sparingRecForSlot.timA).trim().toLowerCase(), String(sparingRecForSlot.timB).trim().toLowerCase()].sort().join('|')
+                    : 'team:' + nameKey;
+                if(!groupMap.has(groupKey)) {
                     const group = { nama: item?.nama || '-', slots: [] };
-                    groupMap.set(nameKey, group);
+                    groupMap.set(groupKey, group);
                     grouped.push(group);
                 }
-                groupMap.get(nameKey).slots.push({ ...item, jam });
+                groupMap.get(groupKey).slots.push({ ...item, jam });
             });
 
             const renderedScheduleCards = grouped.map(group => {
@@ -18991,10 +19014,20 @@ return;
                 // Multi-jam tidak boleh bergantung pada bookingGroupId. Booking lama
                 // bisa tidak mempunyai groupId, tetapi beberapa slot berurutan dengan
                 // nama tim yang sama tetap merupakan satu booking (mis. 15,16,17).
+                //
+                // PENJAGA TAMBAHAN: konsekutif saja tidak cukup untuk memastikan itu
+                // SATU booking yang sama. Dua booking terpisah 1-jam untuk tim yang
+                // sama pada jam berurutan (mis. dua pertandingan sparing berbeda,
+                // masing-masing durasiBooking=1) bukan satu booking multi-jam, dan
+                // TIDAK boleh digabung — jika digabung, lawan pada jam kedua akan
+                // hilang dari tampilan. Karena itu, selain berurutan, setiap slot
+                // juga wajib mencatat durasiBooking > 1 (bukti bahwa slot tersebut
+                // memang dibuat sebagai bagian dari satu booking berdurasi panjang).
                 const bookingSlotsBySequence = slots
                     .filter(x => x.booking)
                     .sort((a,b) => String(a.jam).localeCompare(String(b.jam)));
                 const isConsecutiveMultiHour = bookingSlotsBySequence.length > 1 &&
+                    bookingSlotsBySequence.every(x => Number(x.durasiBooking || 1) > 1) &&
                     bookingSlotsBySequence.every((x, i, arr) => {
                         if(i === 0) return true;
                         const prevH = parseInt(String(arr[i-1].jam).substring(0,2), 10);
