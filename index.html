@@ -17810,7 +17810,7 @@ kaosKakiTerjual: jumlahKaosKaki,
                 const bjam = String(b.tgl).split('T')[1]?.substring(0, 5) || '';
                 return btgl === tanggal && bjam === cleanJam && String(b.nama || '').trim().toLowerCase() === target;
             });
-            const bookingWa = String(booking?.wa || '').trim();
+            const bookingWa = String(booking?.wa || booking?.noHp || '').trim();
             if(bookingWa) return bookingWa;
 
             const direct = String(sparingItem?.waB || '').trim();
@@ -18935,7 +18935,7 @@ kaosKakiTerjual: jumlahKaosKaki,
                 if(item.batal === true || isBookingCancelled(today, item.nama, jam)) return;
                 schedules[jam] = {
                     nama: item.nama || '-',
-                    wa: item.wa || '',
+                    wa: item.wa || item.noHp || '',
                     tanggal: today,
                     jam: jam,
                     // Status booking menjadi sumber utama, tetapi nama yang
@@ -19389,7 +19389,7 @@ return;
                     nama:String(item.nama).trim(),
                     tanggal:dt.date,
                     jam:dt.jam,
-                    wa:String(item.wa || '').trim()
+                    wa:String(item.wa || item.noHp || '').trim()
                 });
             });
             return options;
@@ -20707,7 +20707,7 @@ return;
                     timB: namaLawan,
                     statusA,
                     statusB: statusLawan,
-                    wa: String(booking.wa || '').trim(),
+                    wa: String(booking.wa || booking.noHp || '').trim(),
                     waB: waLawan,
                     waTimB: waLawan,
                     source: 'Booking Schedule',
@@ -21096,7 +21096,7 @@ return;
                     nama: b.nama,
                     type: b.status === 'Member' ? 'member' : 'nonmember',
                     bookingKey,
-                    wa: b.wa || ''
+                    wa: b.wa || b.noHp || ''
                 };
             });
 
@@ -30738,7 +30738,7 @@ function tlCollect(){
   const map={};
   Object.values(cache.memberRawEntries||[]).forEach(m=>tlAdd(map,m?.nama,m?.wa,'Member'));
   Object.values(cache.memberTanpaJadwal||{}).forEach(m=>tlAdd(map,m?.nama,m?.wa,'Member'));
-  Object.values(cache.booking||{}).forEach(b=>tlAdd(map,b?.nama,b?.wa,'Booking'));
+  Object.values(cache.booking||{}).forEach(b=>tlAdd(map,b?.nama,b?.wa || b?.noHp,'Booking'));
   Object.values(cache.sparing||{}).forEach(sp=>{
     tlAdd(map,sp?.timA,sp?.wa || sp?.waA || sp?.waTimA,'Sparing');
     tlAdd(map,sp?.timB,sp?.waB || sp?.waTimB || sp?.waLawan,'Sparing');
@@ -30751,7 +30751,7 @@ function tlFindWaFromRecords(sourceName){
   const check=(name,wa)=>{if(!found && tlNorm(name)===n && String(wa||'').trim()) found=String(wa).trim();};
   Object.values(cache.memberRawEntries||[]).forEach(m=>check(m?.nama,m?.wa));
   Object.values(cache.memberTanpaJadwal||{}).forEach(m=>check(m?.nama,m?.wa));
-  Object.values(cache.booking||{}).forEach(b=>check(b?.nama,b?.wa));
+  Object.values(cache.booking||{}).forEach(b=>check(b?.nama,b?.wa || b?.noHp));
   Object.values(cache.sparing||{}).forEach(sp=>{check(sp?.timA,sp?.wa||sp?.waA||sp?.waTimA);check(sp?.timB,sp?.waB||sp?.waTimB||sp?.waLawan);});
   return found;
 }
