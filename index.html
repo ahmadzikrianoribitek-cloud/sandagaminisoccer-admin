@@ -12671,7 +12671,7 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 
 <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getDatabase, ref, push, remove, update, onValue, get } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+        import { getDatabase, ref, push, remove, update, onValue, get, query, orderByChild, startAt } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDO6gVCRzTClDEwAS2FAWZVf-pB5CG2Pbc",
@@ -16737,13 +16737,26 @@ kaosKakiTerjual: jumlahKaosKaki,
             }
         };
 
-        onValue(ref(db, 'teamLogos'), (snapshot) => {
-            globalCache.teamLogos = snapshot.val() || {};
-            scheduleRender(renderTodaySchedule);
-            scheduleRender(renderTabelBooking);
-            scheduleRender(refreshTeamLogoIndicators);
-            if (typeof renderSparing === 'function') scheduleRender(renderSparing);
-        });
+        // PATCH PERFORMA — LOGO TIM DITUNDA: logo tidak dibutuhkan untuk
+        // menutup popup loading awal (lihat gate __initialBookingLoaded /
+        // __initialMemberLoaded di atas, tidak melibatkan teamLogos), jadi
+        // aman ditunda supaya tidak berebut bandwidth dengan data booking
+        // di detik-detik pertama. Logo akan menyusul tampil begitu selesai
+        // diunduh (otomatis re-render).
+        function startAdminTeamLogosListener() {
+            onValue(ref(db, 'teamLogos'), (snapshot) => {
+                globalCache.teamLogos = snapshot.val() || {};
+                scheduleRender(renderTodaySchedule);
+                scheduleRender(renderTabelBooking);
+                scheduleRender(refreshTeamLogoIndicators);
+                if (typeof renderSparing === 'function') scheduleRender(renderSparing);
+            });
+        }
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(startAdminTeamLogosListener, { timeout: 1500 });
+        } else {
+            setTimeout(startAdminTeamLogosListener, 800);
+        }
 
         // Profil tim untuk List Tim Main: nama/WA yang sudah diedit admin.
         onValue(ref(db, 'teamProfiles'), (snapshot) => {
@@ -17160,9 +17173,33 @@ kaosKakiTerjual: jumlahKaosKaki,
         });
 
 
-        onValue(ref(db, 'booking'), (snapshot) => {
+        // PATCH PERFORMA — BOOKING DIMUAT 2 TAHAP:
+        // Sebelumnya listener ini menunggu SELURUH riwayat booking (dari
+        // awal web ini dipakai) selesai terunduh sebelum popup loading awal
+        // ditutup dan Jadwal Hari Ini/Tabel Booking ditampilkan. Semakin
+        // lama web dipakai, riwayat ini semakin menumpuk dan makin lambat
+        // dibuka (makanya sebelumnya sudah dipasang fallback timer 15 detik
+        // di atas, sebagai tanda ini memang sering lambat).
+        //
+        // Sekarang: TAHAP 1 hanya ambil booking ~60 hari terakhir (cukup
+        // untuk Jadwal Hari Ini, Tabel Booking, Grid Jadwal, dan Rekap
+        // Harian/Bulanan periode berjalan) supaya popup loading cepat
+        // selesai. TAHAP 2 mengambil riwayat LENGKAP di belakang layar
+        // (tanpa memblokir tampilan) dan begitu selesai, cache ditimpa
+        // dengan data lengkap lalu semua tampilan (termasuk laporan/rekap
+        // yang butuh data lama) dirender ulang otomatis. Tidak ada data
+        // yang hilang — cuma ditunda urutan datangnya.
+        // TAHAP 1 kini dibatasi mulai tanggal 1 bulan berjalan (bulan lalu
+        // TIDAK ikut diunduh di awal), sesuai permintaan — supaya loading
+        // awal lebih cepat. Riwayat bulan-bulan sebelumnya tetap akan
+        // menyusul otomatis lewat TAHAP 2 di background untuk kebutuhan
+        // laporan/rekap yang butuh data lama.
+        function getBookingFastLoadStartString() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+        }
+        function applyBookingSnapshot(snapshot) {
             globalCache.booking = snapshot.val() || {};
-            // Tandai bahwa snapshot awal Booking sudah selesai diterima.
             globalCache.__initialBookingLoaded = true;
             if (globalCache.__initialMemberLoaded && globalCache.__initialBookingLoaded) {
                 clearTimeout(window.__sandagaInitialLoadingFallbackTimer);
@@ -17170,7 +17207,23 @@ kaosKakiTerjual: jumlahKaosKaki,
             updateInitialLoadingPopup();
             scheduleRender(renderAll);
             if (typeof window.renderTeamList === 'function') scheduleRender(window.renderTeamList);
+        }
+        const bookingFastQuery = query(ref(db, 'booking'), orderByChild('tgl'), startAt(getBookingFastLoadStartString()));
+        let bookingFullHistoryStarted = false;
+        onValue(bookingFastQuery, (snapshot) => {
+            if (bookingFullHistoryStarted) return; // riwayat lengkap sudah mengambil alih, jangan ditimpa subset ini
+            applyBookingSnapshot(snapshot);
         });
+        function startBookingFullHistoryListener() {
+            if (bookingFullHistoryStarted) return;
+            bookingFullHistoryStarted = true;
+            onValue(ref(db, 'booking'), applyBookingSnapshot);
+        }
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(startBookingFullHistoryListener, { timeout: 2500 });
+        } else {
+            setTimeout(startBookingFullHistoryListener, 1200);
+        }
 
         // Penanda lunas darurat untuk jadwal yang tampil dari Member tetapi
         // belum memiliki record Booking. Tidak membuat transaksi pemasukan.
