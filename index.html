@@ -10494,10 +10494,18 @@ body > header {
 .admin-salary-card-name{font-size:.85rem;font-weight:950;color:#0f172a;}
 .admin-salary-card-icon{font-size:1.1rem;}
 .admin-salary-card-total{font-size:1.12rem;font-weight:950;color:#1e3a8a;margin-top:8px;}
-.admin-salary-card-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:9px;}
-.admin-salary-card-meta div{padding:6px 4px;border-radius:8px;background:#f8fafc;text-align:center;}
-.admin-salary-card-meta small{display:block;font-size:7px;color:#64748b;font-weight:850;}
-.admin-salary-card-meta strong{display:block;margin-top:2px;font-size:9px;color:#0f172a;font-weight:950;}
+.admin-salary-card-finance{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:10px;}
+.admin-salary-card-finance div{padding:8px 5px;border-radius:9px;background:#f8fafc;text-align:center;border:1px solid #e2e8f0;}
+.admin-salary-card-finance small{display:block;font-size:7px;color:#64748b;font-weight:900;text-transform:uppercase;}
+.admin-salary-card-finance strong{display:block;margin-top:3px;font-size:9px;color:#0f172a;font-weight:950;white-space:nowrap;}
+.admin-salary-card-finance .bonus-value{color:#047857;}
+.admin-salary-card-finance .total-value{color:#1e3a8a;}
+.admin-salary-card-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;padding-top:8px;border-top:1px dashed #e2e8f0;}
+.admin-salary-card-meta span{font-size:7px;color:#64748b;font-weight:850;}
+.admin-salary-card-meta b{font-size:8px;color:#0f172a;font-weight:950;}
+.admin-salary-month-breakdown{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px;}
+.admin-salary-month-breakdown span{padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.72);font-size:8px;font-weight:900;color:#334155;}
+.admin-salary-month-breakdown b{color:#0f172a;}
 .admin-salary-detail-wrap{background:#fff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,.06);}
 .admin-salary-section-title{padding:12px 13px;border-bottom:1px solid #e2e8f0;background:#f8fafc;}
 .admin-salary-section-title>div{display:flex;align-items:center;gap:8px;}
@@ -15201,23 +15209,36 @@ kaosKakiTerjual: jumlahKaosKaki,
             const cards = adminOrder.map((admin,index) => {
                 const t = totals[admin] || {shift:0,teamHours:0,bonus:0,total:0};
                 grandTotal += t.total;
+                const gajiShift = t.shift * ADMIN_SALARY_PER_SHIFT;
                 return `<article class="admin-salary-card">
                     <div class="admin-salary-card-top">
                       <div class="admin-salary-card-name">${escapeHtmlSparing ? escapeHtmlSparing(admin) : admin}</div>
                       <div class="admin-salary-card-icon">${index===0?'🧑‍💼':index===1?'🌙':'👤'}</div>
                     </div>
                     <div class="admin-salary-card-total">${gajiAdminFormatMoney(t.total)}</div>
+                    <div class="admin-salary-card-finance">
+                      <div><small>GAJI</small><strong>${gajiAdminFormatMoney(gajiShift)}</strong></div>
+                      <div><small>BONUS</small><strong class="bonus-value">${gajiAdminFormatMoney(t.bonus)}</strong></div>
+                      <div><small>TOTAL</small><strong class="total-value">${gajiAdminFormatMoney(t.total)}</strong></div>
+                    </div>
                     <div class="admin-salary-card-meta">
-                      <div><small>SHIFT</small><strong>${t.shift}</strong></div>
-                      <div><small>TIM-JAM</small><strong>${t.teamHours}</strong></div>
-                      <div><small>BONUS</small><strong>${gajiAdminFormatMoney(t.bonus)}</strong></div>
+                      <span>SHIFT <b>${t.shift}x</b></span>
+                      <span>TIM-JAM <b>${t.teamHours}</b></span>
+                      <span>Rp 10.000/jam</span>
                     </div>
                 </article>`;
             }).join('');
 
             summaryEl.innerHTML = cards + `
               <div class="admin-salary-month-total">
-                <div><small>TOTAL GAJI SEMUA ADMIN</small><b>${monthEl.value}</b></div>
+                <div>
+                  <small>TOTAL PENGGAJIAN BULAN INI</small>
+                  <b>${monthEl.value}</b>
+                  <div class="admin-salary-month-breakdown">
+                    <span>Gaji Shift: <b>${gajiAdminFormatMoney(Object.values(totals).reduce((sum,t)=>sum + (t.shift * ADMIN_SALARY_PER_SHIFT),0))}</b></span>
+                    <span>Bonus: <b>${gajiAdminFormatMoney(Object.values(totals).reduce((sum,t)=>sum + t.bonus,0))}</b></span>
+                  </div>
+                </div>
                 <strong>${gajiAdminFormatMoney(grandTotal)}</strong>
               </div>`;
 
