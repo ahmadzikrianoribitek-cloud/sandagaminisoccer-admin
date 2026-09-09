@@ -10450,6 +10450,89 @@ body > header {
 }
 </style>
 
+
+<style id="admin-salary-page-style-v1">
+#page-gaji-admin{width:100%;box-sizing:border-box;}
+.admin-salary-page{width:100%;max-width:1100px;margin:0 auto;}
+.admin-salary-back-btn{
+  flex:0 0 auto;width:40px;height:40px;border:1px solid rgba(255,255,255,.28);
+  border-radius:12px;background:rgba(255,255,255,.14);color:#fff;font-size:22px;
+  font-weight:950;cursor:pointer;display:grid;place-items:center;
+}
+.admin-salary-back-btn:hover{background:rgba(255,255,255,.24);}
+.admin-salary-head-copy{min-width:0;flex:1;}
+#page-more .more-page-grid button:last-child{grid-column:auto !important;}
+
+.admin-salary-head{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:16px;border-radius:18px;margin-bottom:12px;
+  background:linear-gradient(135deg,#172554 0%,#312e81 55%,#2563eb 100%);
+  color:#fff;box-shadow:0 14px 32px rgba(15,23,42,.16);
+}
+.admin-salary-kicker{font-size:10px;letter-spacing:.12em;font-weight:950;opacity:.78;}
+.admin-salary-head h2{margin:4px 0 3px;font-size:clamp(1.15rem,3vw,1.55rem);font-weight:950;letter-spacing:.01em;}
+.admin-salary-head p{margin:0;font-size:.68rem;font-weight:650;color:rgba(255,255,255,.78);}
+.admin-salary-rate-badge{flex:0 0 auto;text-align:center;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);}
+.admin-salary-rate-badge strong{display:block;font-size:.82rem;font-weight:950;}
+.admin-salary-rate-badge span{display:block;margin-top:2px;font-size:.58rem;opacity:.78;}
+.admin-salary-filter{
+  display:flex;align-items:end;gap:8px;flex-wrap:wrap;padding:12px;
+  background:#f8fafc;border:1px solid #e2e8f0;border-radius:15px;margin-bottom:10px;
+}
+.admin-salary-filter label{display:block;width:100%;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-weight:950;}
+.admin-salary-filter input{flex:1;min-width:180px;padding:9px 11px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#0f172a;font-weight:850;box-sizing:border-box;}
+.admin-salary-filter button{border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;color:#1e3a8a;padding:9px 12px;font-size:11px;font-weight:950;cursor:pointer;}
+.admin-salary-rule{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px;
+}
+.admin-salary-rule>div{padding:10px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;}
+.admin-salary-rule b{display:block;font-size:10px;color:#0f172a;margin-bottom:3px;}
+.admin-salary-rule span{display:block;font-size:8px;line-height:1.35;color:#64748b;font-weight:700;}
+.admin-salary-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px;}
+.admin-salary-card{padding:13px;border-radius:15px;background:#fff;border:1px solid #e2e8f0;box-shadow:0 7px 20px rgba(15,23,42,.06);}
+.admin-salary-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.admin-salary-card-name{font-size:.85rem;font-weight:950;color:#0f172a;}
+.admin-salary-card-icon{font-size:1.1rem;}
+.admin-salary-card-total{font-size:1.12rem;font-weight:950;color:#1e3a8a;margin-top:8px;}
+.admin-salary-card-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:9px;}
+.admin-salary-card-meta div{padding:6px 4px;border-radius:8px;background:#f8fafc;text-align:center;}
+.admin-salary-card-meta small{display:block;font-size:7px;color:#64748b;font-weight:850;}
+.admin-salary-card-meta strong{display:block;margin-top:2px;font-size:9px;color:#0f172a;font-weight:950;}
+.admin-salary-detail-wrap{background:#fff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,.06);}
+.admin-salary-section-title{padding:12px 13px;border-bottom:1px solid #e2e8f0;background:#f8fafc;}
+.admin-salary-section-title>div{display:flex;align-items:center;gap:8px;}
+.admin-salary-section-title>div>span{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#eff6ff;}
+.admin-salary-section-title b{display:block;font-size:11px;color:#0f172a;font-weight:950;}
+.admin-salary-section-title small{display:block;margin-top:2px;font-size:8px;color:#64748b;font-weight:700;}
+.admin-salary-table-wrap{overflow-x:auto;}
+.admin-salary-table{width:100%;border-collapse:collapse;min-width:760px;background:#fff;}
+.admin-salary-table th{padding:8px 7px;background:#172554;color:#fff;font-size:8px;font-weight:950;text-transform:uppercase;white-space:nowrap;}
+.admin-salary-table td{padding:8px 7px;border-bottom:1px solid #e5e7eb;color:#0f172a;font-size:8px;font-weight:750;white-space:nowrap;}
+.admin-salary-table tbody tr:nth-child(even) td{background:#f8fafc;}
+.admin-salary-table .money{font-weight:950;text-align:right;}
+.admin-salary-table .bonus{color:#047857;font-weight:950;text-align:right;}
+.admin-salary-table .total{color:#1e3a8a;font-weight:950;text-align:right;}
+.admin-salary-empty{padding:24px;text-align:center;color:#64748b;font-size:10px;font-weight:750;}
+.admin-salary-month-total{
+  grid-column:1/-1;padding:13px 14px;border-radius:15px;
+  background:linear-gradient(135deg,#ecfdf5,#eff6ff);border:1px solid #bfdbfe;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+}
+.admin-salary-month-total small{display:block;color:#64748b;font-size:8px;font-weight:850;}
+.admin-salary-month-total b{display:block;margin-top:2px;color:#0f172a;font-size:10px;}
+.admin-salary-month-total strong{color:#1e3a8a;font-size:1.2rem;font-weight:950;}
+@media(max-width:700px){
+  .admin-salary-head{padding:12px;border-radius:15px;}
+  .admin-salary-head p{font-size:.58rem;}
+  .admin-salary-rate-badge{padding:8px 9px;}
+  .admin-salary-rate-badge strong{font-size:.7rem;}
+  .admin-salary-rule{grid-template-columns:1fr;}
+  .admin-salary-summary{grid-template-columns:1fr;}
+  .admin-salary-card{padding:11px;}
+  .admin-salary-filter input{min-width:150px;}
+}
+</style>
+
 </head>
 <body class="min-h-screen p-2 sm:p-4 pt-4 sm:pt-6 flex flex-col items-center text-slate-900 font-medium">
 
@@ -12584,10 +12667,70 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
       <button type="button" onclick="quickMoreOpen('laporan')"><span>📊</span><b>Laporan</b><small>Pusat laporan transaksi</small></button>
       <button type="button" onclick="quickMoreOpen('team-list')"><span>👥</span><b>List Tim Main</b><small>Semua tim yang pernah main</small></button>
       <button type="button" onclick="quickMoreOpen('setor-tunai')"><span>💵</span><b>Setor Tunai</b><small>Rekap cash per tanggal</small></button>
+      <button type="button" onclick="quickMoreOpen('gaji-admin')"><span>💰</span><b>Gaji Admin</b><small>Gaji shift + bonus tim</small></button>
     </div>
   </div>
 </div>
 
+
+
+<!-- HALAMAN GAJI ADMIN -->
+<div class="sub-menu-modern glass-panel p-4 sm:p-6 rounded-2xl hidden font-bold text-slate-900" id="page-gaji-admin">
+  <div class="admin-salary-page">
+    <div class="admin-salary-head">
+      <button type="button" class="admin-salary-back-btn" onclick="showPage('more')" aria-label="Kembali ke Menu Lainnya">←</button>
+      <div class="admin-salary-head-copy">
+        <div class="admin-salary-kicker">💰 PENGGAJIAN ADMIN</div>
+        <h2>GAJI ADMIN</h2>
+        <p>Otomatis dari Jadwal Admin Jaga + tim yang benar-benar main.</p>
+      </div>
+      <div class="admin-salary-rate-badge">
+        <strong>Rp 50.000</strong>
+        <span>/ shift</span>
+      </div>
+    </div>
+
+    <div class="admin-salary-filter">
+      <label for="gaji-admin-bulan">Pilih Bulan</label>
+      <input id="gaji-admin-bulan" type="month" onchange="renderGajiAdmin()">
+      <button type="button" onclick="setBulanGajiAdminHariIni()">📅 Bulan Ini</button>
+    </div>
+
+    <div class="admin-salary-rule">
+      <div><b>Gaji shift</b><span>Rp 50.000 setiap admin yang terjadwal pada 1 shift.</span></div>
+      <div><b>Bonus tim</b><span>Rp 10.000 × 1 tim × 1 jam. Jadi 1 tim main 2 jam = Rp 20.000.</span></div>
+      <div><b>Cancel</b><span>Tim yang dibatalkan tidak masuk hitungan bonus.</span></div>
+    </div>
+
+    <div id="gaji-admin-summary" class="admin-salary-summary"></div>
+
+    <div class="admin-salary-detail-wrap">
+      <div class="admin-salary-section-title">
+        <div>
+          <span>📋</span>
+          <div><b>Rincian Harian</b><small>Bonus mengikuti admin yang menjaga pada jam tim bermain.</small></div>
+        </div>
+      </div>
+      <div class="admin-salary-table-wrap">
+        <table class="admin-salary-table">
+          <thead>
+            <tr>
+              <th>Tanggal</th>
+              <th>Shift</th>
+              <th>Admin</th>
+              <th>Tim Main</th>
+              <th>Tim-Jam</th>
+              <th>Gaji</th>
+              <th>Bonus</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody id="gaji-admin-detail-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- MENU SETOR TUNAI — rekap cash berdasarkan rentang tanggal -->
 <div class="hidden" id="page-setor-tunai">
@@ -13029,6 +13172,11 @@ function scheduleRender(fn) {
             }
             if(id === 'admin-jaga') {
                 renderJadwalAdmin();
+            }
+            if(id === 'gaji-admin') {
+                const bulanGaji = document.getElementById('gaji-admin-bulan');
+                if(bulanGaji && !bulanGaji.value) bulanGaji.value = getLocalDateString().substring(0,7);
+                renderGajiAdmin();
             }
             if(id === 'sparring') {
                 updateSparingBookingOptions();
@@ -14896,6 +15044,201 @@ kaosKakiTerjual: jumlahKaosKaki,
         function getAdminShiftName(dateKey, shift){
             return getSavedAdminRoster(dateKey,shift) || defaultAdminShift(dateKey,shift);
         }
+
+        // =========================================================
+        // GAJI ADMIN
+        // Gaji tetap Rp50.000/shift.
+        // Bonus Rp10.000 per tim per JAM yang benar-benar main.
+        // Shift malam dimulai pukul 17:00 (mengikuti logika Jadwal Admin).
+        // Tim cancel tidak dihitung.
+        // =========================================================
+        const ADMIN_SALARY_PER_SHIFT = 50000;
+        const ADMIN_BONUS_PER_TEAM_HOUR = 10000;
+
+        function gajiAdminNormalizeName(value){
+            return String(value || '').replace(/\s*\(Booking\)$/i,'').trim().toLowerCase();
+        }
+
+        function gajiAdminIsCancelled(dateKey, nama, jam){
+            const t = String(dateKey || '').split('T')[0];
+            const j = String(jam || '').substring(0,5);
+            const n = gajiAdminNormalizeName(nama);
+            if(!t || !j || !n) return false;
+
+            const booking = Object.values(globalCache.booking || {}).some(b => {
+                if(!b || !b.tgl) return false;
+                const bt = String(b.tgl).split('T')[0];
+                const bj = String(b.tgl).split('T')[1]?.substring(0,5) || '';
+                return bt === t && bj === j && gajiAdminNormalizeName(b.nama) === n && b.batal === true;
+            });
+            if(booking) return true;
+
+            return Object.values(globalCache.bookingBatal || {}).some(item => {
+                if(!item || item.aktif === false) return false;
+                return String(item.tanggal || '').split('T')[0] === t &&
+                    String(item.jam || '').substring(0,5) === j &&
+                    gajiAdminNormalizeName(item.nama) === n;
+            });
+        }
+
+        function gajiAdminShiftFromHour(hour){
+            const h = Number(hour);
+            if(!Number.isFinite(h)) return '';
+            if(h >= 7 && h <= 16) return 'pagi';
+            if(h >= 17 && h <= 24) return 'malam';
+            return '';
+        }
+
+        function gajiAdminGetTeamHoursForDate(dateKey){
+            const unique = new Map();
+
+            // Booking adalah sumber utama bila ada booking pada jam tersebut.
+            Object.values(globalCache.booking || {}).forEach(b => {
+                if(!b || !b.tgl || b.batal === true) return;
+                const bt = String(b.tgl).split('T')[0];
+                const bj = String(b.tgl).split('T')[1]?.substring(0,5) || '';
+                const hour = parseInt(bj.substring(0,2),10);
+                const nama = String(b.nama || '').trim();
+                if(bt !== dateKey || !nama || !bj || !gajiAdminShiftFromHour(hour)) return;
+                if(gajiAdminIsCancelled(dateKey,nama,bj)) return;
+                const key = `${dateKey}|${gajiAdminNormalizeName(nama)}|${bj}`;
+                if(!unique.has(key)) unique.set(key,{nama:nama,jam:bj});
+            });
+
+            // Tambahkan jadwal member yang benar-benar aktif.
+            // Jika slot yang sama sudah ada booking, jangan dihitung dua kali.
+            const hariName = getNamaHari(dateKey);
+            (typeof listJam !== 'undefined' ? listJam : []).forEach(jam => {
+                const hour = parseInt(String(jam).substring(0,2),10);
+                if(!gajiAdminShiftFromHour(hour)) return;
+                const cell = globalCache.member?.[jam]?.[hariName];
+                if(!cell || cell.type === 'off' || !cell.nama) return;
+                if(typeof isMemberScheduledOnDate === 'function' && !isMemberScheduledOnDate(cell,dateKey)) return;
+                const nama = String(cell.nama || '').trim();
+                if(!nama || nama.toUpperCase() === 'OFF') return;
+                if(gajiAdminIsCancelled(dateKey,nama,jam)) return;
+                const key = `${dateKey}|${gajiAdminNormalizeName(nama)}|${String(jam).substring(0,5)}`;
+                if(!unique.has(key)) unique.set(key,{nama:nama,jam:String(jam).substring(0,5)});
+            });
+
+            return Array.from(unique.values()).sort((a,b) =>
+                a.jam.localeCompare(b.jam) || a.nama.localeCompare(b.nama,'id')
+            );
+        }
+
+        function gajiAdminMonthDays(monthValue){
+            const m = String(monthValue || '');
+            const match = /^(\d{4})-(\d{2})$/.exec(m);
+            if(!match) return [];
+            const year = Number(match[1]), month = Number(match[2]);
+            const last = new Date(year,month,0).getDate();
+            const days = [];
+            for(let day=1;day<=last;day++) days.push(`${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`);
+            return days;
+        }
+
+        function gajiAdminBuildMonth(monthValue){
+            const rows = [];
+            const totals = {};
+            (typeof ADMIN_NAMES !== 'undefined' ? ADMIN_NAMES : []).forEach(name => {
+                totals[name] = {shift:0,teamHours:0,bonus:0,total:0};
+            });
+
+            gajiAdminMonthDays(monthValue).forEach(dateKey => {
+                ['pagi','malam'].forEach(shift => {
+                    const admin = getAdminShiftName(dateKey,shift) || '-';
+                    if(!totals[admin]) totals[admin] = {shift:0,teamHours:0,bonus:0,total:0};
+
+                    const teamHours = gajiAdminGetTeamHoursForDate(dateKey)
+                        .filter(x => gajiAdminShiftFromHour(parseInt(x.jam.substring(0,2),10)) === shift);
+                    const bonus = teamHours.length * ADMIN_BONUS_PER_TEAM_HOUR;
+
+                    totals[admin].shift += 1;
+                    totals[admin].teamHours += teamHours.length;
+                    totals[admin].bonus += bonus;
+                    totals[admin].total += ADMIN_SALARY_PER_SHIFT + bonus;
+
+                    rows.push({
+                        dateKey, shift, admin,
+                        teams: teamHours.map(x => `${x.nama} (${x.jam.replace(':','.')})`),
+                        teamHours: teamHours.length,
+                        base: ADMIN_SALARY_PER_SHIFT,
+                        bonus,
+                        total: ADMIN_SALARY_PER_SHIFT + bonus
+                    });
+                });
+            });
+
+            return {rows,totals};
+        }
+
+        function gajiAdminFormatMoney(value){
+            return 'Rp ' + Number(value || 0).toLocaleString('id-ID');
+        }
+
+        function gajiAdminFormatDate(dateKey){
+            const d = new Date(dateKey + 'T00:00:00');
+            return isNaN(d.getTime()) ? dateKey : d.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
+        }
+
+        window.setBulanGajiAdminHariIni = function(){
+            const el = document.getElementById('gaji-admin-bulan');
+            if(el) el.value = getLocalDateString().substring(0,7);
+            renderGajiAdmin();
+        };
+
+        window.renderGajiAdmin = function(){
+            const monthEl = document.getElementById('gaji-admin-bulan');
+            const summaryEl = document.getElementById('gaji-admin-summary');
+            const bodyEl = document.getElementById('gaji-admin-detail-body');
+            if(!monthEl || !summaryEl || !bodyEl) return;
+
+            if(!monthEl.value) monthEl.value = getLocalDateString().substring(0,7);
+            const {rows,totals} = gajiAdminBuildMonth(monthEl.value);
+            const adminOrder = (typeof ADMIN_NAMES !== 'undefined' ? ADMIN_NAMES : Object.keys(totals));
+            let grandTotal = 0;
+
+            const cards = adminOrder.map((admin,index) => {
+                const t = totals[admin] || {shift:0,teamHours:0,bonus:0,total:0};
+                grandTotal += t.total;
+                return `<article class="admin-salary-card">
+                    <div class="admin-salary-card-top">
+                      <div class="admin-salary-card-name">${escapeHtmlSparing ? escapeHtmlSparing(admin) : admin}</div>
+                      <div class="admin-salary-card-icon">${index===0?'🧑‍💼':index===1?'🌙':'👤'}</div>
+                    </div>
+                    <div class="admin-salary-card-total">${gajiAdminFormatMoney(t.total)}</div>
+                    <div class="admin-salary-card-meta">
+                      <div><small>SHIFT</small><strong>${t.shift}</strong></div>
+                      <div><small>TIM-JAM</small><strong>${t.teamHours}</strong></div>
+                      <div><small>BONUS</small><strong>${gajiAdminFormatMoney(t.bonus)}</strong></div>
+                    </div>
+                </article>`;
+            }).join('');
+
+            summaryEl.innerHTML = cards + `
+              <div class="admin-salary-month-total">
+                <div><small>TOTAL GAJI SEMUA ADMIN</small><b>${monthEl.value}</b></div>
+                <strong>${gajiAdminFormatMoney(grandTotal)}</strong>
+              </div>`;
+
+            if(!rows.length){
+                bodyEl.innerHTML = `<tr><td colspan="8"><div class="admin-salary-empty">Belum ada data jadwal untuk bulan ini.</div></td></tr>`;
+                return;
+            }
+
+            bodyEl.innerHTML = rows.map(row => `
+              <tr>
+                <td>${gajiAdminFormatDate(row.dateKey)}</td>
+                <td>${row.shift === 'pagi' ? '☀️ Pagi' : '🌙 Malam'}</td>
+                <td><b>${escapeHtmlSparing ? escapeHtmlSparing(row.admin) : row.admin}</b></td>
+                <td>${row.teams.length ? row.teams.map(x => escapeHtmlSparing ? escapeHtmlSparing(x) : x).join('<br>') : '-'}</td>
+                <td style="text-align:center;font-weight:950">${row.teamHours}</td>
+                <td class="money">${gajiAdminFormatMoney(row.base)}</td>
+                <td class="bonus">${gajiAdminFormatMoney(row.bonus)}</td>
+                <td class="total">${gajiAdminFormatMoney(row.total)}</td>
+              </tr>
+            `).join('');
+        };
         function renderJadwalAdmin(){
             const grid=document.getElementById('admin-calendar-grid');
             const title=document.getElementById('admin-month-title');
@@ -16716,7 +17059,9 @@ kaosKakiTerjual: jumlahKaosKaki,
         onValue(ref(db, 'adminJaga'), (snapshot) => {
             globalCache.adminJaga = snapshot.val() || {};
             scheduleRender(renderJadwalAdmin);
+            scheduleRender(renderGajiAdmin);
         });
+
 
         // =========================================================
         // API untuk DOWNLOAD DAILY RECAP
@@ -17219,6 +17564,7 @@ kaosKakiTerjual: jumlahKaosKaki,
             }
             updateInitialLoadingPopup();
             if (typeof renderAll === 'function') scheduleRender(renderAll);
+            scheduleRender(renderGajiAdmin);
             if (typeof window.renderTeamList === 'function') scheduleRender(window.renderTeamList);
         }
         onValue(ref(db, 'memberTanpaJadwal'), (snapshot) => {
@@ -17271,6 +17617,7 @@ kaosKakiTerjual: jumlahKaosKaki,
             }
             updateInitialLoadingPopup();
             scheduleRender(renderAll);
+            scheduleRender(renderGajiAdmin);
             if (typeof window.renderTeamList === 'function') scheduleRender(window.renderTeamList);
         }
         const bookingFastQuery = query(ref(db, 'booking'), orderByChild('tgl'), startAt(getBookingFastLoadStartString()));
@@ -17303,6 +17650,7 @@ kaosKakiTerjual: jumlahKaosKaki,
             globalCache.bookingBatal = snapshot.val() || {};
             scheduleRender(renderTodaySchedule);
             scheduleRender(renderMonthlyRecap);
+            scheduleRender(renderGajiAdmin);
         });
 
         onValue(ref(db, 'pelunasanMember'), (snapshot) => {
@@ -43051,7 +43399,8 @@ body > header .admin-global-header-brand-title{
     'minuman':'PENJUALAN MINUMAN',
     'daily-recap':'DAILY RECAP',
     'more':'MENU LAINNYA',
-    'setor-tunai':'SETOR TUNAI'
+    'setor-tunai':'SETOR TUNAI',
+    'gaji-admin':'GAJI ADMIN'
   };
 
   function getCurrentPageId(){
@@ -45301,7 +45650,7 @@ html body {
    seperti tombol lain — hanya lebarnya yang menjadi satu baris penuh.
    ========================================================================= */
 #page-more .more-page-grid button:last-child{
-  grid-column: 1 / -1 !important;
+  grid-column: auto !important;
 }
 </style>
 
