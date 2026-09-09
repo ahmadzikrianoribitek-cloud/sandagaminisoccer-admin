@@ -4755,6 +4755,43 @@ html {
   box-sizing: border-box !important;
 }
 
+/* Logo yang baru saja datang (dimuat satu per satu) muncul dengan fade + */
+/* sedikit zoom-in singkat, supaya kemunculannya terasa hidup & bertahap, */
+/* bukan sekadar "nongol" begitu saja. */
+@keyframes todayScheduleLogoFadeIn {
+  from { opacity: 0; transform: scale(.75); }
+  to { opacity: 1; transform: scale(1); }
+}
+#today-schedule-panel .today-schedule-logo-fade-in {
+  animation: todayScheduleLogoFadeIn .28s ease-out;
+}
+
+/* Kartu yang SEDANG dicek logonya (satu per satu) — kilau biru berdenyut
+   PAS DI DALAM kotak logo, supaya kelihatan jelas mana yang sedang diproses
+   saat itu juga. Sengaja pakai elemen baru (::after) yang ukurannya sama
+   persis dengan kotaknya (bukan melebihi), karena kotak logo punya
+   "overflow: hidden" — apa pun yang melebihi batas kotak akan ikut
+   terpotong. Juga sengaja BUKAN animasi opacity pada ikon ⚽ itu sendiri:
+   ikon itu sudah punya "opacity: .55 !important" dari aturan lain di
+   bawah, dan animasi CSS selalu kalah melawan deklarasi !important apa
+   pun, jadi denyut lewat opacity ikon tidak akan pernah kelihatan. */
+#today-schedule-panel .today-schedule-logo-checking {
+  position: relative !important;
+}
+#today-schedule-panel .today-schedule-logo-checking::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: radial-gradient(circle, rgba(37,99,235,.55), rgba(37,99,235,0) 72%);
+  animation: todayScheduleLogoCheckingPulse 1s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes todayScheduleLogoCheckingPulse {
+  0%, 100% { opacity: .3; }
+  50% { opacity: 1; }
+}
+
 #today-schedule-panel .today-schedule-logo > span {
   font-size: 18px !important;
   line-height: 1 !important;
@@ -15939,9 +15976,19 @@ kaosKakiTerjual: jumlahKaosKaki,
 
         // =========================================================
         // POPUP LOADING AWAL APLIKASI
-        // Progress berjalan halus 0% -> 1% -> 2% ... -> 100%.
-        // Setiap langkah memiliki jeda yang sama; 100% hanya dicapai setelah data selesai.
-        // Angka dan panjang bar selalu memakai nilai progress yang sama.
+        // Sebelumnya progress dipaksa naik 1% setiap 70ms dalam DUA fase
+        // kaku (0%->50% lalu berhenti nunggu di 50%, baru 51%->100% dengan
+        // jeda tetap yang SAMA meskipun data sebenarnya sudah selesai
+        // duluan). Efeknya: popup masih terlihat mentok di angka kecil
+        // (mis. 32%) padahal kartu Jadwal Hari Ini sudah tampil di
+        // belakang — popup jadi lebih lambat dari data aslinya.
+        //
+        // Sekarang: selama data BELUM selesai, progress tetap naik pelan
+        // sebagai penanda "masih bekerja" tapi dibiarkan mendekati 90%
+        // (bukan mentok di satu angka). Begitu data (Member + Booking)
+        // benar-benar SELESAI, progress langsung dipercepat menuju 100%
+        // dalam lompatan besar tiap tick — sehingga popup ikut menutup
+        // sesaat setelah data siap, bukan beberapa detik sesudahnya.
         // =========================================================
         window.__sandagaInitialLoadingProgress = 0;
         window.__sandagaInitialLoadingTimer = null;
@@ -16009,12 +16056,6 @@ kaosKakiTerjual: jumlahKaosKaki,
         function startInitialLoadingProgress() {
             if (window.__sandagaInitialLoadingTimer) return;
 
-            // Progress dibagi menjadi dua fase yang sama-sama terasa natural:
-            // 0% -> 50% = memuat data utama, lalu 50% -> 100% = sinkronisasi.
-            // Jika data belum lengkap saat mencapai 50%, progress berhenti di 50%
-            // sehingga admin tidak terjebak menunggu di 99%.
-            // Begitu Member + Booking selesai, progress langsung melanjutkan 51% -> 100%
-            // dengan jeda per 1% yang sama.
             window.__sandagaInitialLoadingTimer = setInterval(() => {
                 const overlay = document.getElementById('app-initial-loading-overlay');
                 if (!overlay) {
@@ -16023,38 +16064,40 @@ kaosKakiTerjual: jumlahKaosKaki,
                     return;
                 }
 
-                const memberLoaded = !!globalCache.__initialMemberLoaded;
-                const bookingLoaded = !!globalCache.__initialBookingLoaded;
-                const complete = memberLoaded && bookingLoaded;
-                const current = Number(window.__sandagaInitialLoadingProgress || 0);
-
                 if (globalCache.__initialLoadingTimedOut) {
                     clearInterval(window.__sandagaInitialLoadingTimer);
                     window.__sandagaInitialLoadingTimer = null;
                     return;
                 }
 
-                if (current < 50) {
-                    renderInitialLoadingProgress(current + 1);
-                    updateInitialLoadingPopup();
-                    return;
-                }
+                const complete = !!globalCache.__initialMemberLoaded && !!globalCache.__initialBookingLoaded;
+                const current = Number(window.__sandagaInitialLoadingProgress || 0);
 
-                if (current >= 50 && !complete) {
-                    // Tunggu di titik sinkronisasi 50%, bukan 99%.
+                if (complete) {
+                    // Data sebenarnya sudah siap — popup TIDAK BOLEH lebih
+                    // lambat dari data yang sudah tampil di belakang, jadi
+                    // langsung dipercepat menuju 100% dalam lompatan besar
+                    // tiap tick, bukan 1% demi 1% seperti saat menunggu.
+                    const next = Math.min(100, current + 8);
+                    renderInitialLoadingProgress(next);
                     updateInitialLoadingPopup();
-                    return;
-                }
-
-                if (complete && current < 100) {
-                    renderInitialLoadingProgress(current + 1);
-                    updateInitialLoadingPopup();
-                    if (current + 1 >= 100) {
+                    if (next >= 100) {
                         clearInterval(window.__sandagaInitialLoadingTimer);
                         window.__sandagaInitialLoadingTimer = null;
                     }
+                    return;
                 }
-            }, 70);
+
+                // Selagi masih menunggu data, naik pelan-pelan menuju 90%
+                // saja (bukan berhenti kaku di satu angka tetap) — supaya
+                // tetap kelihatan "sedang bekerja" apa pun lama koneksinya,
+                // tapi menyisakan ruang untuk lompatan cepat begitu data
+                // benar-benar selesai.
+                if (current < 90) {
+                    renderInitialLoadingProgress(current + 1);
+                }
+                updateInitialLoadingPopup();
+            }, 60);
         }
 
         function updateInitialLoadingPopup() {
@@ -16073,36 +16116,26 @@ kaosKakiTerjual: jumlahKaosKaki,
 
             if (!complete) {
                 overlay.classList.remove('is-success');
-
-                if (progress >= 50) {
-                    // Mulai fase sinkronisasi tepat di 50%, sehingga waktu tunggu
-                    // tidak terkumpul di angka 99%.
-                    if (title) title.textContent = 'Menyinkronkan data...';
-                    if (text) text.textContent = !memberLoaded && !bookingLoaded
-                        ? 'Menunggu data Member dan Booking selesai disinkronkan...'
-                        : memberLoaded
-                            ? 'Data member sudah masuk. Menunggu data booking...'
-                            : 'Data booking sudah masuk. Menunggu data member...';
-                    if (icon) icon.textContent = '⏳';
+                if (!memberLoaded && !bookingLoaded) {
+                    if (title) title.textContent = 'Memuat data...';
+                    if (text) text.textContent = 'Menghubungkan ke database dan mengambil data Jadwal Hari Ini.';
+                    if (icon) icon.textContent = '📅';
                 } else {
-                    if (!memberLoaded && !bookingLoaded) {
-                        if (title) title.textContent = 'Memuat data...';
-                        if (text) text.textContent = 'Menghubungkan ke database dan mengambil data Jadwal Hari Ini.';
-                        if (icon) icon.textContent = '📅';
-                    } else {
-                        if (title) title.textContent = 'Memuat data...';
-                        if (text) text.textContent = 'Mengambil data Jadwal Hari Ini...';
-                        if (icon) icon.textContent = '📅';
-                    }
+                    if (title) title.textContent = 'Menyinkronkan data...';
+                    if (text) text.textContent = memberLoaded
+                        ? 'Data member sudah masuk. Menunggu data booking...'
+                        : 'Data booking sudah masuk. Menunggu data member...';
+                    if (icon) icon.textContent = '⏳';
                 }
                 return;
             }
 
-            // Kedua sumber utama sudah masuk. Progress melanjutkan dari posisi terakhir
-            // sampai 100%, dengan jeda per 1% yang sama.
+            // Kedua sumber utama sudah masuk — popup sedang dipercepat
+            // menuju 100% (lihat startInitialLoadingProgress) dan akan
+            // langsung ditutup begitu sampai di sana.
             if (progress >= 100) {
                 finishInitialLoadingOverlay(false);
-            } else if (progress >= 50) {
+            } else {
                 if (title) title.textContent = 'Menyinkronkan data...';
                 if (text) text.textContent = 'Data utama sudah masuk. Menyelesaikan sinkronisasi...';
                 if (icon) icon.textContent = '⏳';
@@ -16663,9 +16696,18 @@ kaosKakiTerjual: jumlahKaosKaki,
         };
 
         function renderAll() {
+            // Jadwal Hari Ini dirender PALING DULUAN (bukan paling akhir).
+            // Sebelumnya renderGridJadwal() + renderTabelBooking() (tabel
+            // riwayat booking, bisa ribuan baris logika) jalan duluan di
+            // thread yang sama — jadi permintaan logo Jadwal Hari Ini ikut
+            // ketahan/antre di belakang pekerjaan besar yang sama sekali
+            // tidak berhubungan, meski logonya sendiri sudah siap diminta.
+            // Dengan Jadwal Hari Ini duluan, kartu + permintaan logo
+            // pertama langsung jalan begitu data booking/member siap, baru
+            // render lain (grid, tabel booking, rekap) menyusul.
+            renderTodaySchedule();
             renderGridJadwal();
             renderTabelBooking();
-            renderTodaySchedule();
             renderRekapHarian();
             renderMonthlyRecap();
             updateDropdownTimMasuk();
@@ -16743,20 +16785,43 @@ kaosKakiTerjual: jumlahKaosKaki,
         // aman ditunda supaya tidak berebut bandwidth dengan data booking
         // di detik-detik pertama. Logo akan menyusul tampil begitu selesai
         // diunduh (otomatis re-render).
+        //
+        // CATATAN: sebelumnya listener ini dipicu lewat requestIdleCallback,
+        // tapi browser biasanya langsung "idle" begitu halaman baru dibuka —
+        // jadi listener ini malah ikut jalan hampir bersamaan dengan proses
+        // ambil-satu-satu punya Jadwal Hari Ini (preloadTodayScheduleLogosSequential),
+        // dan karena ia mengambil SEMUA logo sekaligus dalam satu request,
+        // ia sering "menang" duluan sehingga semua logo tampak muncul
+        // serentak, bukan bertahap. Sekarang listener lengkap ini SENGAJA
+        // tidak dipicu di sini — ia baru benar-benar dinyalakan setelah
+        // proses satu-satu Jadwal Hari Ini selesai (lihat pemanggilan
+        // startAdminTeamLogosListener() di preloadTodayScheduleLogosSequential),
+        // dengan jaga-jaga timeout di bawah supaya halaman lain (tabel
+        // booking, list tim, sparring) tidak menunggu logo selamanya kalau
+        // Jadwal Hari Ini kebetulan kosong / belum sempat dirender.
+        window.__adminTeamLogosListenerStarted = false;
         function startAdminTeamLogosListener() {
+            if(window.__adminTeamLogosListenerStarted) return;
+            window.__adminTeamLogosListenerStarted = true;
             onValue(ref(db, 'teamLogos'), (snapshot) => {
                 globalCache.teamLogos = snapshot.val() || {};
+                // Begitu daftar logo LENGKAP ini datang, hentikan proses ambil-satu-satu
+                // punya Jadwal Hari Ini (lihat preloadTodayScheduleLogosSequential) karena
+                // data resmi & lengkap sudah tersedia — tidak perlu lagi tebak per-tim.
+                globalCache.__teamLogosFullLoaded = true;
                 scheduleRender(renderTodaySchedule);
                 scheduleRender(renderTabelBooking);
                 scheduleRender(refreshTeamLogoIndicators);
                 if (typeof renderSparing === 'function') scheduleRender(renderSparing);
             });
         }
-        if ('requestIdleCallback' in window) {
-            requestIdleCallback(startAdminTeamLogosListener, { timeout: 1500 });
-        } else {
-            setTimeout(startAdminTeamLogosListener, 800);
-        }
+        window.startAdminTeamLogosListener = startAdminTeamLogosListener;
+        // Jaga-jaga: kalau proses bertahap Jadwal Hari Ini tidak pernah
+        // jalan (mis. hari ini memang tidak ada jadwal sama sekali, atau
+        // panel belum ke-render saat load), tetap nyalakan listener lengkap
+        // setelah beberapa detik supaya halaman lain tidak kehilangan logo.
+        setTimeout(() => { if(!window.__adminTeamLogosListenerStarted) startAdminTeamLogosListener(); }, 4000);
+
 
         // Profil tim untuk List Tim Main: nama/WA yang sudah diedit admin.
         onValue(ref(db, 'teamProfiles'), (snapshot) => {
@@ -18129,17 +18194,19 @@ kaosKakiTerjual: jumlahKaosKaki,
         function renderTeamLogoHtml(nama, extraClass='') {
             const logo = getTeamLogo(nama);
             const safeLogo = escapeAttrLogo(logo);
+            const dataAttr = ` data-team-logo-single="${encodeURIComponent(String(nama || ''))}"`;
             if(logo) {
-                return `<div class="today-schedule-logo ${extraClass}" title="Logo ${escapeHtmlSparing(nama)}"><img src="${safeLogo}" alt="Logo ${escapeHtmlSparing(nama)}" onerror="this.parentElement.classList.add('logo-error');this.style.display='none';"></div>`;
+                return `<div class="today-schedule-logo ${extraClass}"${dataAttr} title="Logo ${escapeHtmlSparing(nama)}"><img src="${safeLogo}" alt="Logo ${escapeHtmlSparing(nama)}" onerror="this.parentElement.classList.add('logo-error');this.style.display='none';"></div>`;
             }
-            return `<div class="today-schedule-logo ${extraClass}" title="Belum ada logo tim"><span>⚽</span></div>`;
+            return `<div class="today-schedule-logo ${extraClass}"${dataAttr} title="Belum ada logo tim"><span>⚽</span></div>`;
         }
 
         function renderSparingLogoHtml(timA, timB) {
             const logoA = getTeamLogo(timA);
             const logoB = getTeamLogo(timB);
             if(!logoA && !logoB) return renderTeamLogoHtml(timA, 'today-schedule-logo-sparing');
-            return `<div class="today-schedule-logo today-schedule-logo-sparing" title="Logo ${escapeHtmlSparing(timA)} vs ${escapeHtmlSparing(timB)}">
+            const dataAttr = ` data-team-logo-a="${encodeURIComponent(String(timA || ''))}" data-team-logo-b="${encodeURIComponent(String(timB || ''))}"`;
+            return `<div class="today-schedule-logo today-schedule-logo-sparing"${dataAttr} title="Logo ${escapeHtmlSparing(timA)} vs ${escapeHtmlSparing(timB)}">
                 ${logoA ? `<img src="${escapeAttrLogo(logoA)}" alt="Logo ${escapeHtmlSparing(timA)}" onerror="this.style.display='none';">` : '<span>⚽</span>'}
                 ${logoB ? `<img src="${escapeAttrLogo(logoB)}" alt="Logo ${escapeHtmlSparing(timB)}" onerror="this.style.display='none';">` : '<span>⚽</span>'}
             </div>`;
@@ -19271,6 +19338,11 @@ return;
                     </div>`;
             } else {
                 listEl.innerHTML = renderedScheduleCards;
+                // PRIORITAS LOGO JADWAL HARI INI: begitu kartu-kartu ini tampil,
+                // segera mulai ambil logo tim satu per satu (mulai dari kartu
+                // paling atas) SEBELUM listener logo lengkap (semua tim, untuk
+                // seluruh halaman) berjalan. Lihat preloadTodayScheduleLogosSequential.
+                if(!globalCache.__teamLogosFullLoaded) preloadTodayScheduleLogosSequential();
             }
 
             // Ukuran logo mengikuti 90% tinggi card setelah layout selesai.
@@ -19279,6 +19351,154 @@ return;
                 requestAnimationFrame(fitTodayScheduleLogos);
             });
         };
+
+        // =========================================================
+        // PRIORITAS LOGO — JADWAL HARI INI
+        // =========================================================
+        // Sebelumnya: seluruh logo tim ('teamLogos') sengaja DITUNDA
+        // (requestIdleCallback / setTimeout 800ms, lihat
+        // startAdminTeamLogosListener) supaya tidak berebut bandwidth
+        // dengan data booking di detik-detik pertama. Efeknya, logo di
+        // Jadwal Hari Ini juga baru muncul belakangan, setelah data lain.
+        //
+        // Sekarang, KHUSUS untuk kartu-kartu Jadwal Hari Ini: begitu
+        // kartunya tampil (booking + member hari ini sudah siap), kita
+        // langsung ambil logo tim yang benar-benar dibutuhkan hari ini
+        // saja (bukan seluruh 'teamLogos'), satu per satu, dimulai dari
+        // kartu paling atas — jadi logo muncul cepat & bertahap, tanpa
+        // menunggu data lain (logo tim lain, tabel booking, dsb) yang
+        // tetap berjalan seperti biasa di belakang layar.
+        // Menempelkan logo langsung ke SATU slot kartu (tanpa render ulang
+        // seluruh daftar Jadwal Hari Ini). Sebelumnya setiap logo yang
+        // didapat memicu scheduleRender(renderTodaySchedule) — itu membangun
+        // ULANG seluruh daftar kartu dari nol setiap ~180ms, sehingga semua
+        // kartu ikut "berkedip"/reflow bersamaan dan logo terasa muncul
+        // serentak (atau malah terasa berat/lambat) alih-alih satu per satu.
+        // Dengan menempel langsung ke elemen slotnya saja, kartu lain sama
+        // sekali tidak tersentuh — hanya logo yang baru datang yang muncul,
+        // dengan animasi fade-in singkat, persis satu per satu dari atas.
+        function applyTodayScheduleLogoSlot(el) {
+            if(!el) return false;
+            if(el.dataset.teamLogoSingle) {
+                const nama = decodeURIComponent(el.dataset.teamLogoSingle);
+                const logo = getTeamLogo(nama);
+                if(!logo) return false;
+                el.classList.remove('logo-error');
+                el.title = 'Logo ' + nama;
+                el.innerHTML = `<img src="${escapeAttrLogo(logo)}" alt="Logo ${escapeHtmlSparing(nama)}" class="today-schedule-logo-fade-in" onerror="this.parentElement.classList.add('logo-error');this.style.display='none';">`;
+                return true;
+            }
+            if(el.dataset.teamLogoA || el.dataset.teamLogoB) {
+                const timA = decodeURIComponent(el.dataset.teamLogoA || '');
+                const timB = decodeURIComponent(el.dataset.teamLogoB || '');
+                const logoA = getTeamLogo(timA);
+                const logoB = getTeamLogo(timB);
+                if(!logoA && !logoB) return false;
+                el.title = `Logo ${timA} vs ${timB}`;
+                el.innerHTML = `${logoA ? `<img src="${escapeAttrLogo(logoA)}" alt="Logo ${escapeHtmlSparing(timA)}" class="today-schedule-logo-fade-in" onerror="this.style.display='none';">` : '<span>⚽</span>'}${logoB ? `<img src="${escapeAttrLogo(logoB)}" alt="Logo ${escapeHtmlSparing(timB)}" class="today-schedule-logo-fade-in" onerror="this.style.display='none';">` : '<span>⚽</span>'}`;
+                return true;
+            }
+            return false;
+        }
+
+        window.__todayLogoPreloadRunning = false;
+        async function preloadTodayScheduleLogosSequential() {
+            if(window.__todayLogoPreloadRunning) return;
+            if(globalCache.__teamLogosFullLoaded) return;
+            const listEl = document.getElementById('today-schedule-list');
+            if(!listEl) return;
+            const db = window.__APP_FIREBASE_DB__;
+            const refFn = window.__APP_FIREBASE_REF__;
+            const getFn = window.__APP_FIREBASE_GET__;
+            if(!db || !refFn || !getFn) return;
+
+            // Urutan diambil langsung dari urutan kartu di DOM (atas ke bawah),
+            // sama persis dengan urutan tampil di Jadwal Hari Ini.
+            const logoSlots = Array.from(listEl.querySelectorAll('.today-schedule-logo'));
+            const pending = logoSlots.filter(el => !el.querySelector('img'));
+            if(!pending.length) {
+                // Tidak ada yang perlu diprioritaskan (mis. tidak ada jadwal hari
+                // ini, atau semua logo sudah tersedia) — langsung nyalakan listener
+                // lengkap untuk halaman lain, tidak perlu menunggu lagi.
+                if(typeof window.startAdminTeamLogosListener === 'function') window.startAdminTeamLogosListener();
+                return;
+            }
+
+            window.__todayLogoPreloadRunning = true;
+            try {
+                // Semua kartu yang belum ada logonya ditandai "sedang dicek"
+                // (kilau biru berdenyut) SEKALIGUS di awal — persis saat
+                // permintaan ke server benar-benar dikirim. Jadi denyutnya
+                // mewakili proses tunggu yang sesungguhnya, bukan cuma jeda
+                // kosmetik yang dipasang belakangan setelah data sudah ada.
+                pending.forEach(el => el.classList.add('today-schedule-logo-checking'));
+
+                // Kumpulkan semua key logo yang dibutuhkan ke-N kartu ini,
+                // lalu minta SEKALIGUS secara paralel (bukan bergantian
+                // satu-satu) supaya total waktu tunggu tetap sesingkat
+                // mungkin — tapi setiap key yang datang LANGSUNG ditempelkan
+                // ke kartu yang membutuhkannya saat itu juga, tidak menunggu
+                // key logo tim lain ikut selesai dulu. Jadi logo benar-benar
+                // muncul satu-satu sesuai kecepatan datangnya masing-masing,
+                // bukan serentak di akhir.
+                const keyToElements = new Map();
+                pending.forEach(el => {
+                    [el.dataset.teamLogoSingle, el.dataset.teamLogoA, el.dataset.teamLogoB]
+                        .filter(Boolean)
+                        .forEach(encoded => {
+                            const key = getTeamLogoKey(decodeURIComponent(encoded));
+                            if(!key) return;
+                            if(!keyToElements.has(key)) keyToElements.set(key, []);
+                            keyToElements.get(key).push(el);
+                        });
+                });
+
+                // Kartu SPARING (2 tim) butuh 2 key sekaligus untuk dianggap
+                // "beres" — dicoba tempel tiap kali salah satu key-nya
+                // datang, supaya sisi yang sudah siap duluan tetap bisa
+                // langsung muncul (yang satu lagi menyusul begitu key-nya
+                // datang), tanpa saling menunggu.
+                const tryApplyNow = (el) => {
+                    if(globalCache.__teamLogosFullLoaded) return;
+                    if(!document.body.contains(el)) return;
+                    if(applyTodayScheduleLogoSlot(el)) {
+                        el.classList.remove('today-schedule-logo-checking');
+                    }
+                };
+
+                await Promise.all(Array.from(keyToElements.keys()).map(async (key) => {
+                    if(!globalCache.teamLogos?.[key]) {
+                        try {
+                            const snap = await getFn(refFn(db, 'teamLogos/' + key));
+                            globalCache.teamLogos = globalCache.teamLogos || {};
+                            // Simpan meski kosong ({}), supaya tim tanpa logo tidak
+                            // ditanya ulang berkali-kali selama listener lengkap
+                            // belum datang.
+                            globalCache.teamLogos[key] = snap.val() || {};
+                        } catch(error) {
+                            console.warn('Gagal memuat awal logo tim (' + key + '):', error);
+                            return;
+                        }
+                    }
+                    // Key ini sudah siap di tangan — langsung tempel ke semua
+                    // kartu yang memakainya, saat ini juga.
+                    keyToElements.get(key).forEach(tryApplyNow);
+                }));
+
+                // Sisa kartu yang ternyata dua-duanya tidak punya logo tetap
+                // dibersihkan dari status "sedang dicek" di akhir.
+                pending.forEach(el => el.classList.remove('today-schedule-logo-checking'));
+            } finally {
+                window.__todayLogoPreloadRunning = false;
+                // Proses prioritas untuk Jadwal Hari Ini sudah selesai (atau
+                // dihentikan karena listener lengkap sudah datang duluan) —
+                // baru sekarang nyalakan listener lengkap untuk halaman lain
+                // (tabel booking, list tim, sparring). Aman dipanggil berkali-
+                // kali karena sudah dijaga idempoten.
+                if(typeof window.startAdminTeamLogosListener === 'function') window.startAdminTeamLogosListener();
+            }
+        }
+
 
         function escapeHtmlSparing(value) {
             return String(value ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
