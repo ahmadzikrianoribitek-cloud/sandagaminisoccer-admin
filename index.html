@@ -15092,8 +15092,9 @@ kaosKakiTerjual: jumlahKaosKaki,
         function gajiAdminShiftFromHour(hour){
             const h = Number(hour);
             if(!Number.isFinite(h)) return '';
-            if(h >= 7 && h <= 16) return 'pagi';
-            if(h >= 17 && h <= 24) return 'malam';
+            // Jam 16.00 sudah masuk shift malam.
+            if(h >= 7 && h <= 15) return 'pagi';
+            if(h >= 16 && h <= 24) return 'malam';
             return '';
         }
 
