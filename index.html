@@ -12683,7 +12683,7 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 
 
 <!-- HALAMAN GAJI ADMIN -->
-<div class="sub-menu-modern glass-panel p-4 sm:p-6 rounded-2xl hidden font-bold text-slate-900" id="page-gaji-admin">
+<div class="hidden font-bold text-slate-900" id="page-gaji-admin">
   <div class="admin-salary-page">
     <div class="admin-salary-head">
       <button type="button" class="admin-salary-back-btn" onclick="showPage('more')" aria-label="Kembali ke Menu Lainnya">←</button>
@@ -13521,11 +13521,21 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             const nama1 = String(selectedName || '').replace(/\s*\(Booking\)$/i, '').trim();
 
             // Cari seluruh slot booking untuk transaksi ini.
-            // Prioritas: bookingGroupId. Fallback: rentang jam yang berurutan
-            // dengan nama tim + tanggal yang sama, supaya booking lama yang
-            // belum mempunyai bookingGroupId tetap dihitung multi-jam.
+            // Sumber kebenaran UTAMA: rentang jam berurutan dengan nama tim +
+            // tanggal yang sama. bookingGroupId dipakai sebagai bantuan, TAPI
+            // tidak boleh menghentikan pencarian — booking yang di-input
+            // sebagai beberapa slot 1 jam terpisah (bukan sekali input durasi
+            // banyak jam) akan punya bookingGroupId BERBEDA di tiap jam,
+            // sehingga grouping berdasarkan bookingGroupId saja hanya
+            // menangkap 1 slot dan membuat harga cuma dihitung 1 jam padahal
+            // tim itu bermain berjam-jam. Karena itu, hasil rentang jam
+            // berurutan selalu dibandingkan dan dipakai jika lebih lengkap.
             let bookingGroupId = '';
             let bookingSlots = [];
+            // effectiveJamList: daftar jam (berurutan) yang benar-benar ditempati
+            // tim ini hari ini, digabung dari SEMUA sumber (booking + jadwal
+            // member). Dipakai sebagai acuan utama durasi & harga di bawah.
+            let effectiveJamList = [];
             if (tgl && jam && !isManual) {
                 const allBookingsToday = Object.values(globalCache.booking || {}).filter(b => {
                     const btgl = String(b?.tgl || '').split('T')[0];
@@ -13554,20 +13564,69 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                     }
                 }
 
-                // Jika card hanya mengirim jam awal, kumpulkan slot berurutan
-                // dari jam awal selama nama tim yang sama masih mempunyai booking.
-                if (!bookingSlots.length && firstBooking) {
+                // Selalu kumpulkan slot berurutan dari jam awal selama nama tim
+                // yang sama masih mempunyai booking pada jam berikutnya, lalu
+                // pakai hasil ini jika lebih lengkap daripada hasil bookingGroupId
+                // di atas (mis. saat tiap jam disimpan dengan bookingGroupId
+                // sendiri-sendiri).
+                if (firstBooking) {
                     const byHour = new Map(allBookingsToday.map(b => [parseInt(String(b.tgl || '').split('T')[1]?.substring(0,2), 10), b]));
                     const startH = parseInt(jam.substring(0,2), 10);
                     if (Number.isFinite(startH)) {
+                        const consecutiveSlots = [];
                         for (let h = startH; ; h++) {
                             const slot = byHour.get(h);
                             if (!slot) break;
-                            bookingSlots.push(slot);
+                            consecutiveSlots.push(slot);
+                        }
+                        if (consecutiveSlots.length > bookingSlots.length) {
+                            bookingSlots = consecutiveSlots;
                         }
                     }
                 }
-                if (bookingSlots.length > 1) durasiJam = bookingSlots.length;
+
+                // PENTING — sumber bug lama: jika jam PERTAMA sebuah tim adalah
+                // jadwal MEMBER mingguan (bukan tercatat di koleksi booking) dan
+                // jam BERIKUTNYA baru berupa booking tambahan (mis. member main
+                // jam 19.00, lalu booking tambahan jam 20.00), pencarian di atas
+                // tidak pernah menemukan "firstBooking" pada jam 19.00 — sehingga
+                // deteksi jam berurutan tidak pernah berjalan dan durasi jatuh ke
+                // 1 jam saja, padahal totalnya 2 jam. Untuk itu, susun juga peta
+                // jam yang ditempati tim ini HARI INI dari GABUNGAN jadwal member
+                // + booking (sama seperti logika kartu "Jadwal Tim Hari Ini"),
+                // lalu jadikan referensi utama bila hasilnya lebih lengkap.
+                const hariNamaCalc = getNamaHari(tgl);
+                const occupiedHours = new Set();
+                Object.entries(globalCache.member || {}).forEach(([jamKeyRaw, perHari]) => {
+                    const cell = perHari ? perHari[hariNamaCalc] : null;
+                    if (!cell || !cell.nama || cell.type === 'off') return;
+                    if (String(cell.nama).trim().toLowerCase() !== nama1.toLowerCase()) return;
+                    if (typeof isMemberScheduledOnDate === 'function' && !isMemberScheduledOnDate(cell, tgl)) return;
+                    const jamKey = String(jamKeyRaw).substring(0,5);
+                    if (typeof isBookingCancelled === 'function' && isBookingCancelled(tgl, cell.nama, jamKey)) return;
+                    occupiedHours.add(jamKey);
+                });
+                allBookingsToday.forEach(b => {
+                    const bj = String(b.tgl || '').split('T')[1]?.substring(0,5) || '';
+                    if (bj) occupiedHours.add(bj);
+                });
+                const startHOcc = parseInt(jam.substring(0,2), 10);
+                if (Number.isFinite(startHOcc) && occupiedHours.has(jam)) {
+                    for (let h = startHOcc; ; h++) {
+                        const jamH = `${String(h).padStart(2,'0')}:00`;
+                        if (!occupiedHours.has(jamH)) break;
+                        effectiveJamList.push(jamH);
+                    }
+                }
+
+                if (effectiveJamList.length > bookingSlots.length) {
+                    durasiJam = effectiveJamList.length;
+                } else if (bookingSlots.length > 1) {
+                    durasiJam = bookingSlots.length;
+                    effectiveJamList = bookingSlots.map(b => (b.tgl.split('T')[1] || '').substring(0,5));
+                } else if (!effectiveJamList.length) {
+                    effectiveJamList = [jam];
+                }
             }
 
             // Admin memilih secara eksplisit: Tim Internal hanya 1 tim yang bayar,
@@ -13695,12 +13754,11 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             // Tambahan 30 menit = 50% tarif pada jam berikutnya.
             let hargaTotalLapangan = 0;
             let jamAkhirBooking = '';
-            if (bookingSlots.length) {
-                hargaTotalLapangan = bookingSlots.reduce((sum, b) => {
-                    const bj = (b.tgl.split('T')[1] || '').substring(0,5);
-                    return sum + getHargaLapangan(tgl, bj, isSparingPayment ? 'Non-Member' : selectedStatus);
+            if (effectiveJamList.length) {
+                hargaTotalLapangan = effectiveJamList.reduce((sum, jj) => {
+                    return sum + getHargaLapangan(tgl, jj, isSparingPayment ? 'Non-Member' : selectedStatus);
                 }, 0);
-                const lastJam = String(bookingSlots[bookingSlots.length - 1]?.tgl || '').split('T')[1]?.substring(0,5) || '';
+                const lastJam = effectiveJamList[effectiveJamList.length - 1] || '';
                 if (lastJam) jamAkhirBooking = `${String((parseInt(lastJam.split(':')[0]) + 1) % 24).padStart(2,'0')}:00`;
             } else if (jam && tgl) {
                 hargaTotalLapangan = getHargaLapangan(tgl, jam, isSparingPayment ? 'Non-Member' : selectedStatus);
@@ -13719,11 +13777,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             } else if (tambahanMenit < 0 && tgl) {
                 // Waktu yang dikurangi selalu diambil dari jam terakhir booking.
                 // -30 menit = -50% tarif jam terakhir.
-                let jamTerakhir = '';
-                if (bookingSlots.length) {
-                    const lastSlot = bookingSlots[bookingSlots.length - 1];
-                    jamTerakhir = (lastSlot?.tgl ? String(lastSlot.tgl).split('T')[1]?.substring(0,5) : '') || '';
-                }
+                let jamTerakhir = effectiveJamList.length ? effectiveJamList[effectiveJamList.length - 1] : '';
                 if (!jamTerakhir) jamTerakhir = jam;
 
                 if (jamTerakhir) {
@@ -13810,8 +13864,8 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 const tim1Member = String(selectedStatus).toLowerCase() === 'member';
                 // Harga non-member tetap menjadi acuan; member sudah mendapat
                 // potongan normal Rp50.000 per jam dari getHargaLapangan().
-                const hargaTanpaMember = bookingSlots.length
-                    ? bookingSlots.reduce((sum, b) => sum + getHargaLapangan(tgl, (b.tgl.split('T')[1] || '').substring(0,5), 'Non-Member'), 0)
+                const hargaTanpaMember = effectiveJamList.length
+                    ? effectiveJamList.reduce((sum, jj) => sum + getHargaLapangan(tgl, jj, 'Non-Member'), 0)
                     : ((jam && tgl) ? getHargaLapangan(tgl, jam, 'Non-Member') : 0);
                 let hargaTanpaMemberDisesuaikan = hargaTanpaMember + biayaTambahanWaktu;
                 diskonNormalMemberTim1 = Math.max(0, hargaTanpaMemberDisesuaikan - hargaTim1);
@@ -14492,7 +14546,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 const tglDpManual1 = document.getElementById('in-tgl-dp-1')?.value || '';
                 const tglDpManual2 = document.getElementById('in-tgl-dp-2')?.value || '';
 
-                let durasiJam = 1;
+                let durasiJam = Number(window.__pelunasanCalc?.durasiJam) || 1;
                 if(jamMain && jamMain.includes('-')) {
                     let parts = jamMain.split('-');
                     if(parts.length === 2) {
@@ -15248,9 +15302,12 @@ kaosKakiTerjual: jumlahKaosKaki,
                 return;
             }
 
-            bodyEl.innerHTML = rows.map(row => `
-              <tr>
-                <td>${gajiAdminFormatDate(row.dateKey)}</td>
+            const gajiAdminHariIni = getLocalDateString();
+            bodyEl.innerHTML = rows.map(row => {
+                const isToday = row.dateKey === gajiAdminHariIni;
+                return `
+              <tr class="${isToday ? 'admin-salary-row-today' : ''}">
+                <td>${gajiAdminFormatDate(row.dateKey)}${isToday ? ' <span class="admin-salary-today-badge">HARI INI</span>' : ''}</td>
                 <td>${row.shift === 'pagi' ? '☀️ Pagi' : '🌙 Malam'}</td>
                 <td><b>${escapeHtmlSparing ? escapeHtmlSparing(row.admin) : row.admin}</b></td>
                 <td>${row.teams.length ? row.teams.map(x => escapeHtmlSparing ? escapeHtmlSparing(x) : x).join('<br>') : '-'}</td>
@@ -15259,7 +15316,8 @@ kaosKakiTerjual: jumlahKaosKaki,
                 <td class="bonus">${gajiAdminFormatMoney(row.bonus)}</td>
                 <td class="total">${gajiAdminFormatMoney(row.total)}</td>
               </tr>
-            `).join('');
+            `;
+            }).join('');
         };
         function renderJadwalAdmin(){
             const grid=document.getElementById('admin-calendar-grid');
@@ -17953,24 +18011,44 @@ kaosKakiTerjual: jumlahKaosKaki,
             let paymentSlots = [];
             if(firstBookingForPayment) {
                 const groupId = String(firstBookingForPayment.bookingGroupId || '');
+                let groupSlots = [];
                 if(groupId) {
-                    paymentSlots = allPaymentBookings
+                    groupSlots = allPaymentBookings
                         .filter(b => String(b?.bookingGroupId || '') === groupId)
                         .map(b => String(b.tgl).split('T')[1]?.substring(0,5) || '')
                         .filter(Boolean);
-                } else {
-                    // Fallback untuk booking lama: ambil slot yang berurutan
-                    // mulai dari jam yang diklik.
-                    const byHour = new Map(allPaymentBookings.map(b => [parseInt(String(b.tgl).split('T')[1]?.substring(0,2), 10), b]));
-                    const startH = parseInt(jamMain.substring(0,2), 10);
-                    if(Number.isFinite(startH)) {
-                        for(let h = startH; ; h++) {
-                            const slot = byHour.get(h);
-                            if(!slot) break;
-                            paymentSlots.push(String(slot.tgl).split('T')[1]?.substring(0,5) || '');
-                        }
+                }
+                // Rentang jam berurutan (booking + jadwal member) mulai dari jam
+                // yang diklik dijadikan sumber utama, karena booking berjam-jam
+                // bisa saja tersimpan sebagai beberapa transaksi terpisah dengan
+                // bookingGroupId berbeda-beda (mis. 2 kali input 2 jam). Kalau
+                // hanya mengandalkan bookingGroupId yang sama persis, rentang jam
+                // akan terpotong di tengah walau totalnya sudah benar.
+                const hariNamaPayment = getNamaHari(tgl);
+                const occupiedHoursPayment = new Set();
+                Object.entries(globalCache.member || {}).forEach(([jamKeyRaw, perHari]) => {
+                    const cell = perHari ? perHari[hariNamaPayment] : null;
+                    if (!cell || !cell.nama || cell.type === 'off') return;
+                    if (String(cell.nama).trim().toLowerCase() !== targetNamaPembayaran) return;
+                    if (typeof isMemberScheduledOnDate === 'function' && !isMemberScheduledOnDate(cell, tgl)) return;
+                    const jamKey = String(jamKeyRaw).substring(0,5);
+                    if (typeof isBookingCancelled === 'function' && isBookingCancelled(tgl, cell.nama, jamKey)) return;
+                    occupiedHoursPayment.add(jamKey);
+                });
+                allPaymentBookings.forEach(b => {
+                    const bjam = String(b?.tgl || '').split('T')[1]?.substring(0,5) || '';
+                    if (bjam) occupiedHoursPayment.add(bjam);
+                });
+                const consecutiveSlots = [];
+                const startH = parseInt(jamMain.substring(0,2), 10);
+                if(Number.isFinite(startH) && occupiedHoursPayment.has(jamMain)) {
+                    for(let h = startH; ; h++) {
+                        const jamH = `${String(h).padStart(2,'0')}:00`;
+                        if(!occupiedHoursPayment.has(jamH)) break;
+                        consecutiveSlots.push(jamH);
                     }
                 }
+                paymentSlots = consecutiveSlots.length >= groupSlots.length ? consecutiveSlots : groupSlots;
             }
             paymentSlots = [...new Set(paymentSlots)].sort();
 
@@ -19501,30 +19579,38 @@ return;
                 // sebagai SATU booking: harga dijumlahkan sekali dan DP/pelunasan
                 // tidak pernah dikalikan berdasarkan jumlah slot.
                 const bookingGroupId = first.booking ? String(first.bookingGroupId || '') : '';
-                // Multi-jam tidak boleh bergantung pada bookingGroupId. Booking lama
-                // bisa tidak mempunyai groupId, tetapi beberapa slot berurutan dengan
-                // nama tim yang sama tetap merupakan satu booking (mis. 15,16,17).
+                // Multi-jam TIDAK boleh hanya bergantung pada kecocokan bookingGroupId
+                // yang persis sama, karena booking berdurasi banyak jam bisa saja
+                // tersimpan sebagai beberapa slot 1 jam terpisah (mis. 4 kali input
+                // 1 jam untuk PGRI jam 08.00-11.00), yang masing-masing punya
+                // bookingGroupId/durasiBooking SENDIRI-SENDIRI. Jika hanya
+                // mengandalkan bookingGroupId yang sama persis, hanya slot pertama
+                // yang tertangkap sehingga harga hanya dihitung 1 jam.
                 //
-                // PENJAGA TAMBAHAN: konsekutif saja tidak cukup untuk memastikan itu
-                // SATU booking yang sama. Dua booking terpisah 1-jam untuk tim yang
-                // sama pada jam berurutan (mis. dua pertandingan sparing berbeda,
-                // masing-masing durasiBooking=1) bukan satu booking multi-jam, dan
-                // TIDAK boleh digabung — jika digabung, lawan pada jam kedua akan
-                // hilang dari tampilan. Karena itu, selain berurutan, setiap slot
-                // juga wajib mencatat durasiBooking > 1 (bukti bahwa slot tersebut
-                // memang dibuat sebagai bagian dari satu booking berdurasi panjang).
+                // Sumber kebenaran utama sekarang: rentang jam BERURUTAN dengan nama
+                // tim yang sama pada tanggal yang sama (persis seperti logika di
+                // popup Uang Masuk). Hasil rentang berurutan ini dibandingkan dengan
+                // hasil pencocokan bookingGroupId, dan yang PALING LENGKAP yang dipakai.
                 const bookingSlotsBySequence = slots
                     .filter(x => x.booking)
                     .sort((a,b) => String(a.jam).localeCompare(String(b.jam)));
-                const isConsecutiveMultiHour = bookingSlotsBySequence.length > 1 &&
-                    bookingSlotsBySequence.every(x => Number(x.durasiBooking || 1) > 1) &&
-                    bookingSlotsBySequence.every((x, i, arr) => {
-                        if(i === 0) return true;
-                        const prevH = parseInt(String(arr[i-1].jam).substring(0,2), 10);
-                        const curH = parseInt(String(x.jam).substring(0,2), 10);
-                        return Number.isFinite(prevH) && Number.isFinite(curH) && curH === prevH + 1;
-                    });
-                const isMultiHourBooking = !!bookingGroupId || isConsecutiveMultiHour;
+                const slotsByGroupId = bookingGroupId
+                    ? slots.filter(x => String(x.bookingGroupId || '') === bookingGroupId)
+                        .sort((a,b) => String(a.jam).localeCompare(String(b.jam)))
+                    : [];
+                const consecutiveRun = (() => {
+                    if (!bookingSlotsBySequence.length) return [];
+                    const run = [bookingSlotsBySequence[0]];
+                    for (let i = 1; i < bookingSlotsBySequence.length; i++) {
+                        const prevH = parseInt(String(bookingSlotsBySequence[i-1].jam).substring(0,2), 10);
+                        const curH = parseInt(String(bookingSlotsBySequence[i].jam).substring(0,2), 10);
+                        if (Number.isFinite(prevH) && Number.isFinite(curH) && curH === prevH + 1) {
+                            run.push(bookingSlotsBySequence[i]);
+                        } else break;
+                    }
+                    return run;
+                })();
+                const isMultiHourBooking = !!first.booking && (slotsByGroupId.length > 0 || consecutiveRun.length > 0);
 
                 const hitungPembayaran = (item, total, jamUntukMatch) => {
                     const summary = getTodayPaymentSummary(item.nama, jamUntukMatch, total);
@@ -19532,10 +19618,7 @@ return;
                 };
 
                 if(isMultiHourBooking) {
-                    const bookingSlots = bookingGroupId
-                        ? slots.filter(x => String(x.bookingGroupId || '') === bookingGroupId)
-                            .sort((a,b) => String(a.jam).localeCompare(String(b.jam)))
-                        : bookingSlotsBySequence;
+                    const bookingSlots = consecutiveRun.length >= slotsByGroupId.length ? consecutiveRun : slotsByGroupId;
                     const firstBooking = bookingSlots[0];
                     const total = bookingSlots.reduce((sum, x) => sum + getHargaLapangan(today, x.jam, x.status), 0);
                     const dp = Number(firstBooking.dp || 0);
@@ -19558,7 +19641,7 @@ return;
                     // penyesuaian = seluruh booking multi-jam dianggap LUNAS.
                     // Semua slot dalam bookingGroup ikut hilang dari Jadwal Hari Ini.
                     const sudahLunas = freeMultiHour || lunasPenyesuaianMultiHour || forceLunasMultiHour || paymentSummary.free || (total > 0 && sisa <= 0.5);
-                    slotDetails.push({ ...firstBooking, jam: firstBooking.jam, durasiBooking: bookingSlots.length, total, dp, sisa, sudahLunas, free: paymentSummary.free, forceLunas: forceLunasMultiHour, belumBayar: paymentSummary.belumBayar, bookingGroupId });
+                    slotDetails.push({ ...firstBooking, jam: firstBooking.jam, jamList: bookingSlots.map(x => x.jam), durasiBooking: bookingSlots.length, total, dp, sisa, sudahLunas, free: paymentSummary.free, forceLunas: forceLunasMultiHour, belumBayar: paymentSummary.belumBayar, bookingGroupId });
                 } else {
                     slots.forEach(item => {
                         const jam = item.jam;
@@ -19638,7 +19721,10 @@ return;
                 // Untuk sparing, status kedua tim ditampilkan di bawah matchup.
                 const cardStatusBadge = isSparing ? '' : statusBadge;
 
-                const jamChips = aktif.map(item => `<span class="schedule-time shrink-0 inline-flex items-center justify-center px-2 py-1 rounded-lg border font-black text-xs sm:text-sm shadow-sm">⏰ ${String(item.jam).replace(':','.')}</span>`).join('');
+                const jamChips = aktif.map(item => {
+                    const jams = Array.isArray(item.jamList) && item.jamList.length ? item.jamList : [item.jam];
+                    return jams.map(j => `<span class="schedule-time shrink-0 inline-flex items-center justify-center px-2 py-1 rounded-lg border font-black text-xs sm:text-sm shadow-sm">⏰ ${String(j).replace(':','.')}</span>`).join('');
+                }).join('');
                 const lateTimers = aktif.map(item => getLateTimerHtml(today, item.jam)).join('');
 
                 // Untuk kartu SPARING (2 tim), tombol Ingatkan dipecah jadi 2 tombol
@@ -45863,5 +45949,71 @@ main.space-y-6 > #page-minuman {
   #today-schedule-panel .today-remind-btn-pair .today-remind-half-btn span {
     font-size: 8.5px !important;
   }
+}
+</style>
+
+<style id="gaji-admin-clean-standalone-width-v1">
+/* =========================================================================
+   GAJI ADMIN — HAPUS KACA PEMBUNGKUS BESAR
+   #page-gaji-admin sebelumnya dibungkus glass-panel + padding besar
+   (mirip kartu kaca raksasa). Sekarang dibuat "clean": tidak ada panel
+   kaca pembungkus, setiap card (header info, ringkasan, tabel) berdiri
+   sendiri dengan latar putih masing-masing, dan LEBAR KESELURUHAN
+   halaman disamakan persis dengan lebar header & dock bar
+   (mengikuti pola yang sama seperti #page-setor-tunai).
+   ========================================================================= */
+#page-gaji-admin{
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-radius: 0 !important;
+  box-sizing: border-box !important;
+}
+
+#page-gaji-admin .admin-salary-page{
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 0 24px !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 767px){
+  #page-gaji-admin .admin-salary-page{
+    padding: 4px 0 24px !important;
+  }
+}
+
+/* Highlight baris tanggal hari ini di tabel Rincian Harian */
+.admin-salary-table tbody tr.admin-salary-row-today td{
+  background: #fef3c7 !important;
+  border-top: 1.5px solid #f59e0b;
+  border-bottom: 1.5px solid #f59e0b;
+  color: #78350f;
+  font-weight: 900;
+}
+.admin-salary-table tbody tr.admin-salary-row-today td:first-child{
+  position: relative;
+}
+.admin-salary-today-badge{
+  display: inline-block;
+  margin-left: 5px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: #f59e0b;
+  color: #fff;
+  font-size: 6.5px;
+  font-weight: 950;
+  letter-spacing: .03em;
+  vertical-align: middle;
+  white-space: nowrap;
 }
 </style>
