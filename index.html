@@ -10654,7 +10654,7 @@ body > header {
   <div class="sparring-form-wrap">
     <div class="flex items-center justify-between gap-2 mb-3">
       <div>
-        <h3 class="text-sm sm:text-base font-black text-sparring-dark" id="sparring-form-title">➕ Catat Permintaan Sparing</h3>
+        <h3 class="text-sm sm:text-base font-black text-sparring-dark" id="sparring-form-title">➕ Tambah Sparing Baru (Cari Lawan)</h3>
       </div>
       <button type="button" id="sparring-cancel-edit" onclick="batalEditSparing()" class="hidden px-3 py-2 rounded-xl bg-slate-200 text-slate-700 text-[10px] font-black">BATAL EDIT</button>
     </div>
@@ -10697,12 +10697,12 @@ body > header {
         </div>
         <label class="sparring-label">No. WhatsApp Tim yang Mencari Lawan</label>
         <input id="sparring-wa" type="tel" inputmode="tel" autocomplete="tel" class="sparring-input" placeholder="Contoh: 081234567890">
-        <div class="text-[10px] text-slate-500 mt-1">Nomor ini ikut tersimpan ke data sparing agar dapat dibaca web customer.</div>
+        <div class="text-[10px] text-slate-500 mt-1">Terisi otomatis jika tim sudah pernah tercatat; tetap bisa diubah. Nomor ini ikut tersimpan ke data sparing agar dapat dibaca web customer.</div>
         <div id="sparring-booking-info" class="sparring-booking-info">Pilih tim dari jadwal, atau pilih <b>Tim Tanpa Jadwal Tetap</b> jika jadwal main ditentukan langsung oleh tim.</div>
       </div>
 
       <!-- CARD TIM 2 -->
-      <div class="sparring-card">
+      <div class="sparring-card sparring-card-opponent">
         <div class="sparring-card-head">
           <span class="sparring-card-badge sparring-card-badge-b">2</span>
           <span class="sparring-card-title">Lawan Sparing</span>
@@ -10729,7 +10729,7 @@ body > header {
   <div class="sparring-list-wrap">
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
       <div>
-        <h3 class="text-sm sm:text-base font-black text-sparring-dark">📋 Daftar Sparing</h3>
+        <h3 class="text-sm sm:text-base font-black text-sparring-dark" id="sparring-list-title">📋 Daftar Sparing</h3>
       </div>
       <div class="flex gap-2">
         <input id="sparring-filter-search" oninput="renderSparing()" class="sparring-filter" placeholder="Cari tim...">
@@ -10754,16 +10754,24 @@ body > header {
       <button type="button" class="sparing-chooser-btn" onclick="openSparingSection('form')">
         <span class="sparing-chooser-icon">➕</span>
         <span class="sparing-chooser-copy">
-          <strong>Buat Sparing Baru</strong>
-          <small>Buat permintaan sparing baru dan isi form sparing.</small>
+          <strong>Tambah Sparing Baru</strong>
+          <small>Catat tim yang sedang mencari lawan sparing.</small>
+        </span>
+        <span class="sparing-chooser-arrow">›</span>
+      </button>
+      <button type="button" class="sparing-chooser-btn" onclick="openSparingSection('opponent')">
+        <span class="sparing-chooser-icon">🤝</span>
+        <span class="sparing-chooser-copy">
+          <strong>Tambah Lawan Sparing</strong>
+          <small>Isi lawan untuk tim yang sebelumnya masih mencari lawan.</small>
         </span>
         <span class="sparing-chooser-arrow">›</span>
       </button>
       <button type="button" class="sparing-chooser-btn" onclick="openSparingSection('list')">
         <span class="sparing-chooser-icon">📋</span>
         <span class="sparing-chooser-copy">
-          <strong>Edit Sparing yang Sudah Ada</strong>
-          <small>Lihat daftar sparing, lalu pilih data yang ingin diedit.</small>
+          <strong>List Sparing</strong>
+          <small>Lihat semua daftar sparing, lalu edit atau hapus datanya.</small>
         </span>
         <span class="sparing-chooser-arrow">›</span>
       </button>
@@ -11289,7 +11297,10 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
   <div id="member-tanpa-jadwal-list" class="member-tanpa-jadwal-list"></div>
 </div>
 
-<h3 id="member-list-heading" class="font-black text-sm text-slate-900 mb-2">Daftar Jadwal / Member Aktif</h3>
+<div id="member-list-heading" class="member-list-heading-row">
+  <h3 class="font-black text-sm text-slate-900">Daftar Jadwal / Member Aktif</h3>
+  <button type="button" id="btn-download-logo-member" class="member-logo-download-btn" onclick="downloadLogoMember()" title="Download semua logo tim member (PNG transparan)">⬇️ Download Logo</button>
+</div>
 <div id="tabel-list-member" class="member-cards-grid"></div>
 </div>
 
@@ -12852,8 +12863,10 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 @keyframes sparingChooserFade{from{opacity:0}to{opacity:1}}
 @keyframes sparingChooserIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
 #page-sparring[data-sparring-mode="form"] .sparring-list-wrap{display:none!important}
-#page-sparring[data-sparring-mode="list"] .sparring-form-wrap{display:none!important}
-#page-sparring[data-sparring-mode="form"] .sparring-form-wrap,#page-sparring[data-sparring-mode="list"] .sparring-list-wrap{display:block}
+#page-sparring[data-sparring-mode="form"] .sparring-card-opponent{display:none!important}
+#page-sparring[data-sparring-mode="list"] .sparring-form-wrap,#page-sparring[data-sparring-mode="opponent"] .sparring-form-wrap{display:none!important}
+#page-sparring[data-sparring-mode="opponent"] #sparring-filter-status{display:none!important}
+#page-sparring[data-sparring-mode="form"] .sparring-form-wrap,#page-sparring[data-sparring-mode="list"] .sparring-list-wrap,#page-sparring[data-sparring-mode="opponent"] .sparring-list-wrap{display:block}
 @media(max-width:640px){.sparring-chooser{padding:16px;border-radius:20px}.sparring-chooser-btn{grid-template-columns:42px minmax(0,1fr) 18px;padding:11px 12px}.sparring-chooser-icon{width:42px;height:42px;border-radius:12px}}
 </style>
 
@@ -20945,7 +20958,7 @@ return;
             document.getElementById('sparring-tim-a-manual').value = '';
             document.getElementById('sparring-tanggal-manual').value = '';
             document.getElementById('sparring-jam-manual').value = '';
-            document.getElementById('sparring-form-title').textContent = '➕ Catat Permintaan Sparing';
+            document.getElementById('sparring-form-title').textContent = '➕ Tambah Sparing Baru (Cari Lawan)';
             document.getElementById('sparring-save-btn').textContent = 'Simpan Catatan';
             document.getElementById('sparring-cancel-edit').classList.add('hidden');
             updateSparingBookingOptions();
@@ -21030,7 +21043,11 @@ return;
             const matchedEl = document.getElementById('sparring-count-matched');
             if(!list) return;
             const search = (document.getElementById('sparring-filter-search')?.value || '').trim().toLowerCase();
-            const statusFilter = document.getElementById('sparring-filter-status')?.value || 'all';
+            const sparringMode = document.getElementById('page-sparring')?.getAttribute('data-sparring-mode') || '';
+            const isOpponentMode = sparringMode === 'opponent';
+            const statusFilter = isOpponentMode ? 'pending' : (document.getElementById('sparring-filter-status')?.value || 'all');
+            const listTitleEl = document.getElementById('sparring-list-title');
+            if(listTitleEl) listTitleEl.textContent = isOpponentMode ? '🤝 Pilih Tim yang Mencari Lawan' : '📋 Daftar Sparing';
             const today = getLocalDateString();
 
             // Tanggal yang sudah lewat tidak ditampilkan lagi di menu Sparing.
@@ -21055,7 +21072,7 @@ return;
                 if(statusFilter === 'matched' && item?.status !== 'matched') return false;
                 return true;
             });
-            if(!filtered.length) { list.innerHTML = '<div class="sparring-empty">Belum ada data sparring yang cocok.</div>'; return; }
+            if(!filtered.length) { list.innerHTML = '<div class="sparring-empty">' + (isOpponentMode ? 'Tidak ada tim yang sedang mencari lawan.' : 'Belum ada data sparring yang cocok.') + '</div>'; return; }
             list.innerHTML = filtered.map(([key,item])=>{
                 const matched = item?.status === 'matched' && item?.timB;
                 const dateLabel = item?.tanggal ? item.tanggal.split('-').reverse().join('/') : '-';
@@ -21095,7 +21112,7 @@ return;
                 const hubungiHtml = waIntl
                     ? `<a class="sparring-action sparring-action-wa" href="https://wa.me/${waIntl}" target="_blank" rel="noopener noreferrer" title="Hubungi melalui WhatsApp" aria-label="Hubungi melalui WhatsApp">🟢 Hubungi</a>`
                     : '';
-                return `<div class="sparring-record">\n<div class="sparring-record-main">\n<div class="sparring-record-meta"><span class="sparring-badge sparring-badge-date">📅 ${dateLabel} · ${escapeHtmlSparing(item.jam||'-')}</span><span class="sparring-badge ${matched?'sparring-badge-matched':'sparring-badge-pending'}">${matched?'✓ SUDAH DAPAT LAWAN':'⌛ MENCARI LAWAN'}</span></div>\n<div class="sparring-pair">${pair}</div>\n</div>\n<div class="sparring-actions">${hubungiHtml}<button type="button" class="sparring-action sparring-action-edit" onclick="event.preventDefault(); event.stopPropagation(); editSparing(decodeURIComponent('${encodeURIComponent(key)}'))">Edit</button><button type="button" class="sparring-action sparring-action-delete" onclick="hapusSparing('${key}')">Hapus</button></div>\n</div>`;
+                return `<div class="sparring-record">\n<div class="sparring-record-main">\n<div class="sparring-record-meta"><span class="sparring-badge sparring-badge-date">📅 ${dateLabel} · ${escapeHtmlSparing(item.jam||'-')}</span><span class="sparring-badge ${matched?'sparring-badge-matched':'sparring-badge-pending'}">${matched?'✓ SUDAH DAPAT LAWAN':'⌛ MENCARI LAWAN'}</span></div>\n<div class="sparring-pair">${pair}</div>\n</div>\n<div class="sparring-actions">${hubungiHtml}<button type="button" class="sparring-action sparring-action-edit" onclick="event.preventDefault(); event.stopPropagation(); editSparing(decodeURIComponent('${encodeURIComponent(key)}'))">${isOpponentMode ? '➕ Tambah Lawan' : 'Edit'}</button>${isOpponentMode ? '' : `<button type="button" class="sparring-action sparring-action-delete" onclick="hapusSparing('${key}')">Hapus</button>`}</div>\n</div>`;
             }).join('');
         };
 
@@ -31787,7 +31804,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if(typeof window.quickMoreOpen==='function') window.quickMoreOpen('sparring');
 
     setTimeout(function(){
-      p.setAttribute('data-sparring-mode',section==='list'?'list':'form');
+      p.setAttribute('data-sparring-mode',section==='list'?'list':(section==='opponent'?'opponent':'form'));
       p.scrollTop=0;
 
       if(section==='form'){
@@ -31805,8 +31822,14 @@ document.addEventListener('DOMContentLoaded', function(){
   const originalEditSparing=window.editSparing;
   window.editSparing=function(key){
     const p=page();
-    if(p) p.setAttribute('data-sparring-mode','form');
+    const isOpp=!!p && p.getAttribute('data-sparring-mode')==='opponent';
     if(typeof originalEditSparing==='function') originalEditSparing(key);
+    if(isOpp){
+      setTimeout(function(){
+        const t=document.getElementById('sparing-edit-title'); if(t) t.textContent='🤝 Tambah Lawan Sparing';
+        const b=document.getElementById('sparing-edit-tim-b'); if(b) b.focus();
+      },30);
+    }
   };
 
   document.addEventListener('click',function(e){
@@ -31832,6 +31855,239 @@ document.addEventListener('DOMContentLoaded', function(){
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',startObserver,{once:true});
   else startObserver();
+})();
+</script>
+
+<style id="member-logo-download-v1">
+#page-atur-member .member-list-heading-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:.5rem}
+#page-atur-member .member-logo-download-btn{border:0;border-radius:10px;padding:8px 12px;font-size:11px;font-weight:900;color:#fff;background:linear-gradient(135deg,#4338ca,#312e81);box-shadow:0 6px 14px rgba(49,46,129,.25);cursor:pointer;white-space:nowrap}
+#page-atur-member .member-logo-download-btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+#page-atur-member .member-logo-download-btn:disabled{opacity:.6;cursor:wait}
+</style>
+<script id="member-logo-download-script">
+(function(){
+  'use strict';
+  const cache=()=>window.__sandagaGlobalCache||{};
+  const norm=v=>{let x=String(v||'');try{x=x.normalize('NFKC');}catch(e){}return x.trim().replace(/\s+/g,' ').toLowerCase();};
+
+  /* CRC32 + ZIP (tanpa kompresi; PNG sudah terkompresi) */
+  const CRC=(function(){const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+  const crc32=b=>{let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC[(c^b[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0;};
+  function buildZip(files){
+    const enc=new TextEncoder(),parts=[],central=[];let offset=0;
+    const d=new Date();
+    const time=(d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1);
+    const date=((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate();
+    files.forEach(f=>{
+      const name=enc.encode(f.name),data=f.data,crc=crc32(data);
+      const lh=new DataView(new ArrayBuffer(30));
+      lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(6,0x0800,true);lh.setUint16(8,0,true);
+      lh.setUint16(10,time,true);lh.setUint16(12,date,true);lh.setUint32(14,crc,true);
+      lh.setUint32(18,data.length,true);lh.setUint32(22,data.length,true);lh.setUint16(26,name.length,true);lh.setUint16(28,0,true);
+      parts.push(lh.buffer,name,data);
+      const ch=new DataView(new ArrayBuffer(46));
+      ch.setUint32(0,0x02014b50,true);ch.setUint16(4,20,true);ch.setUint16(6,20,true);ch.setUint16(8,0x0800,true);ch.setUint16(10,0,true);
+      ch.setUint16(12,time,true);ch.setUint16(14,date,true);ch.setUint32(16,crc,true);
+      ch.setUint32(20,data.length,true);ch.setUint32(24,data.length,true);ch.setUint16(28,name.length,true);
+      ch.setUint32(42,offset,true);
+      central.push(ch.buffer,name);
+      offset+=30+name.length+data.length;
+    });
+    let cSize=0;central.forEach(c=>cSize+=c.byteLength);
+    const end=new DataView(new ArrayBuffer(22));
+    end.setUint32(0,0x06054b50,true);end.setUint16(8,files.length,true);end.setUint16(10,files.length,true);
+    end.setUint32(12,cSize,true);end.setUint32(16,offset,true);
+    return new Blob([...parts,...central,end.buffer],{type:'application/zip'});
+  }
+
+  const safeFileName=n=>String(n||'tim').replace(/[\\/:*?"<>|\u0000-\u001f]/g,'').replace(/\s+/g,' ').trim().slice(0,80)||'tim';
+  function saveBlob(blob,name){
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  }
+  function loadImage(src){
+    return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('gagal memuat gambar'));i.src=src;});
+  }
+
+  /* Ubah ke PNG. Jika gambar belum transparan dan pojok-pojoknya putih
+     (mis. logo JPG), latar putih yang tersambung ke tepi dihapus. */
+  async function toTransparentPng(dataUrl){
+    const img=await loadImage(dataUrl);
+    const w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;
+    if(!w||!h) throw new Error('ukuran gambar kosong');
+    const c=document.createElement('canvas');c.width=w;c.height=h;
+    const ctx=c.getContext('2d',{willReadFrequently:true});
+    ctx.clearRect(0,0,w,h);ctx.drawImage(img,0,0);
+    try{
+      const im=ctx.getImageData(0,0,w,h),px=im.data;
+      let hasAlpha=false;
+      for(let i=3;i<px.length;i+=4){if(px[i]<250){hasAlpha=true;break;}}
+      if(!hasAlpha){
+        const T=238,near=i=>px[i]>=T&&px[i+1]>=T&&px[i+2]>=T&&px[i+3]>0;
+        const corners=[0,(w-1)*4,(h-1)*w*4,((h-1)*w+w-1)*4];
+        if(corners.every(near)){
+          const seen=new Uint8Array(w*h),stack=[];
+          const push=(x,y)=>{if(x<0||y<0||x>=w||y>=h)return;const k=y*w+x;if(seen[k])return;if(!near(k*4))return;seen[k]=1;stack.push(k);};
+          for(let x=0;x<w;x++){push(x,0);push(x,h-1);}
+          for(let y=0;y<h;y++){push(0,y);push(w-1,y);}
+          while(stack.length){const k=stack.pop(),x=k%w,y=(k-x)/w;px[k*4+3]=0;push(x+1,y);push(x-1,y);push(x,y+1);push(x,y-1);}
+          ctx.putImageData(im,0,0);
+        }
+      }
+    }catch(e){/* canvas tainted/gagal baca piksel: tetap simpan PNG apa adanya */}
+    const blob=await new Promise(r=>c.toBlob(r,'image/png'));
+    if(!blob) throw new Error('gagal membuat PNG');
+    return new Uint8Array(await blob.arrayBuffer());
+  }
+
+  window.downloadLogoMember=async function(){
+    const btn=document.getElementById('btn-download-logo-member');
+    if(btn&&btn.disabled) return;
+    const gc=cache();
+    const teams=new Map();
+    const add=n=>{const name=String(n||'').trim();if(!name||name==='-'||/^off$/i.test(name))return;const k=norm(name);if(!teams.has(k))teams.set(k,name);};
+    Object.values(gc.member||{}).forEach(m=>add(m&&m.nama));
+    (gc.memberRawEntries||[]).forEach(m=>add(m&&m.nama));
+    /* Cadangan: ambil langsung dari database jika cache member belum terisi. */
+    try{
+      const db=window.__APP_FIREBASE_DB__,ref=window.__APP_FIREBASE_REF__,get=window.__APP_FIREBASE_GET__;
+      if(db&&ref&&get){const sm=await get(ref(db,'member'));sm.forEach(c=>{const v=c.val()||{};add(v.nama);});}
+    }catch(e){console.warn('Gagal mengambil member dari database:',e);}
+    Object.values(gc.memberTanpaJadwal||{}).forEach(m=>add(m&&m.nama));
+    if(!teams.size){alert('Belum ada data member.');return;}
+
+    const pr=typeof window.showAppProgress==='function'?window.showAppProgress('Menyiapkan logo...','Mengambil data logo tim member.'):null;
+    if(btn) btn.disabled=true;
+    try{
+      /* Logo dimuat bertahap oleh aplikasi, jadi ambil daftar lengkap langsung dari database. */
+      let logos=Object.assign({},gc.teamLogos||{});
+      try{
+        const db=window.__APP_FIREBASE_DB__,ref=window.__APP_FIREBASE_REF__,get=window.__APP_FIREBASE_GET__;
+        if(db&&ref&&get){const snap=await get(ref(db,'teamLogos'));logos=Object.assign(logos,snap.val()||{});}
+      }catch(e){console.warn('Gagal mengambil teamLogos lengkap:',e);}
+      const byName=new Map();
+      Object.values(logos).forEach(e=>{const l=String(e&&e.logo||'').trim();if(l){byName.set(norm(e.nama),l);}});
+
+      const items=[];
+      teams.forEach((name,k)=>{const l=byName.get(k);if(l)items.push({name,logo:l});});
+      if(!items.length){pr&&pr.remove();alert('Belum ada logo tim member yang tersimpan.');return;}
+
+      const files=[],used=new Set(),failed=[];
+      for(let i=0;i<items.length;i++){
+        const it=items[i];
+        pr&&pr.set(8+(i/items.length)*82,null,`Memproses ${i+1} dari ${items.length}: ${it.name}`);
+        try{
+          let src=typeof window.logoToDataUrl==='function'?window.logoToDataUrl(it.logo):it.logo;
+          if(!/^data:image\//i.test(src)&&/^[A-Za-z0-9+/=\s]+$/.test(src)) src='data:image/png;base64,'+src.replace(/\s/g,'');
+          const data=await toTransparentPng(src);
+          let base=safeFileName(it.name),fn=base+'.png',n=2;
+          while(used.has(fn.toLowerCase())){fn=base+' ('+n+').png';n++;}
+          used.add(fn.toLowerCase());
+          files.push({name:fn,data});
+        }catch(e){console.warn('Logo gagal diproses:',it.name,e);failed.push(it.name);}
+        await new Promise(r=>setTimeout(r));
+      }
+      if(!files.length){pr&&pr.remove();alert('Semua logo gagal diproses.');return;}
+
+      if(files.length===1){saveBlob(new Blob([files[0].data],{type:'image/png'}),files[0].name);}
+      else{saveBlob(buildZip(files),'logo-tim-member.zip');}
+
+      const note=files.length===1?'1 logo diunduh sebagai PNG.':`${files.length} logo PNG diunduh dalam satu file ZIP.`;
+      if(pr){pr.ok(note+(failed.length?` Gagal: ${failed.length} logo.`:''));setTimeout(()=>pr.remove(),1600);}
+      if(failed.length) alert('Logo yang gagal diproses:\n'+failed.join('\n'));
+    }catch(err){
+      console.error('Download logo member:',err);
+      if(pr){pr.err(err&&err.message||String(err));setTimeout(()=>pr.remove(),2200);}else alert('Gagal mengunduh logo: '+(err&&err.message||err));
+    }finally{
+      if(btn) btn.disabled=false;
+    }
+  };
+})();
+</script>
+
+<script id="sparing-wa-autofill-script">
+(function(){
+  'use strict';
+  const gc=()=>window.__sandagaGlobalCache||{};
+  const norm=v=>{let x=String(v||'');try{x=x.normalize('NFKC');}catch(e){}return x.trim().replace(/\s+/g,' ').toLowerCase();};
+  const pKey=v=>encodeURIComponent(norm(v)).replace(/\./g,'%2E');
+  const clean=v=>String(v||'').trim();
+
+  /* Cari nomor WA tim dari riwayat: profil tim (hasil edit di List Tim Main),
+     Member, Member Tanpa Jadwal, lalu Booking & Sparing terbaru. */
+  window.lookupTeamWa=function(name){
+    const n=norm(name);
+    if(!n||n==='off'||n==='__manual__') return '';
+    const c=gc();
+    const prof=c.teamProfiles||{};
+    let w=clean(prof[pKey(name)]?.wa);
+    if(w) return w;
+    for(const v of Object.values(prof)){ if(v && norm(v.nama)===n && clean(v.wa)) return clean(v.wa); }
+    for(const m of (c.memberRawEntries||[])){ if(m && norm(m.nama)===n && clean(m.wa)) return clean(m.wa); }
+    for(const m of Object.values(c.memberTanpaJadwal||{})){ if(m && norm(m.nama)===n && clean(m.wa)) return clean(m.wa); }
+    for(const m of Object.values(c.member||{})){ if(m && norm(m.nama)===n && clean(m.wa)) return clean(m.wa); }
+    const hist=[];
+    Object.values(c.booking||{}).forEach(b=>{ if(b && norm(b.nama)===n){ const x=clean(b.wa||b.noHp); if(x) hist.push([b.updatedAt||b.timestamp||0,x]); } });
+    Object.values(c.sparring||{}).forEach(sp=>{
+      if(!sp) return; const t=sp.updatedAt||sp.timestamp||0;
+      if(norm(sp.timA)===n){ const x=clean(sp.wa||sp.waA||sp.waTimA); if(x) hist.push([t,x]); }
+      if(norm(sp.timB)===n){ const x=clean(sp.waB||sp.waTimB||sp.waLawan); if(x) hist.push([t,x]); }
+    });
+    hist.sort((a,b)=>b[0]-a[0]);
+    return hist.length?hist[0][1]:'';
+  };
+
+  /* Pasangan: kolom nama tim -> kolom WA */
+  const PAIRS={
+    'sparring-tim-a-manual':'sparring-wa',
+    'sparring-tim-b':'sparring-wa-b',
+    'sparing-edit-tim-a':'sparing-edit-wa-a',
+    'sparing-edit-tim-b':'sparing-edit-wa-b'
+  };
+  const WA_IDS=Object.values(PAIRS);
+
+  function fill(nameEl,waEl){
+    if(!nameEl||!waEl) return;
+    /* Nomor yang diketik/diubah admin sendiri tidak pernah ditimpa. */
+    const canOverwrite=!clean(waEl.value)||waEl.dataset.waAuto==='1';
+    if(!canOverwrite) return;
+    const found=window.lookupTeamWa(nameEl.value);
+    if(found){ waEl.value=found; waEl.dataset.waAuto='1'; }
+    else if(waEl.dataset.waAuto==='1'){ waEl.value=''; waEl.dataset.waAuto='0'; }
+  }
+
+  const timers={};
+  document.addEventListener('input',function(e){
+    const t=e.target; if(!t||!t.id) return;
+    if(WA_IDS.includes(t.id)){ t.dataset.waAuto='0'; return; } /* diketik manual */
+    const waId=PAIRS[t.id]; if(!waId) return;
+    clearTimeout(timers[t.id]);
+    timers[t.id]=setTimeout(()=>fill(t,document.getElementById(waId)),250);
+  });
+  document.addEventListener('change',function(e){
+    const t=e.target; if(!t||!t.id) return;
+    if(PAIRS[t.id]){ clearTimeout(timers[t.id]); fill(t,document.getElementById(PAIRS[t.id])); return; }
+    /* Tim 1 dipilih dari jadwal: pakai nomor dari jadwal; jika kosong, cari dari riwayat. */
+    if(t.id==='sparring-tim-a'){
+      setTimeout(function(){
+        const wa=document.getElementById('sparring-wa'); if(!wa) return;
+        if(t.value==='__manual__'){ fill(document.getElementById('sparring-tim-a-manual'),wa); return; }
+        if(!clean(wa.value)){
+          const opt=t.options[t.selectedIndex];
+          const nm=clean(String(opt?.textContent||'').split(' · ')[0]);
+          const found=window.lookupTeamWa(nm);
+          if(found){ wa.value=found; wa.dataset.waAuto='1'; }
+        }
+      },0);
+    }
+  });
+
+  /* Reset penanda saat form dikosongkan. */
+  document.addEventListener('reset',function(e){
+    if(e.target&&e.target.closest&&e.target.closest('#page-sparring')){
+      WA_IDS.forEach(id=>{const el=document.getElementById(id); if(el) el.dataset.waAuto='0';});
+    }
+  },true);
 })();
 </script>
 
