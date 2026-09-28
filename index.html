@@ -18071,6 +18071,12 @@ kaosKakiTerjual: jumlahKaosKaki,
                 const jamInputFull = document.getElementById('in-jam-main');
                 if(jamInputFull && Number.isFinite(firstHour) && Number.isFinite(lastHour)) {
                     jamInputFull.value = `${String(firstHour).padStart(2,'0')}:00-${String(lastHour + 1).padStart(2,'0')}:00`;
+                    // FIX: perhitungan biaya & penyimpanan pembayaran membaca
+                    // atribut data-base-jam-main lebih dulu daripada .value.
+                    // Sebelumnya atribut ini tetap berisi 1 jam saja ("16:00")
+                    // sehingga popup pembayaran hanya membaca 1 jam. Samakan
+                    // atributnya dengan rentang jam multi-jam.
+                    jamInputFull.setAttribute('data-base-jam-main', jamInputFull.value);
                 }
             }
 
