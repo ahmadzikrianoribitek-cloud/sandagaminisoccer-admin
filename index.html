@@ -13485,6 +13485,41 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             if(s2) s2.dataset.manual = '';
         };
 
+        // FIX durasi sparing: lawan sparing tiap jam bisa BERBEDA walau tim 1 sama
+        // (mis. JATIBARU 22:00 vs LOPAK, 23:00 vs PB FC). Jam berurutan hanya
+        // boleh digabung jadi 1 transaksi bila lawannya sama.
+        window.getSparingOpponentAtHour = function(nama, tgl, jam){
+            const t = String(nama || '').replace(/\s*\(Booking\)$/i, '').trim().toLowerCase();
+            const j = String(jam || '').substring(0,5);
+            if(!t || !tgl || !j) return '';
+            const hit = Object.values(globalCache.sparring || {}).find(sp => {
+                if(!sp || String(sp.status || '').toLowerCase() !== 'matched') return false;
+                if(String(sp.tanggal || '') !== String(tgl)) return false;
+                if(String(sp.jam || '').substring(0,5) !== j) return false;
+                const a = String(sp.timA || '').trim().toLowerCase();
+                const b = String(sp.timB || '').trim().toLowerCase();
+                return a === t || b === t;
+            });
+            if(!hit) return '';
+            const a = String(hit.timA || '').trim().toLowerCase();
+            const b = String(hit.timB || '').trim().toLowerCase();
+            return a === t ? b : a;
+        };
+        // Ambil awalan list jam berurutan selama lawan sparingnya sama dengan jam pertama.
+        window.trimJamBySparingOpponent = function(nama, tgl, startJam, list, getJam){
+            const startOpp = window.getSparingOpponentAtHour(nama, tgl, startJam);
+            const out = [];
+            for(const it of (list || [])){
+                const jj = getJam ? getJam(it) : it;
+                if(out.length){
+                    const opp = window.getSparingOpponentAtHour(nama, tgl, jj);
+                    if(startOpp && opp && opp !== startOpp) break;
+                }
+                out.push(it);
+            }
+            return out;
+        };
+
         window.hitungOtomatisBiaya = () => {
             const selectTim = document.getElementById('in-tim');
             const selectedOption = selectTim?.options[selectTim.selectedIndex];
@@ -13632,7 +13667,16 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                     }
                 }
 
-                if (effectiveJamList.length > bookingSlots.length) {
+                // Potong rentang jam bila lawan sparing berubah di tengah jalan.
+                const __lenSebelumPotong = Math.max(effectiveJamList.length, bookingSlots.length);
+                effectiveJamList = window.trimJamBySparingOpponent(nama1, tgl, jam, effectiveJamList);
+                bookingSlots = window.trimJamBySparingOpponent(nama1, tgl, jam, bookingSlots, b => String(b.tgl || '').split('T')[1]?.substring(0,5) || '');
+                const __terpotongSparing = Math.max(effectiveJamList.length, bookingSlots.length) < __lenSebelumPotong;
+                if (__terpotongSparing) {
+                    // jamMainStr bisa berisi rentang lama ("22:00-24:00"); durasi dihitung ulang
+                    durasiJam = Math.max(1, effectiveJamList.length, bookingSlots.length);
+                    if (!effectiveJamList.length) effectiveJamList = [jam];
+                } else if (effectiveJamList.length > bookingSlots.length) {
                     durasiJam = effectiveJamList.length;
                 } else if (bookingSlots.length > 1) {
                     durasiJam = bookingSlots.length;
@@ -18064,6 +18108,8 @@ kaosKakiTerjual: jumlahKaosKaki,
                 paymentSlots = consecutiveSlots.length >= groupSlots.length ? consecutiveSlots : groupSlots;
             }
             paymentSlots = [...new Set(paymentSlots)].sort();
+            // Jangan gabungkan jam berurutan bila lawan sparing-nya berbeda.
+            paymentSlots = window.trimJamBySparingOpponent(targetNamaPembayaran, tgl, jamMain, paymentSlots);
 
             if(paymentSlots.length > 1) {
                 const firstHour = parseInt(paymentSlots[0].split(':')[0], 10);
