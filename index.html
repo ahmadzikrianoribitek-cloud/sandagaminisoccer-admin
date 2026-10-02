@@ -10608,6 +10608,7 @@ body > header {
     </div>
     <div class="flex justify-center mb-3">
       <button type="button" class="bg-purple-700 hover:bg-purple-800 text-white px-4 py-2 rounded-xl text-xs font-black shadow" onclick="kembaliKeBulanHariIniAdmin()">📅 Bulan Ini</button>
+      <button type="button" class="ml-2 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-black shadow" onclick="bukaKelolaNamaAdmin()">➕ Tambah Nama Admin</button>
     </div>
 
     <!-- JADWAL HARI INI -->
@@ -15134,7 +15135,23 @@ kaosKakiTerjual: jumlahKaosKaki,
 
         const ADMIN_ROSTER_ANCHOR = '2026-08-12';
         let adminRosterMonth = (function(){ const n=new Date(); return new Date(n.getFullYear(), n.getMonth(), 1); })();
-        const ADMIN_NAMES = ['Zikri', 'Alfi', 'Rama'];
+        const ADMIN_NAMES_DEFAULT = ['Zikri', 'Alfi', 'Rama'];
+        const ADMIN_NAMES = ADMIN_NAMES_DEFAULT.slice();   // diubah di tempat agar semua kode lain ikut terbarui
+        let adminNamesFirebase = {};                        // { key: {nama} } dari Firebase (adminJagaNames)
+        const ADMIN_NAMES_LS_KEY = 'adminJagaNamaTambahan';
+        function adminEsc(v){ return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+        function adminLocalExtraNames(){
+            try{ const a=JSON.parse(localStorage.getItem(ADMIN_NAMES_LS_KEY)||'[]'); return Array.isArray(a)?a.map(x=>String(x||'').trim()).filter(Boolean):[]; }catch(_){ return []; }
+        }
+        function rebuildAdminNames(){
+            const seen=new Set(), out=[];
+            const add=n=>{ n=String(n||'').trim(); if(!n) return; const k=n.toLowerCase(); if(seen.has(k)) return; seen.add(k); out.push(n); };
+            ADMIN_NAMES_DEFAULT.forEach(add);
+            Object.values(adminNamesFirebase||{}).forEach(x=>add(x && x.nama));
+            adminLocalExtraNames().forEach(add);
+            ADMIN_NAMES.splice(0, ADMIN_NAMES.length, ...out);
+        }
+        rebuildAdminNames();
 
         function adminDateKey(d){
             const y=d.getFullYear();
@@ -15427,46 +15444,127 @@ kaosKakiTerjual: jumlahKaosKaki,
         window.editJadwalAdminTanggal=async(dateKey)=>{
             const pagiSekarang=getAdminShiftName(dateKey,'pagi');
             const malamSekarang=getAdminShiftName(dateKey,'malam');
-            const html=`<div id="modal-admin-roster" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            // Pastikan nama yang sedang tersimpan tetap muncul di dropdown walau tidak ada di daftar.
+            const names=ADMIN_NAMES.slice();
+            [pagiSekarang,malamSekarang].forEach(n=>{ if(n && !names.some(x=>x.toLowerCase()===String(n).toLowerCase())) names.push(n); });
+            const opts=sel=>names.map(n=>`<option value="${adminEsc(n)}" ${n===sel?'selected':''}>${adminEsc(n)}</option>`).join('');
+            document.getElementById('admin-roster-edit-box')?.remove();
+            const wrap=document.createElement('div');
+            wrap.id='admin-roster-edit-box';
+            wrap.className='fixed inset-0 z-[10050] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm';
+            wrap.innerHTML=`
               <div class="w-full max-w-sm bg-white rounded-2xl p-5 shadow-2xl text-slate-900">
                 <h3 class="font-black text-purple-950 text-base mb-1">Ubah Jadwal Admin</h3>
                 <p class="text-xs font-bold text-slate-500 mb-4">${formatTanggalAdmin(dateKey)}</p>
                 <label class="block text-xs font-black mb-1">☀️ Shift Pagi</label>
-                <select id="edit-admin-pagi" class="w-full p-2 rounded-lg border mb-3 text-sm font-bold">
-                  ${ADMIN_NAMES.map(n=>`<option ${n===pagiSekarang?'selected':''}>${n}</option>`).join('')}
-                </select>
+                <select id="edit-admin-pagi" class="w-full p-2 rounded-lg border mb-3 text-sm font-bold">${opts(pagiSekarang)}</select>
                 <label class="block text-xs font-black mb-1">🌙 Shift Malam</label>
-                <select id="edit-admin-malam" class="w-full p-2 rounded-lg border mb-4 text-sm font-bold">
-                  ${ADMIN_NAMES.map(n=>`<option ${n===malamSekarang?'selected':''}>${n}</option>`).join('')}
-                </select>
+                <select id="edit-admin-malam" class="w-full p-2 rounded-lg border mb-4 text-sm font-bold">${opts(malamSekarang)}</select>
                 <div class="flex gap-2">
-                  <button type="button" class="flex-1 bg-slate-200 text-slate-800 px-3 py-2 rounded-xl text-xs font-black" onclick="document.getElementById('modal-admin-roster')?.remove()">Batal</button>
-                  <button type="button" class="flex-1 bg-purple-700 text-white px-3 py-2 rounded-xl text-xs font-black" onclick="simpanPerubahanJadwalAdmin('${dateKey}')">Simpan</button>
+                  <button type="button" data-act="batal" class="flex-1 bg-slate-200 text-slate-800 px-3 py-2 rounded-xl text-xs font-black">Batal</button>
+                  <button type="button" data-act="simpan" class="flex-1 bg-purple-700 text-white px-3 py-2 rounded-xl text-xs font-black">Simpan</button>
                 </div>
-              </div>
-            </div>`;
-            document.getElementById('modal-admin-roster')?.remove();
-            document.body.insertAdjacentHTML('beforeend',html);
+              </div>`;
+            document.body.appendChild(wrap);
+            wrap.querySelector('[data-act="batal"]').addEventListener('click',()=>wrap.remove());
+            wrap.addEventListener('click',e=>{ if(e.target===wrap) wrap.remove(); });
+            wrap.querySelector('[data-act="simpan"]').addEventListener('click',()=>window.simpanPerubahanJadwalAdmin(dateKey));
         };
         window.simpanPerubahanJadwalAdmin=async(dateKey)=>{
             const pagi=document.getElementById('edit-admin-pagi')?.value;
             const malam=document.getElementById('edit-admin-malam')?.value;
-            if(!pagi || !malam) return;
+            if(!pagi || !malam){ alert('Pilih nama admin untuk shift pagi dan malam.'); return; }
             try{
+                // Satu kali tulis (multi-path): hapus entri lama tanggal ini + simpan entri baru.
+                const updates={};
                 const all=globalCache.adminJaga || {};
                 for(const [key,item] of Object.entries(all)){
-                    if(item?.tanggal===dateKey && (item.shift==='pagi'||item.shift==='malam')){
-                        await remove(ref(db,'adminJaga/'+key));
-                    }
+                    if(item?.tanggal===dateKey && (item.shift==='pagi'||item.shift==='malam')) updates[key]=null;
                 }
-                await push(ref(db,'adminJaga'),{tanggal:dateKey,shift:'pagi',nama:pagi,keterangan:'Shift Pagi',timestamp:Date.now()});
-                await push(ref(db,'adminJaga'),{tanggal:dateKey,shift:'malam',nama:malam,keterangan:'Shift Malam',timestamp:Date.now()});
-                document.getElementById('modal-admin-roster')?.remove();
-                showSuccessPopup('Jadwal admin berhasil diperbarui.');
+                const now=Date.now();
+                const kPagi=push(ref(db,'adminJaga')).key;
+                const kMalam=push(ref(db,'adminJaga')).key;
+                updates[kPagi]={tanggal:dateKey,shift:'pagi',nama:pagi,keterangan:'Shift Pagi',timestamp:now};
+                updates[kMalam]={tanggal:dateKey,shift:'malam',nama:malam,keterangan:'Shift Malam',timestamp:now+1};
+                const pending=update(ref(db,'adminJaga'),updates);
+                // Firebase langsung menerapkan perubahan di lokal; tutup dialog tanpa menunggu server
+                // supaya tombol tidak terlihat "mati" bila koneksi lambat.
+                document.getElementById('admin-roster-edit-box')?.remove();
+                if(typeof showSuccessPopup==='function') showSuccessPopup('Jadwal admin berhasil diperbarui.');
+                pending.catch(error=>{ console.error(error); alert('Gagal menyimpan jadwal admin ke server: '+error.message); });
             }catch(error){
                 console.error(error);
                 alert('Gagal menyimpan perubahan jadwal admin: '+error.message);
             }
+        };
+
+        // ---------- Kelola nama admin tambahan ----------
+        function renderDaftarNamaAdmin(){
+            const box=document.getElementById('admin-names-list');
+            if(!box) return;
+            const extraFb=Object.entries(adminNamesFirebase||{}).filter(([k,x])=>x&&x.nama);
+            const extraLocal=adminLocalExtraNames();
+            const rows=[];
+            ADMIN_NAMES_DEFAULT.forEach(n=>rows.push(`<div class="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-100 text-xs font-black"><span>${adminEsc(n)}</span><span class="text-slate-400 text-[10px]">bawaan</span></div>`));
+            extraFb.forEach(([k,x])=>rows.push(`<div class="flex items-center justify-between px-3 py-2 rounded-lg bg-purple-50 text-xs font-black"><span>${adminEsc(x.nama)}</span><button type="button" data-hapus-fb="${adminEsc(k)}" class="text-red-600 px-2">✕</button></div>`));
+            extraLocal.forEach(n=>rows.push(`<div class="flex items-center justify-between px-3 py-2 rounded-lg bg-purple-50 text-xs font-black"><span>${adminEsc(n)}</span><button type="button" data-hapus-ls="${adminEsc(n)}" class="text-red-600 px-2">✕</button></div>`));
+            box.innerHTML=rows.join('');
+        }
+        window.bukaKelolaNamaAdmin=()=>{
+            document.getElementById('admin-names-box')?.remove();
+            const wrap=document.createElement('div');
+            wrap.id='admin-names-box';
+            wrap.className='fixed inset-0 z-[10050] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm';
+            wrap.innerHTML=`
+              <div class="w-full max-w-sm bg-white rounded-2xl p-5 shadow-2xl text-slate-900">
+                <h3 class="font-black text-purple-950 text-base mb-1">Tambah Nama Admin</h3>
+                <p class="text-xs font-bold text-slate-500 mb-3">Nama baru akan muncul di dropdown saat edit jadwal harian.</p>
+                <div class="flex gap-2 mb-3">
+                  <input id="admin-name-new" type="text" maxlength="20" placeholder="Nama admin baru" class="flex-1 p-2 rounded-lg border text-sm font-bold" autocomplete="off">
+                  <button type="button" data-act="tambah" class="bg-purple-700 text-white px-3 py-2 rounded-xl text-xs font-black">Tambah</button>
+                </div>
+                <div id="admin-names-list" class="flex flex-col gap-1.5 max-h-56 overflow-y-auto mb-4"></div>
+                <button type="button" data-act="tutup" class="w-full bg-slate-200 text-slate-800 px-3 py-2 rounded-xl text-xs font-black">Tutup</button>
+              </div>`;
+            document.body.appendChild(wrap);
+            renderDaftarNamaAdmin();
+            const input=wrap.querySelector('#admin-name-new');
+            const tambah=async()=>{
+                const nama=(input.value||'').trim().replace(/\s+/g,' ');
+                if(!nama){ input.focus(); return; }
+                if(ADMIN_NAMES.some(n=>n.toLowerCase()===nama.toLowerCase())){ alert('Nama "'+nama+'" sudah ada di daftar.'); return; }
+                input.value='';
+                try{
+                    await Promise.race([
+                        push(ref(db,'adminJagaNames'),{nama,timestamp:Date.now()}),
+                        new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),6000))
+                    ]);
+                }catch(error){
+                    // Fallback: simpan di perangkat ini bila Firebase menolak / tidak terjangkau.
+                    console.warn('adminJagaNames gagal, pakai penyimpanan lokal:',error);
+                    try{ const a=adminLocalExtraNames(); a.push(nama); localStorage.setItem(ADMIN_NAMES_LS_KEY,JSON.stringify(a)); }catch(_){}
+                    alert('Nama "'+nama+'" disimpan di perangkat ini saja (server menolak/tidak terjangkau).');
+                }
+                rebuildAdminNames(); renderDaftarNamaAdmin();
+                scheduleRender(renderJadwalAdmin); scheduleRender(renderGajiAdmin);
+            };
+            wrap.querySelector('[data-act="tambah"]').addEventListener('click',tambah);
+            input.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); tambah(); } });
+            wrap.querySelector('[data-act="tutup"]').addEventListener('click',()=>wrap.remove());
+            wrap.addEventListener('click',async e=>{
+                if(e.target===wrap){ wrap.remove(); return; }
+                const fb=e.target.closest('[data-hapus-fb]');
+                const ls=e.target.closest('[data-hapus-ls]');
+                if(fb){
+                    try{ await remove(ref(db,'adminJagaNames/'+fb.getAttribute('data-hapus-fb'))); }catch(err){ alert('Gagal menghapus nama: '+err.message); }
+                }else if(ls){
+                    const n=ls.getAttribute('data-hapus-ls');
+                    try{ localStorage.setItem(ADMIN_NAMES_LS_KEY,JSON.stringify(adminLocalExtraNames().filter(x=>x!==n))); }catch(_){}
+                }else return;
+                rebuildAdminNames(); renderDaftarNamaAdmin();
+                scheduleRender(renderJadwalAdmin); scheduleRender(renderGajiAdmin);
+            });
+            setTimeout(()=>input.focus(),50);
         };
         function formatTanggalAdmin(tgl){
             if(!tgl) return '-';
@@ -17198,6 +17296,14 @@ kaosKakiTerjual: jumlahKaosKaki,
             scheduleRender(renderJadwalAdmin);
             scheduleRender(renderGajiAdmin);
         });
+
+        onValue(ref(db, 'adminJagaNames'), (snapshot) => {
+            adminNamesFirebase = snapshot.val() || {};
+            rebuildAdminNames();
+            if(typeof renderDaftarNamaAdmin==='function') renderDaftarNamaAdmin();
+            scheduleRender(renderJadwalAdmin);
+            scheduleRender(renderGajiAdmin);
+        }, (error) => { console.warn('adminJagaNames tidak bisa dibaca:', error); });
 
 
         // =========================================================
