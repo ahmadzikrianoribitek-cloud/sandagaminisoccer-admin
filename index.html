@@ -11666,6 +11666,7 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 <div class="p-3 rounded-xl border border-violet-400/50 mb-3 space-y-2 bg-violet-50/50 uang-masuk-option-panel">
   <label class="block text-xs font-black text-violet-950">💸 Diskon Tambahan Manual dari Admin</label>
   <input id="in-diskon-manual" class="w-full p-2 rounded-xl text-sm glass-input font-bold" type="text" inputmode="numeric" oninput="formatNominalInput(this); hitungOtomatisBiaya()" min="0" step="1000" value="0" placeholder="Masukkan nominal diskon (Rp)"/>
+  <input id="in-diskon-manual-ket" class="w-full p-2 rounded-xl text-sm glass-input font-bold" type="text" maxlength="80" autocomplete="off" oninput="hitungOtomatisBiaya()" placeholder="Keterangan diskon (contoh: Promo ulang tahun, Kompensasi lapangan)"/>
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
     <label class="flex items-center gap-2 rounded-xl border border-violet-200 bg-white/70 px-3 py-2 cursor-pointer">
       <input type="radio" name="diskon-manual-alokasi" id="in-diskon-manual-tim1" value="tim1" onchange="hitungOtomatisBiaya()" checked>
@@ -13365,6 +13366,8 @@ function scheduleRender(fn) {
              document.getElementById('in-sewa-rompi-2').checked = false;
 const diskonManualEl = document.getElementById('in-diskon-manual');
             if (diskonManualEl) diskonManualEl.value = 0;
+            const diskonManualKetResetEl = document.getElementById('in-diskon-manual-ket');
+            if (diskonManualKetResetEl) diskonManualKetResetEl.value = '';
             const infoDiskonManualEl = document.getElementById('info-diskon-manual');
             if (infoDiskonManualEl) infoDiskonManualEl.innerText = 'Diskon tambahan tidak aktif';
             const diskonTim1Radio = document.getElementById('in-diskon-manual-tim1');
@@ -13535,6 +13538,9 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             const pakaiDiskonKhusus = false;
             const diskonManualInput = parseNominalInputValue(document.getElementById("in-diskon-manual")?.value || "");
             let diskonManual = Math.max(0, Number.isFinite(diskonManualInput) ? diskonManualInput : 0);
+            const diskonManualKet = String(document.getElementById('in-diskon-manual-ket')?.value || '').trim().slice(0, 80);
+            const escKetDiskon = v => String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+            const ketDiskonHtml = diskonManualKet ? ` (${escKetDiskon(diskonManualKet)})` : '';
             const diskonManualAlokasi = document.querySelector('input[name="diskon-manual-alokasi"]:checked')?.value || 'tim1';
             const diskonManualTim1Input = parseNominalInputValue(document.getElementById("in-diskon-manual-tim1-nominal")?.value || "");
             const diskonManualTim2Input = parseNominalInputValue(document.getElementById("in-diskon-manual-tim2-nominal")?.value || "");
@@ -13963,6 +13969,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 diskonNormalMemberTim1,
                 diskonNormalMemberTim2,
                 diskonManual,
+                diskonManualKet,
                 diskonManualAlokasi,
                 diskonManualTim1,
                 diskonManualTim2,
@@ -14015,7 +14022,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                             <div class="bg-white/70 rounded-lg p-1.5"><div class="text-slate-500">Harga ${durasiEfektif > 1 ? `Total ${durasiEfektif % 1 ? durasiEfektif.toLocaleString('id-ID') : durasiEfektif} Jam` : 'Booking'}</div><b class="text-slate-900">${formatRupiah(totalAkhir1)}</b></div>
                             <div class="bg-white/70 rounded-lg p-1.5"><div class="text-slate-500">DP</div><b class="text-slate-900">${formatRupiah(dp1)}</b></div>
                         </div>
-                        ${diskonManual > 0 ? `<div class="mt-2 rounded-lg bg-violet-100 text-violet-900 px-2 py-1.5 text-[10px] font-black">💸 Diskon manual: ${formatRupiah(diskonManualTim1)}</div>` : ''}
+                        ${diskonManual > 0 ? `<div class="mt-2 rounded-lg bg-violet-100 text-violet-900 px-2 py-1.5 text-[10px] font-black">💸 Diskon manual${ketDiskonHtml}: ${formatRupiah(diskonManualTim1)}</div>` : ''}
                         <div class="mt-2 flex items-center justify-between rounded-lg bg-blue-600 text-white px-2 py-1.5"><span class="text-[10px] font-bold">SISA TAGIHAN</span><b class="text-sm">${formatRupiah(sisa1)}</b></div>
                     </div>
                     ${isSparingPayment ? `<div class="rounded-xl border-2 border-blue-300 bg-blue-50 p-3 shadow-md">
@@ -14028,7 +14035,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                             <div class="bg-white/70 rounded-lg p-1.5"><div class="text-slate-500">Harga ${durasiEfektif > 1 ? `Total ${durasiEfektif % 1 ? durasiEfektif.toLocaleString('id-ID') : durasiEfektif} Jam` : 'Booking'}</div><b class="text-slate-900">${formatRupiah(totalAkhir2)}</b></div>
                             <div class="bg-white/70 rounded-lg p-1.5"><div class="text-slate-500">DP</div><b class="text-slate-900">${formatRupiah(Number(second.dp || 0))}</b></div>
                         </div>
-                        ${diskonManual > 0 ? `<div class="mt-2 rounded-lg bg-violet-100 text-violet-900 px-2 py-1.5 text-[10px] font-black">💸 Diskon manual: ${formatRupiah(diskonManualTim2)}</div>` : ''}
+                        ${diskonManual > 0 ? `<div class="mt-2 rounded-lg bg-violet-100 text-violet-900 px-2 py-1.5 text-[10px] font-black">💸 Diskon manual${ketDiskonHtml}: ${formatRupiah(diskonManualTim2)}</div>` : ''}
                         <div class="mt-2 flex items-center justify-between rounded-lg bg-blue-600 text-white px-2 py-1.5"><span class="text-[10px] font-bold">SISA TAGIHAN</span><b class="text-sm">${formatRupiah(sisa2)}</b></div>
                     </div>` : ''}`;
             }
@@ -14259,6 +14266,8 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             const berbedaWrap=document.getElementById('in-diskon-manual-berbeda-wrap');
             const alokasi=String(data?.diskonManualAlokasiTersimpan||'tim1');
             if(nominalEl) nominalEl.value=formatNominalInputValue(Number(data?.diskonManualTersimpan||0));
+            const ketEl=document.getElementById('in-diskon-manual-ket');
+            if(ketEl) ketEl.value=String(data?.diskonManualKetTersimpan||'');
             if(tim1El) tim1El.value=formatNominalInputValue(Number(data?.diskonManualTim1NominalTersimpan||0));
             if(tim2El) tim2El.value=formatNominalInputValue(Number(data?.diskonManualTim2NominalTersimpan||0));
             const radioAktif=document.querySelector(`input[name="diskon-manual-alokasi"][value="${alokasi}"]`);
@@ -14290,6 +14299,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             const patch={
                 diskonManualTersimpan: Math.max(0, Number.isFinite(nominalInput)?nominalInput:0),
                 diskonManualAlokasiTersimpan: alokasi,
+                diskonManualKetTersimpan: String(document.getElementById('in-diskon-manual-ket')?.value||'').trim().slice(0,80),
                 diskonManualTim1NominalTersimpan: Math.max(0, Number.isFinite(tim1Input)?tim1Input:0),
                 diskonManualTim2NominalTersimpan: Math.max(0, Number.isFinite(tim2Input)?tim2Input:0)
             };
@@ -14664,6 +14674,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                     jenisPembayaran: isSparingPayment ? 'sparing' : 'internal',
                     diskonManual: Number(window.__pelunasanCalc?.diskonManual || 0),
                     diskonManualAlokasi: window.__pelunasanCalc?.diskonManualAlokasi || 'tim1',
+                    diskonManualKet: String(window.__pelunasanCalc?.diskonManualKet || '').trim(),
                     diskonMemberAlokasi: window.__pelunasanCalc?.diskonMemberAlokasi || 'rata',
                     diskonManualTim1: Number(window.__pelunasanCalc?.diskonManualTim1 || 0),
                     diskonManualTim2: isSparingPayment ? Number(window.__pelunasanCalc?.diskonManualTim2 || 0) : 0,
@@ -22347,13 +22358,17 @@ return;
                 // Diskon tambahan/manual/promo.
                 const manual1 = num('diskonManualTim1');
                 const manual2 = num('diskonManualTim2');
-                if (manual1 > 0) details.push(`🎁 Diskon Promo/Manual Tim 1: ${rupiah(manual1)}`);
-                if (manual2 > 0) details.push(`🎁 Diskon Promo/Manual Tim 2: ${rupiah(manual2)}`);
+                const ketManualRaw = String(data.diskonManualKet || '').trim();
+                const ketManual = ketManualRaw
+                    ? ` (${ketManualRaw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')})`
+                    : '';
+                if (manual1 > 0) details.push(`🎁 Diskon Promo/Manual Tim 1${ketManual}: ${rupiah(manual1)}`);
+                if (manual2 > 0) details.push(`🎁 Diskon Promo/Manual Tim 2${ketManual}: ${rupiah(manual2)}`);
 
                 // Fallback untuk data lama atau skema transaksi lain.
                 const manualTotal = num('diskonManual', 'diskonPromo', 'diskonKhusus', 'diskon');
                 if (manualTotal > 0 && manual1 + manual2 === 0) {
-                    details.push(`🎁 Diskon Promo/Manual: ${rupiah(manualTotal)}`);
+                    details.push(`🎁 Diskon Promo/Manual${ketManual}: ${rupiah(manualTotal)}`);
                 }
 
                 return details.length
