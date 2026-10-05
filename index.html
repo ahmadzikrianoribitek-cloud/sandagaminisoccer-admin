@@ -10790,6 +10790,7 @@ body > header {
 <select class="p-1.5 rounded-lg text-xs glass-input font-bold text-center" id="filter-periode-jadwal" onchange="renderGridJadwal()">
 </select>
 </div>
+<button type="button" id="btn-cek-bentrok" onclick="cekBentrokJadwal()">🔍 Cek Bentrok Jadwal <span id="badge-cek-bentrok"></span></button>
 </div>
 <div class="shadow-2xl rounded-xl border border-white/30 mb-4 overflow-hidden relative" id="booking-schedule-grid-wrap">
     <div id="booking-schedule-periods" class="booking-schedule-periods"></div>
@@ -12899,6 +12900,328 @@ window.__APP_FIREBASE_UPDATE__ = update;
 window.__APP_FIREBASE_GET__ = get;
 
 /* =========================================================
+   ANTI DOUBLE BOOKING / DOUBLE MEMBER + CEK BENTROK JADWAL
+   - Booking & Member baru/edit ditolak jika slot (tanggal + jam)
+     sudah terisi booking lain, member aktif, atau OFF.
+   - Tombol "Cek Bentrok Jadwal" di Booking Schedule memindai
+     seluruh data dan menampilkan jadwal yang sudah terlanjur ganda.
+   ========================================================= */
+const BENTROK_JAM_TUTUP = '18:00'; // jam 18:00 selalu tampil OFF di grid
+const BENTROK_HARI = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+function bentrokNorm(v){ return String(v||'').replace(/\s*\(Booking\)$/i,'').trim().toLowerCase(); }
+function bentrokJam(v){ return String(v||'').substring(0,5); }
+function bentrokHari(d){ const x = new Date(d + 'T00:00:00'); return Number.isNaN(x.getTime()) ? '' : BENTROK_HARI[x.getDay()]; }
+function bentrokTgl(d){ return String(d||'').split('-').reverse().join('/'); }
+function bentrokHariIni(){ const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; }
+function bentrokEsc(v){ return String(v==null?'':v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
+function bentrokBatalFn(d, n, j){ try { return typeof isBookingCancelled === 'function' && isBookingCancelled(d, n, j); } catch(_) { return false; } }
+function bentrokMemberAktif(m, d){ try { return isMemberScheduledOnDate(m, d); } catch(_) { return false; } }
+function bentrokBookingNyata(b){ return !!(b && b.tgl && b.sparringOpponent !== true && b.batal !== true); }
+
+/* Sparring = 2 tim sah berbagi 1 slot. Dicocokkan dengan data sparring berstatus matched. */
+function bentrokSparringPair(dateStr, jam, a, b){
+    const na = bentrokNorm(a), nb = bentrokNorm(b);
+    if(!na || !nb) return false;
+    return Object.values(globalCache.sparring || {}).some(s => {
+        if(!s || s.status !== 'matched') return false;
+        if(String(s.tanggal || '').split('T')[0] !== dateStr || bentrokJam(s.jam) !== bentrokJam(jam)) return false;
+        const x = bentrokNorm(s.timA), y = bentrokNorm(s.timB);
+        return (x === na && y === nb) || (x === nb && y === na);
+    });
+}
+/* Sparring dua tim member pada hari + jam mingguan yang sama (tanggal mana pun). */
+function bentrokSparringPairMingguan(hari, jam, a, b){
+    const na = bentrokNorm(a), nb = bentrokNorm(b);
+    if(!na || !nb) return false;
+    return Object.values(globalCache.sparring || {}).some(s => {
+        if(!s || s.status !== 'matched') return false;
+        const d = String(s.tanggal || '').split('T')[0];
+        if(bentrokHari(d) !== hari || bentrokJam(s.jam) !== bentrokJam(jam)) return false;
+        const x = bentrokNorm(s.timA), y = bentrokNorm(s.timB);
+        return (x === na && y === nb) || (x === nb && y === na);
+    });
+}
+
+/* Cek 1 slot (tanggal + jam). Mengembalikan daftar yang sudah menempati slot itu. */
+function bentrokCekSlot(dateStr, jam, opt){
+    opt = opt || {};
+    const hasil = [];
+    const jamN = bentrokJam(jam);
+    if(!dateStr || !jamN) return hasil;
+    const exB = new Set((opt.excludeBookingKeys || []).map(String));
+    const exM = opt.excludeMemberKey ? String(opt.excludeMemberKey) : '';
+    const semuaBooking = Object.entries(globalCache.booking || {});
+
+    if(jamN === BENTROK_JAM_TUTUP) hasil.push({ tipe:'tutup', nama:'Jam istirahat (OFF)' });
+
+    // Booking lain di slot yang sama (booking batal & lawan sparing tidak dihitung).
+    semuaBooking.forEach(([k, b]) => {
+        if(exB.has(String(k)) || !bentrokBookingNyata(b)) return;
+        const p = String(b.tgl).split('T');
+        if(p[0] !== dateStr || bentrokJam(p[1]) !== jamN) return;
+        if(bentrokBatalFn(dateStr, b.nama, jamN)) return;
+        hasil.push({ tipe:'booking', nama:b.nama || '-', key:k, status:b.status || '' });
+    });
+
+    // Tim yang punya booking pada tanggal itu dianggap memindahkan jadwal member-nya
+    // (sama seperti logika grid Booking Schedule), jadi slot member-nya dianggap kosong.
+    const timBooking = new Set();
+    semuaBooking.forEach(([k, b]) => {
+        if(exB.has(String(k)) || !b || !b.tgl || !b.nama || b.sparringOpponent === true) return;
+        timBooking.add(String(b.tgl).split('T')[0] + '|' + bentrokNorm(b.nama));
+    });
+
+    const hari = bentrokHari(dateStr);
+    (globalCache.memberRawEntries || []).forEach(m => {
+        if(!m || String(m.key) === exM) return;
+        if(m.hari !== hari || bentrokJam(m.jam) !== jamN) return;
+        if(!bentrokMemberAktif(m, dateStr)) return;
+        if(m.isOff) { hasil.push({ tipe:'off', nama:'OFF', key:m.key }); return; }
+        if(bentrokBatalFn(dateStr, m.nama, jamN)) return;
+        if(timBooking.has(dateStr + '|' + bentrokNorm(m.nama))) return;
+        hasil.push({ tipe:'member', nama:m.nama || '-', key:m.key });
+    });
+    return hasil;
+}
+
+function bentrokLabel(c){
+    if(c.tipe === 'member') return `Member ${c.nama}`;
+    if(c.tipe === 'booking') return `Booking ${c.nama}`;
+    if(c.tipe === 'off') return 'OFF (slot ditutup)';
+    return c.nama;
+}
+
+function bentrokCekBookingBaru(tgl, jamMulai, durasi, opt){
+    const h0 = parseInt(String(jamMulai).split(':')[0], 10);
+    const out = [];
+    if(!tgl || !Number.isFinite(h0)) return out;
+    for(let i = 0; i < Math.max(1, Number(durasi) || 1); i++){
+        const jam = String(h0 + i).padStart(2, '0') + ':00';
+        const konflik = bentrokCekSlot(tgl, jam, opt);
+        if(konflik.length) out.push({ jam, konflik });
+    }
+    return out;
+}
+
+function bentrokPesanBooking(tgl, daftar){
+    const baris = daftar.slice(0, 6).map(x => `• ${bentrokTgl(tgl)} jam ${x.jam.replace(':','.')} → ${x.konflik.map(bentrokLabel).join(', ')}`);
+    const lebih = daftar.length > 6 ? `\n… dan ${daftar.length - 6} jam lain` : '';
+    return `Booking TIDAK disimpan karena jadwal bentrok:\n\n${baris.join('\n')}${lebih}\n\nSilakan pilih tanggal/jam lain, atau batalkan jadwal yang sudah ada terlebih dahulu.`;
+}
+
+/* Cek jadwal member tetap (hari + jam + periode berlaku). */
+function bentrokCekMemberBaru(opt){
+    const hasil = [];
+    const jamN = bentrokJam(opt.jam);
+    const mulai = opt.mulai || '';
+    const berhenti = opt.berhenti || '';
+    if(!opt.hari || !jamN) return hasil;
+    const namaOff = String(opt.nama || '').trim().toUpperCase() === 'OFF';
+
+    if(jamN === BENTROK_JAM_TUTUP && !namaOff) hasil.push({ tipe:'tutup', nama:'Jam istirahat (OFF)' });
+
+    // 1) Bentrok dengan member / OFF lain pada hari & jam yang sama, periodenya beririsan.
+    (globalCache.memberRawEntries || []).forEach(m => {
+        if(!m || String(m.key) === String(opt.excludeKey || '')) return;
+        if(m.hari !== opt.hari || bentrokJam(m.jam) !== jamN) return;
+        const oM = m.mulai || '', oB = m.berhenti || '';
+        const beririsan = (berhenti === '' || oM === '' || oM < berhenti) && (oB === '' || mulai === '' || oB > mulai);
+        if(beririsan) hasil.push({ tipe: m.isOff ? 'off' : 'member', nama: m.isOff ? 'OFF' : (m.nama || '-'), mulai:oM, berhenti:oB });
+    });
+
+    // 2) Bentrok dengan booking yang sudah ada pada tanggal-tanggal ke depan.
+    const hariIni = bentrokHariIni();
+    const awal = (mulai && mulai > hariIni) ? mulai : hariIni;
+    const libur = opt.libur || {};
+    const liburHas = d => Array.isArray(libur) ? libur.includes(d) : libur[d] === true;
+    Object.entries(globalCache.booking || {}).forEach(([k, b]) => {
+        if(!bentrokBookingNyata(b)) return;
+        const p = String(b.tgl).split('T');
+        const d = p[0];
+        if(!d || d < awal || (berhenti && d >= berhenti)) return;
+        if(bentrokJam(p[1]) !== jamN || bentrokHari(d) !== opt.hari) return;
+        if(liburHas(d) || bentrokBatalFn(d, b.nama, jamN)) return;
+        hasil.push({ tipe:'booking', nama:b.nama || '-', tgl:d, key:k });
+    });
+    hasil.sort((a, b) => String(a.tgl || '').localeCompare(String(b.tgl || '')));
+    return hasil;
+}
+
+function bentrokPesanMember(info, daftar){
+    const jamTxt = bentrokJam(info.jam).replace(':', '.');
+    const baris = daftar.slice(0, 6).map(c => {
+        if(c.tipe === 'booking') return `• Booking ${c.nama} pada ${bentrokTgl(c.tgl)} jam ${jamTxt}`;
+        if(c.tipe === 'tutup') return `• Jam ${jamTxt} adalah jam istirahat (OFF)`;
+        const periode = c.mulai ? ` (sejak ${bentrokTgl(c.mulai)}${c.berhenti ? ' s/d ' + bentrokTgl(c.berhenti) : ''})` : '';
+        return `• ${c.tipe === 'off' ? 'OFF' : 'Member ' + c.nama} sudah mengisi tiap ${info.hari} jam ${jamTxt}${periode}`;
+    });
+    const lebih = daftar.length > 6 ? `\n… dan ${daftar.length - 6} bentrok lain` : '';
+    return `Jadwal member TIDAK disimpan karena bentrok:\n\n${baris.join('\n')}${lebih}\n\nPilih hari/jam lain, atau ubah/hapus jadwal yang bentrok terlebih dahulu.`;
+}
+
+/* Pindai semua data: booking ganda, booking vs member/OFF, member ganda. */
+function bentrokScan(semua){
+    const dari = semua ? '' : bentrokHariIni();
+    const temuan = [];
+
+    const slotMap = new Map();
+    Object.entries(globalCache.booking || {}).forEach(([k, b]) => {
+        if(!bentrokBookingNyata(b)) return;
+        const p = String(b.tgl).split('T');
+        const d = p[0], j = bentrokJam(p[1]);
+        if(!d || !j || (dari && d < dari)) return;
+        if(bentrokBatalFn(d, b.nama, j)) return;
+        const sk = d + '|' + j;
+        if(!slotMap.has(sk)) slotMap.set(sk, []);
+        slotMap.get(sk).push({ key:k, b });
+    });
+
+    slotMap.forEach((arr, sk) => {
+        const [d, j] = sk.split('|');
+        const baris = arr.map(x => ({ tipe:'booking', nama:x.b.nama || '-', key:x.key }));
+        let bentrokBooking = false, adaNamaSama = false;
+        for(let i = 0; i < arr.length; i++){
+            for(let k = i + 1; k < arr.length; k++){
+                const sama = bentrokNorm(arr[i].b.nama) === bentrokNorm(arr[k].b.nama);
+                if(sama) { bentrokBooking = true; adaNamaSama = true; }
+                else if(!bentrokSparringPair(d, j, arr[i].b.nama, arr[k].b.nama)) bentrokBooking = true;
+            }
+        }
+        if(bentrokBooking){
+            temuan.push({ jenis: adaNamaSama ? 'Booking ganda (nama sama, kemungkinan tersimpan 2x)' : 'Booking ganda (2 tim di jam yang sama, bukan sparring)', tgl:d, jam:j, baris });
+        }
+        const lain = bentrokCekSlot(d, j, { excludeBookingKeys: arr.map(x => x.key) });
+        const memberOff = lain.filter(c => (c.tipe === 'member' || c.tipe === 'off') &&
+            !(c.tipe === 'member' && arr.some(x => bentrokSparringPair(d, j, x.b.nama, c.nama))));
+        if(memberOff.length) temuan.push({ jenis:'Booking bentrok dengan jadwal member/OFF', tgl:d, jam:j, baris: baris.concat(memberOff) });
+        if(lain.some(c => c.tipe === 'tutup')) temuan.push({ jenis:'Booking di jam istirahat (18.00 = OFF)', tgl:d, jam:j, baris });
+    });
+    temuan.sort((a, b) => (a.tgl + a.jam).localeCompare(b.tgl + b.jam));
+
+    // Member ganda: hari + jam sama dan periode berlakunya beririsan.
+    const grup = new Map();
+    (globalCache.memberRawEntries || []).forEach(m => {
+        if(!m) return;
+        const gk = m.hari + '|' + bentrokJam(m.jam);
+        if(!grup.has(gk)) grup.set(gk, []);
+        grup.get(gk).push(m);
+    });
+    const memberTemuan = [];
+    grup.forEach((arr, gk) => {
+        for(let i = 0; i < arr.length; i++){
+            for(let k = i + 1; k < arr.length; k++){
+                const a = arr[i], b = arr[k];
+                if(a.isOff && b.isOff) continue;
+                const aM = a.mulai || '', aB = a.berhenti || '', bM = b.mulai || '', bB = b.berhenti || '';
+                const beririsan = (aB === '' || bM === '' || bM < aB) && (bB === '' || aM === '' || aM < bB);
+                if(!beririsan) continue;
+                const akhir = [aB, bB].filter(Boolean).sort()[0] || '';
+                if(dari && akhir && akhir <= dari) continue;
+                const [hari, jam] = gk.split('|');
+                const timSama = !a.isOff && !b.isOff && bentrokNorm(a.nama) === bentrokNorm(b.nama);
+                const tercatatSparring = !a.isOff && !b.isOff && !timSama && bentrokSparringPairMingguan(hari, jam, a.nama, b.nama);
+                const row = m => ({ tipe: m.isOff ? 'off' : 'member', nama: m.isOff ? 'OFF' : (m.nama || '-'), key:m.key, mulai:m.mulai || '', berhenti:m.berhenti || '' });
+                memberTemuan.push({ jenis: timSama ? 'Data member dobel (tim sama, kemungkinan tersimpan 2x / belum dihentikan saat perpanjang)' : (tercatatSparring ? 'Double member (keduanya member tetap di slot yang sama, walau tercatat sebagai sparring)' : 'Double member (2 tim member di hari & jam yang sama)'), hari, jam, baris:[row(a), row(b)] });
+            }
+        }
+    });
+    return temuan.concat(memberTemuan);
+}
+
+function bentrokInjectStyle(){
+    if(document.getElementById('bentrok-style')) return;
+    const st = document.createElement('style');
+    st.id = 'bentrok-style';
+    st.textContent = `
+    #modal-cek-bentrok{position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.72);display:flex;align-items:center;justify-content:center;padding:12px;}
+    #modal-cek-bentrok .bkc-box{background:#fff;border-radius:18px;width:100%;max-width:560px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.35);overflow:hidden;color:#0f172a;}
+    #modal-cek-bentrok .bkc-head{padding:14px 16px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+    #modal-cek-bentrok .bkc-head h3{font-weight:900;font-size:15px;margin:0;}
+    #modal-cek-bentrok .bkc-close{border:0;background:#e2e8f0;border-radius:10px;width:32px;height:32px;font-weight:900;cursor:pointer;}
+    #modal-cek-bentrok .bkc-tools{padding:10px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid #f1f5f9;font-size:12px;font-weight:800;}
+    #modal-cek-bentrok .bkc-tools select{padding:6px 8px;border-radius:10px;border:1px solid #cbd5e1;font-weight:800;font-size:12px;}
+    #modal-cek-bentrok .bkc-body{padding:12px 16px 16px;overflow:auto;display:flex;flex-direction:column;gap:10px;}
+    #modal-cek-bentrok .bkc-ok{padding:18px;border-radius:14px;background:#ecfdf5;border:1px solid #6ee7b7;color:#065f46;font-weight:900;text-align:center;font-size:13px;}
+    #modal-cek-bentrok .bkc-item{border:1px solid #fca5a5;background:#fef2f2;border-radius:14px;padding:10px 12px;}
+    #modal-cek-bentrok .bkc-jenis{font-size:11px;font-weight:900;color:#b91c1c;text-transform:uppercase;letter-spacing:.02em;}
+    #modal-cek-bentrok .bkc-waktu{font-size:14px;font-weight:900;margin:2px 0 8px;}
+    #modal-cek-bentrok .bkc-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px dashed #fecaca;font-size:12px;font-weight:800;}
+    #modal-cek-bentrok .bkc-row small{display:block;font-weight:700;color:#64748b;}
+    #modal-cek-bentrok .bkc-act{display:flex;gap:6px;flex-shrink:0;}
+    #modal-cek-bentrok .bkc-act button{border:0;border-radius:8px;padding:5px 9px;font-size:11px;font-weight:900;cursor:pointer;}
+    #modal-cek-bentrok .bkc-edit{background:#2563eb;color:#fff;} #modal-cek-bentrok .bkc-del{background:#e11d48;color:#fff;}
+    #btn-cek-bentrok{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:12px;border:1px solid rgba(37,99,235,.45);background:rgba(255,255,255,.85);color:#1e3a8a;font-weight:900;font-size:12px;cursor:pointer;box-shadow:0 3px 10px rgba(15,23,42,.1);}
+    #badge-cek-bentrok{display:none;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#dc2626;color:#fff;font-size:10px;font-weight:900;}
+    `;
+    document.head.appendChild(st);
+}
+
+window.tutupCekBentrok = () => { document.getElementById('modal-cek-bentrok')?.remove(); };
+
+window.cekBentrokJadwal = (scope) => {
+    scope = scope || 'depan';
+    bentrokInjectStyle();
+    document.getElementById('modal-cek-bentrok')?.remove();
+    if(scope === 'semua' && typeof startBookingFullHistoryListener === 'function') {
+        try { startBookingFullHistoryListener(); } catch(_) {}
+    }
+    const temuan = bentrokScan(scope === 'semua');
+    const waktu = t => t.tgl ? `${BENTROK_HARI[new Date(t.tgl + 'T00:00:00').getDay()]}, ${bentrokTgl(t.tgl)} · ${t.jam.replace(':','.')}` : `Tiap ${t.hari} · ${t.jam.replace(':','.')}`;
+    const rowHtml = r => {
+        const nama = r.tipe === 'off' ? 'OFF' : r.nama;
+        const tag = r.tipe === 'member' ? 'Member' : r.tipe === 'booking' ? 'Booking' : 'Jadwal';
+        const ket = r.mulai ? `<small>berlaku ${bentrokTgl(r.mulai)}${r.berhenti ? ' – ' + bentrokTgl(r.berhenti) : ' – seterusnya'}</small>` : '';
+        let aksi = '';
+        if(r.key && r.tipe === 'booking') aksi = `<button class="bkc-edit" data-a="eb" data-k="${bentrokEsc(r.key)}">Edit</button><button class="bkc-del" data-a="hb" data-k="${bentrokEsc(r.key)}">Hapus</button>`;
+        if(r.key && (r.tipe === 'member' || r.tipe === 'off')) aksi = `<button class="bkc-edit" data-a="em" data-k="${bentrokEsc(r.key)}">Edit</button><button class="bkc-del" data-a="hm" data-k="${bentrokEsc(r.key)}">Hapus</button>`;
+        return `<div class="bkc-row"><div>${tag}: ${bentrokEsc(nama)}${ket}</div><div class="bkc-act">${aksi}</div></div>`;
+    };
+    const isiList = temuan.length
+        ? temuan.map(t => `<div class="bkc-item"><div class="bkc-jenis">${bentrokEsc(t.jenis)}</div><div class="bkc-waktu">${bentrokEsc(waktu(t))}</div>${t.baris.map(rowHtml).join('')}</div>`).join('')
+        : `<div class="bkc-ok">✅ Tidak ada jadwal bentrok${scope === 'semua' ? ' pada data yang termuat' : ' dari hari ini ke depan'}.</div>`;
+
+    const modal = document.createElement('div');
+    modal.id = 'modal-cek-bentrok';
+    modal.innerHTML = `<div class="bkc-box">
+        <div class="bkc-head"><h3>🔍 Cek Bentrok Jadwal${temuan.length ? ' (' + temuan.length + ')' : ''}</h3><button type="button" class="bkc-close" data-a="x">✕</button></div>
+        <div class="bkc-tools"><span>Cakupan:</span>
+            <select id="bkc-scope"><option value="depan"${scope === 'depan' ? ' selected' : ''}>Hari ini ke depan</option><option value="semua"${scope === 'semua' ? ' selected' : ''}>Semua data (termasuk riwayat)</option></select>
+        </div>
+        <div class="bkc-body">${isiList}</div></div>`;
+    modal.addEventListener('click', async (ev) => {
+        if(ev.target === modal) return window.tutupCekBentrok();
+        const btn = ev.target.closest('[data-a]');
+        if(!btn) return;
+        const a = btn.dataset.a, k = btn.dataset.k;
+        if(a === 'x') return window.tutupCekBentrok();
+        const sc = document.getElementById('bkc-scope')?.value || 'depan';
+        window.tutupCekBentrok();
+        if(a === 'eb') window.editBooking(k);
+        else if(a === 'em') window.editMember(k);
+        else if(a === 'hb') { await window.hapusBooking(k); setTimeout(() => window.cekBentrokJadwal(sc), 500); }
+        else if(a === 'hm') { await window.hapusMember(k); setTimeout(() => window.cekBentrokJadwal(sc), 500); }
+    });
+    modal.addEventListener('change', (ev) => { if(ev.target.id === 'bkc-scope') window.cekBentrokJadwal(ev.target.value); });
+    document.body.appendChild(modal);
+};
+
+/* Badge jumlah bentrok pada tombol (diperbarui setiap grid dirender ulang). */
+(function(){
+    let timer = null;
+    function perbarui(){
+        const el = document.getElementById('badge-cek-bentrok');
+        if(!el) return;
+        let n = 0;
+        try { if(globalCache.__initialBookingLoaded) n = bentrokScan(false).length; } catch(_) {}
+        el.textContent = n;
+        el.style.display = n > 0 ? 'inline-flex' : 'none';
+    }
+    const target = document.getElementById('booking-schedule-periods');
+    if(target) new MutationObserver(() => { clearTimeout(timer); timer = setTimeout(perbarui, 700); }).observe(target, { childList:true });
+})();
+
+
+/* =========================================================
    PENJADWAL RENDER (render batching) — PERBAIKAN PERFORMA
    =========================================================
    Halaman Admin punya banyak listener realtime (booking, sparring,
@@ -14444,6 +14767,12 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                     return;
                 }
 
+                if(window.__savingBookingLock) return;
+                const __bentrokBooking = bentrokCekBookingBaru(tglInput, jamInput, durasi);
+                if(__bentrokBooking.length) { alert(bentrokPesanBooking(tglInput, __bentrokBooking)); return; }
+                window.__savingBookingLock = true;
+                setTimeout(() => { window.__savingBookingLock = false; }, 3000);
+
                 const bookingGroupId = `BG-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
                 const tanggalAwal = new Date(`${tglInput}T00:00:00`);
                 const bookingRecords = [];
@@ -14471,6 +14800,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 for(const record of bookingRecords) {
                     await push(ref(db, 'booking'), record);
                 }
+                window.__savingBookingLock = false;
                 showSuccessPopup(`Booking ${namaBooking} berhasil disimpan untuk ${durasi} jam (${jamInput}–${String(endExclusive).padStart(2, '0')}:00).`);
                 e.target.reset();
                 setDefaultDates();
@@ -15613,9 +15943,16 @@ kaosKakiTerjual: jumlahKaosKaki,
             let jam = document.getElementById('m-jam').value;
             let mulai = document.getElementById('m-mulai').value || getLocalDateString();
 
+            if(window.__savingMemberLock) return;
+            const __bentrokMember = bentrokCekMemberBaru({ nama, hari, jam, mulai });
+            if(__bentrokMember.length) { alert(bentrokPesanMember({ nama, hari, jam, mulai }, __bentrokMember)); return; }
+            window.__savingMemberLock = true;
+            setTimeout(() => { window.__savingMemberLock = false; }, 3000);
+
             try {
                 let wa = document.getElementById('m-wa')?.value.trim() || '';
                 await push(ref(db, 'member'), { nama, wa, hari, jam, mulai, berhenti: '' });
+                window.__savingMemberLock = false;
                 alert(`Jadwal berhasil ditambahkan mulai ${mulai}!`);
                 document.getElementById('form-member').reset();
                 document.getElementById('m-mulai').value = getLocalDateString();
@@ -15636,6 +15973,7 @@ kaosKakiTerjual: jumlahKaosKaki,
                     if(cell && String(cell.key || '') === String(key)) current = cell;
                 });
             });
+            if(!current) current = (globalCache.memberRawEntries || []).find(e => String(e.key) === String(key)) || null;
             if(!current) { alert('Data member tidak ditemukan.'); return; }
 
             const esc = v => String(v ?? '')
@@ -15689,6 +16027,14 @@ kaosKakiTerjual: jumlahKaosKaki,
             const mulai = document.getElementById('edit-member-mulai')?.value;
             const wa = document.getElementById('edit-member-wa')?.value.trim() || '';
             if(!nama || !hari || !jam || !mulai) { alert('Mohon lengkapi data member.'); return; }
+            {
+                const __lama = (globalCache.memberRawEntries || []).find(e => String(e.key) === String(key)) || {};
+                const __berubah = String(__lama.hari || '') !== hari || bentrokJam(__lama.jam) !== bentrokJam(jam) || String(__lama.mulai || '') !== mulai;
+                if(__berubah) {
+                    const __b = bentrokCekMemberBaru({ nama, hari, jam, mulai, berhenti: __lama.berhenti || '', excludeKey: key, libur: __lama.liburTanggal });
+                    if(__b.length) { alert(bentrokPesanMember({ nama, hari, jam, mulai }, __b)); return; }
+                }
+            }
             try {
                 await update(ref(db, 'member/' + key), { nama, hari, jam, mulai, wa });
                 document.getElementById('modal-edit-member-permanent')?.remove();
@@ -16289,6 +16635,19 @@ kaosKakiTerjual: jumlahKaosKaki,
             if(!nama || !tanggal || !jam || !status || isNaN(dp) || dp < 0) {
                 alert('Mohon lengkapi data dengan benar.');
                 return;
+            }
+
+            {
+                const __exist = globalCache.booking?.[key] || {};
+                const __lama = String(__exist.tgl || '').split('T');
+                const __berubah = !(__lama[0] === tanggal && bentrokJam(__lama[1]) === bentrokJam(jam));
+                if(__berubah) {
+                    const __konflik = bentrokCekSlot(tanggal, jam, {
+                        excludeBookingKeys: [key],
+                        excludeMemberKey: (__exist.oneDayOverride === true && __exist.memberSourceKey) ? __exist.memberSourceKey : ''
+                    });
+                    if(__konflik.length) { alert(bentrokPesanBooking(tanggal, [{ jam, konflik: __konflik }])); return; }
+                }
             }
 
             try {
@@ -22006,8 +22365,9 @@ return;
                 const weekDay = weekDates.find(d => d.dateStr === datePart);
                 if(!weekDay || !isActiveDate(datePart)) return;
                 const slotKey = `${datePart}|${jamFormat}`;
-                if(bookingBySlot[slotKey]) return;
+                if(bookingBySlot[slotKey] && !(bookingBySlot[slotKey].__batal && b.batal !== true)) return;
                 bookingBySlot[slotKey] = {
+                    __batal: b.batal === true,
                     nama: b.nama,
                     type: b.status === 'Member' ? 'member' : 'nonmember',
                     bookingKey,
