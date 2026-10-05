@@ -13220,6 +13220,101 @@ window.cekBentrokJadwal = (scope) => {
     if(target) new MutationObserver(() => { clearTimeout(timer); timer = setTimeout(perbarui, 700); }).observe(target, { childList:true });
 })();
 
+/* =========================================================
+   AUTO-ISI NOMOR WA DI FORM BOOKING
+   Nomor dicari dari data yang sudah tersimpan berdasarkan nama tim.
+   Urutan sumber: Profil Tim (hasil edit admin) -> Booking terbaru
+   -> Member tetap -> Member tanpa jadwal tetap -> Sparring.
+   ========================================================= */
+function waNorm(v){ return String(v == null ? '' : v).trim().toLowerCase().replace(/[^a-z0-9]+/g, ''); }
+function waAmbil(o){ return String((o && (o.wa ?? o.noHp ?? o.whatsapp)) ?? '').trim(); }
+
+function waCariTersimpan(nama){
+    const t = waNorm(nama);
+    if(!t) return null;
+
+    for(const p of Object.values(globalCache.teamProfiles || {})){
+        if(p && (waNorm(p.nama) === t || waNorm(p.normalizedNama) === t) && waAmbil(p)) return { wa: waAmbil(p), sumber: 'profil tim' };
+    }
+
+    let terbaru = null;
+    Object.values(globalCache.booking || {}).forEach(b => {
+        if(!b || waNorm(b.nama) !== t) return;
+        const wa = waAmbil(b);
+        if(!wa) return;
+        const urut = String(b.tgl || '') + '|' + String(b.timestamp || 0).padStart(15, '0');
+        if(!terbaru || urut > terbaru.urut) terbaru = { urut, wa };
+    });
+    if(terbaru) return { wa: terbaru.wa, sumber: 'booking sebelumnya' };
+
+    for(const m of (globalCache.memberRawEntries || [])){
+        if(m && !m.isOff && waNorm(m.nama) === t && waAmbil(m)) return { wa: waAmbil(m), sumber: 'data member' };
+    }
+    for(const m of Object.values(globalCache.memberTanpaJadwal || {})){
+        if(m && waNorm(m.nama) === t && waAmbil(m)) return { wa: waAmbil(m), sumber: 'data member' };
+    }
+    for(const s of Object.values(globalCache.sparring || {})){
+        if(!s) continue;
+        if(waNorm(s.timA) === t && waAmbil(s)) return { wa: waAmbil(s), sumber: 'data sparring' };
+        const wb = String(s.waB || s.waTimB || '').trim();
+        if(waNorm(s.timB) === t && wb) return { wa: wb, sumber: 'data sparring' };
+    }
+    return null;
+}
+
+function waDaftarNamaTim(){
+    const peta = new Map();
+    const tambah = n => { n = String(n || '').trim(); if(n && n.toUpperCase() !== 'OFF' && !peta.has(waNorm(n))) peta.set(waNorm(n), n); };
+    Object.values(globalCache.teamProfiles || {}).forEach(p => tambah(p && p.nama));
+    Object.values(globalCache.booking || {}).forEach(b => { if(b && b.sparringOpponent !== true) tambah(b.nama); });
+    (globalCache.memberRawEntries || []).forEach(m => { if(m && !m.isOff) tambah(m.nama); });
+    Object.values(globalCache.memberTanpaJadwal || {}).forEach(m => tambah(m && m.nama));
+    return Array.from(peta.values()).sort((a, b) => a.localeCompare(b, 'id', { sensitivity: 'base' }));
+}
+
+(function(){
+    const inpNama = document.getElementById('b-nama');
+    const inpWa = document.getElementById('b-wa');
+    if(!inpNama || !inpWa) return;
+
+    const hint = document.createElement('div');
+    hint.id = 'b-wa-hint';
+    hint.style.cssText = 'display:none;font-size:11px;font-weight:800;color:#047857;margin:-6px 0 10px;';
+    inpWa.insertAdjacentElement('afterend', hint);
+
+    const dl = document.createElement('datalist');
+    dl.id = 'b-nama-list';
+    document.body.appendChild(dl);
+    inpNama.setAttribute('list', 'b-nama-list');
+    inpNama.setAttribute('autocomplete', 'off');
+
+    let otomatis = false;
+    const tampilHint = t => { hint.textContent = t || ''; hint.style.display = t ? 'block' : 'none'; };
+
+    function terapkan(){
+        const hasil = waCariTersimpan(inpNama.value);
+        const kosong = inpWa.value.trim() === '';
+        if(hasil && (kosong || otomatis)){
+            inpWa.value = hasil.wa;
+            otomatis = true;
+            tampilHint('✓ Nomor terisi otomatis dari ' + hasil.sumber + '. Ubah jika nomornya berbeda.');
+        } else if(!hasil && otomatis){
+            inpWa.value = '';
+            otomatis = false;
+            tampilHint('');
+        }
+    }
+
+    inpNama.addEventListener('focus', () => {
+        // Muat seluruh riwayat booking agar nomor lama ikut terbaca.
+        try { if(typeof startBookingFullHistoryListener === 'function') startBookingFullHistoryListener(); } catch(_) {}
+        dl.innerHTML = waDaftarNamaTim().map(n => '<option value="' + bentrokEsc(n) + '"></option>').join('');
+    });
+    ['input', 'change', 'blur'].forEach(ev => inpNama.addEventListener(ev, terapkan));
+    inpWa.addEventListener('input', () => { otomatis = false; tampilHint(''); });
+    inpNama.form && inpNama.form.addEventListener('reset', () => { otomatis = false; tampilHint(''); });
+})();
+
 
 /* =========================================================
    PENJADWAL RENDER (render batching) — PERBAIKAN PERFORMA
