@@ -11634,6 +11634,9 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
   <select class="masuk-native-control" id="in-tambahan-waktu" onchange="hitungOtomatisBiaya()">
     <option value="0">Tidak ada perubahan</option>
     <option value="30">+ 30 menit</option>
+    <option value="60">+ 1 jam</option>
+    <option value="90">+ 1 jam 30 menit</option>
+    <option value="120">+ 2 jam</option>
     <option value="-30">− 30 menit</option>
   </select>
 </div>
@@ -11727,18 +11730,6 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
   <p id="info-diskon-member-alokasi" class="text-[10px] text-blue-800 font-black">Diskon Member: Rp25.000/jam per tim</p>
 </div>
 
-<div class="uang-masuk-socks-card" id="in-kaos-kaki-card">
-  <label class="flex items-center gap-2 cursor-pointer">
-    <input class="w-4 h-4 rounded accent-sky-600" id="in-kaos-kaki" onchange="updateKaosKakiMasuk()" type="checkbox"/>
-    <span class="text-sm font-black text-slate-900">🧦 PENJUALAN KAOS KAKI · Rp 30.000 / pcs</span>
-  </label>
-  <div id="in-kaos-kaki-options" class="hidden mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-    <select id="in-kaos-kaki-qty" class="w-full p-2 rounded-xl text-sm glass-input font-bold" onchange="updateKaosKakiMasuk()">
-      <option value="1">1 Pcs</option><option value="2">2 Pcs</option><option value="3">3 Pcs</option><option value="4">4 Pcs</option><option value="5">5 Pcs</option><option value="6">6 Pcs</option><option value="7">7 Pcs</option><option value="8">8 Pcs</option><option value="9">9 Pcs</option><option value="10">10 Pcs</option>
-    </select>
-    <div id="in-kaos-kaki-total" class="rounded-xl bg-sky-50/80 border border-sky-200 px-3 py-2 text-sm font-black text-sky-900 flex items-center">Tambahan: Rp 30.000</div>
-  </div>
-</div>
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 uang-masuk-payment-wrap">
 <div class="p-3 rounded-xl border border-emerald-500/40 space-y-2 bg-white/30 uang-masuk-payment-card">
 <label id="label-pembayaran-tim-1" class="block text-xs font-black text-emerald-950">Pembayaran Tim 1</label>
@@ -14251,11 +14242,36 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             // 3 jam - 30 menit = 2,5 jam. Begitu juga +30 menit: 1,5 / 2,5 / 3,5 jam.
             // Jika tarif tiap jam berbeda, 30 menit memakai 50% tarif jam yang relevan.
             let biayaTambahanWaktu = 0;
+            // Versi tanpa diskon member dari biaya tambahan (dipakai untuk menghitung
+            // total diskon member di transaksi Tim Internal).
+            let biayaTambahanWaktuNonMember = 0;
+            // Jumlah JAM PENUH tambahan (30 menit tidak termasuk) -> dasar diskon member Rp50.000/jam.
+            const jamPenuhTambahan = tambahanMenit > 0 ? Math.floor(tambahanMenit / 60) : 0;
             if (tambahanMenit > 0 && tgl && jamAkhirBooking) {
                 // Waktu tambahan dimulai setelah jam booking terakhir.
-                // +30 menit = 50% tarif jam berikutnya.
-                const tarifJamBerikutnya = getHargaLapangan(tgl, jamAkhirBooking, isSparingPayment ? 'Non-Member' : selectedStatus);
-                biayaTambahanWaktu = Math.round(tarifJamBerikutnya * tambahanJam);
+                // - Setiap JAM PENUH memakai tarif jam tersebut (member: potongan Rp50.000/jam).
+                // - Sisa 30 menit = 50% tarif Non-Member (30 menit TIDAK dihitung diskon member).
+                const statusTarifTambahan = isSparingPayment ? 'Non-Member' : selectedStatus;
+                const jamTerakhirBooked = effectiveJamList.length ? effectiveJamList[effectiveJamList.length - 1] : jam;
+                const tarifTambahanJam = (offsetJam, statusTarif) => {
+                    let h = parseInt(String(jamAkhirBooking).substring(0, 2), 10) + offsetJam;
+                    h = h % 24;
+                    if (h === 0) h = 24; // tengah malam dihitung sebagai jam 24 (kolom tarif 18-24)
+                    let t = getHargaLapangan(tgl, `${String(h).padStart(2, '0')}:00`, statusTarif);
+                    // Jam di luar daftar tarif (mis. lewat tengah malam): ikuti tarif jam booking terakhir.
+                    if (!t && jamTerakhirBooked) t = getHargaLapangan(tgl, jamTerakhirBooked, statusTarif);
+                    return t;
+                };
+                const sisaMenitTambahan = tambahanMenit % 60;
+                for (let k = 0; k < jamPenuhTambahan; k++) {
+                    biayaTambahanWaktu += tarifTambahanJam(k, statusTarifTambahan);
+                    biayaTambahanWaktuNonMember += tarifTambahanJam(k, 'Non-Member');
+                }
+                if (sisaMenitTambahan > 0) {
+                    const separuhJam = Math.round(tarifTambahanJam(jamPenuhTambahan, 'Non-Member') * (sisaMenitTambahan / 60));
+                    biayaTambahanWaktu += separuhJam;
+                    biayaTambahanWaktuNonMember += separuhJam;
+                }
             } else if (tambahanMenit < 0 && tgl) {
                 // Waktu yang dikurangi selalu diambil dari jam terakhir booking.
                 // -30 menit = -50% tarif jam terakhir.
@@ -14266,6 +14282,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                     const tarifJamTerakhir = getHargaLapangan(tgl, jamTerakhir, isSparingPayment ? 'Non-Member' : selectedStatus);
                     biayaTambahanWaktu = -Math.round(tarifJamTerakhir * Math.abs(tambahanJam));
                 }
+                biayaTambahanWaktuNonMember = biayaTambahanWaktu;
             }
             hargaTotalLapangan += biayaTambahanWaktu;
 
@@ -14305,22 +14322,25 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 const normalizeStatus = value => String(value || '').trim().toLowerCase().replace(/[ _-]/g, '');
                 const tim1Member = normalizeStatus(selectedStatus) === 'member';
                 const tim2Member = normalizeStatus(second.status) === 'member';
+                // Diskon member Rp50.000 per jam. Tambahan 30 menit tidak diberi diskon,
+                // sedangkan tambahan jam penuh (1 jam, 1,5 jam, 2 jam) menambah diskon Rp50.000 per jamnya.
+                const diskonMemberTotalSparing = 50000 * (1 + jamPenuhTambahan);
 
                 if (tim1Member && tim2Member) {
                     if (diskonMemberAlokasi === 'tim1') {
-                        diskonNormalMemberTim1 = 50000;
+                        diskonNormalMemberTim1 = diskonMemberTotalSparing;
                         diskonNormalMemberTim2 = 0;
                     } else if (diskonMemberAlokasi === 'tim2') {
                         diskonNormalMemberTim1 = 0;
-                        diskonNormalMemberTim2 = 50000;
+                        diskonNormalMemberTim2 = diskonMemberTotalSparing;
                     } else {
-                        diskonNormalMemberTim1 = 25000;
-                        diskonNormalMemberTim2 = 25000;
+                        diskonNormalMemberTim1 = diskonMemberTotalSparing / 2;
+                        diskonNormalMemberTim2 = diskonMemberTotalSparing / 2;
                     }
                 } else if (tim1Member) {
-                    diskonNormalMemberTim1 = 50000;
+                    diskonNormalMemberTim1 = diskonMemberTotalSparing;
                 } else if (tim2Member) {
-                    diskonNormalMemberTim2 = 50000;
+                    diskonNormalMemberTim2 = diskonMemberTotalSparing;
                 }
 
                 hargaTim1 = Math.max(0, hargaTim1 - diskonNormalMemberTim1);
@@ -14349,7 +14369,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 const hargaTanpaMember = effectiveJamList.length
                     ? effectiveJamList.reduce((sum, jj) => sum + getHargaLapangan(tgl, jj, 'Non-Member'), 0)
                     : ((jam && tgl) ? getHargaLapangan(tgl, jam, 'Non-Member') : 0);
-                let hargaTanpaMemberDisesuaikan = hargaTanpaMember + biayaTambahanWaktu;
+                let hargaTanpaMemberDisesuaikan = hargaTanpaMember + biayaTambahanWaktuNonMember;
                 diskonNormalMemberTim1 = Math.max(0, hargaTanpaMemberDisesuaikan - hargaTim1);
 // Pada transaksi internal hanya Tim 1 yang tersedia. Jika admin memilih Tim 2,
                 // arahkan otomatis ke Tim 1 agar diskon tidak hilang.
@@ -14464,7 +14484,11 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 if (pakaiBola) r.push(`Bola ${formatRupiah(biayaBola)}`);
                 if (pakaiRompi1) r.push(`Rompi Tim 1 ${formatRupiah(rompiTim1)}`);
                 if (isSparingPayment && pakaiRompi2) r.push(`Rompi Tim 2 ${formatRupiah(rompiTim2)}`);
-                if (tambahanMenit > 0) r.push(`Tambah ${tambahanMenit} menit ${formatRupiah(biayaTambahanWaktu)}`);
+                if (tambahanMenit > 0) {
+                    const _jp = Math.floor(tambahanMenit / 60), _mp = tambahanMenit % 60;
+                    const _lbl = [_jp > 0 ? `${_jp} jam` : '', _mp > 0 ? `${_mp} menit` : ''].filter(Boolean).join(' ');
+                    r.push(`Tambah ${_lbl} ${formatRupiah(biayaTambahanWaktu)}`);
+                }
                 infoSewa.innerText = r.length ? `Tambahan: ${r.join(' · ')}` : 'Biaya tambahan sewa: Rp 0';
             }
             const infoDiskon = document.getElementById('info-diskon-khusus');
@@ -14652,17 +14676,6 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             });
         };
 
-        window.updateKaosKakiMasuk = () => {
-            const cb = document.getElementById('in-kaos-kaki');
-            const opts = document.getElementById('in-kaos-kaki-options');
-            const qtyEl = document.getElementById('in-kaos-kaki-qty');
-            const totalEl = document.getElementById('in-kaos-kaki-total');
-            const qty = Number(qtyEl?.value || 1);
-            const total = cb?.checked ? qty * 30000 : 0;
-            if(opts) opts.classList.toggle('hidden', !cb?.checked);
-            if(totalEl) totalEl.textContent = `Tambahan: ${formatRupiah(total)}`;
-            return total;
-        };
 
         function getBookingForPaymentTeam(nama,tgl,jam){const target=String(nama||'').trim().toLowerCase(),j=String(jam||'').substring(0,5);if(!target||!tgl)return null;return Object.entries(globalCache.booking||{}).find(([k,b])=>b&&String(b.tgl||'').split('T')[0]===String(tgl)&&String(b.tgl||'').split('T')[1]?.substring(0,5)===j&&String(b.nama||'').trim().toLowerCase()===target)||null;}
         function getSparingTeamNamesForPayment(nama,tgl,jam){const cur=String(nama||'').trim(),rec=getSparingForTeam(cur,tgl,String(jam||'').substring(0,5)),s=rec?.[1];if(!s||String(s.status||'').toLowerCase()!=='matched')return {tim1:cur,tim2:''};const a=String(s.timA||'').trim(),b=String(s.timB||'').trim(),x=cur.toLowerCase();return {tim1:a.toLowerCase()===x?a:(b.toLowerCase()===x?b:cur),tim2:a.toLowerCase()===x?b:(b.toLowerCase()===x?a:b)};}
@@ -15030,9 +15043,6 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 let jml2 = (met2 === 'Free') ? 0 : jml2Input;
                 const jml2b = campur2 ? parseNominalInputValue(document.getElementById("in-jumlah-2b")?.value || "") : 0;
                 if((campur1 && jml1b <= 0) || (campur2 && jml2b <= 0)) { alert('Nominal metode kedua harus diisi jika pembayaran campuran dipilih.'); return; }
-                const kaosKakiAktif = !!document.getElementById('in-kaos-kaki')?.checked;
-                const jumlahKaosKaki = kaosKakiAktif ? Number(document.getElementById('in-kaos-kaki-qty')?.value || 1) : 0;
-                const totalKaosKaki = jumlahKaosKaki * 30000;
                 let tgl = document.getElementById('in-tgl').value;
                 const dpManual1 = parseNominalInputValue(document.getElementById("in-dp-1")?.value || "");
                 const dpManual2 = parseNominalInputValue(document.getElementById("in-dp-2")?.value || "");
@@ -15071,7 +15081,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 const totalTagihanPenyesuaianTim2 = Number(window.__pelunasanCalc?.totalAkhir2 || 0);
 
                 data = { 
-                    ket: `Pelunasan ${tim} (${jamMain})${ketTambahanStr}${kaosKakiAktif ? ` + Kaos Kaki ${jumlahKaosKaki} pcs (${formatRupiah(totalKaosKaki)})` : ''}`, 
+                    ket: `Pelunasan ${tim} (${jamMain})${ketTambahanStr}`, 
                     timNamaBersih: tim.replace(/\s*\(.*\)/g, '').trim(),
                     timNama2: timNama2,
                     // Simpan status kedua tim agar Daily Recap dan hasil download
@@ -15112,9 +15122,6 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                     // dan 2 jam + 30 menit = 2,5 jam).
                     totalTagihanSetelahPenyesuaian: totalTagihanPenyesuaian,
                     totalTagihanSetelahPenyesuaianTim2: totalTagihanPenyesuaianTim2,
-kaosKakiTerjual: jumlahKaosKaki,
-                    totalKaosKaki: totalKaosKaki,
-                    hargaKaosKakiPerPcs: 30000,
                     totalDiskonTim1: Number(window.__pelunasanCalc?.diskonNormalMemberTim1 || 0),
                     totalDiskonTim2: Number(window.__pelunasanCalc?.diskonNormalMemberTim2 || 0),
                     // Penanda eksplisit untuk -30 menit. DP + pembayaran saat ini
@@ -15135,7 +15142,7 @@ kaosKakiTerjual: jumlahKaosKaki,
                     })(),
                     // Catatan: totalTim1 = jml1 + jml1b (lihat definisi di atas),
                     // jadi jml1b TIDAK ditambahkan lagi di sini agar tidak dobel hitung.
-                    jumlah: totalTim1 + jml2 + (isSparingPayment && campur2 ? jml2b : 0) + totalKaosKaki,
+                    jumlah: totalTim1 + jml2 + (isSparingPayment && campur2 ? jml2b : 0),
                     tgl: tgl
                 };
             } else if(type === 'minuman') {
@@ -39421,11 +39428,6 @@ body.daily-sub-modal-v6-open > main #sub-page-ringkasan{
 #page-masuk .masuk-field-card .masuk-field-label{display:none !important;}
 #page-masuk .masuk-field-card .masuk-field-note{display:none !important;}
 #page-masuk .masuk-field-card .masuk-field-value{min-height:46px !important; padding:12px 14px !important;}
-#page-masuk .uang-masuk-socks-card{
-  margin:0 0 12px; padding:12px 14px; border:1px solid rgba(56,189,248,.30);
-  border-radius:16px; background:rgba(255,255,255,.16); box-shadow:none; backdrop-filter:none;
-}
-#page-masuk .uang-masuk-socks-card .glass-input{background:rgba(255,255,255,.34) !important; box-shadow:none !important; backdrop-filter:none !important;}
 </style>
 
 <style id="uang-masuk-field-cards-final-v12">
@@ -41123,8 +41125,7 @@ body:has(#modal-edit-booking) {
       'in-metode-1':'Metode Pembayaran Tim 1',
       'in-metode-1b':'Metode Kedua Tim 1',
       'in-metode-2':'Metode Pembayaran Tim 2',
-      'in-metode-2b':'Metode Kedua Tim 2',
-      'in-kaos-kaki-qty':'Jumlah Kaos Kaki'
+      'in-metode-2b':'Metode Kedua Tim 2'
     };
     return labels[id] || sel?.closest('.masuk-field-card')?.getAttribute('aria-label') || 'Pilih Opsi';
   }
