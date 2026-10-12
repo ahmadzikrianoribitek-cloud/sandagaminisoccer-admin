@@ -10652,6 +10652,50 @@ body > header {
     </div>
   </div>
 
+  <!-- PANEL UPLOAD LATAR POSTER (muncul saat mode "background") -->
+  <div id="poster-bg-panel">
+    <div class="pbg-head">
+      <h3>🖼️ Latar Poster Customer</h3>
+      <p>Upload desain baru (PNG atau JPG). Rasio & tata letak kotak harus sama seperti desain lama (9:16). Setelah disimpan, poster di web customer langsung memakai gambar baru.</p>
+    </div>
+    <div class="pbg-grid">
+      <div class="pbg-card" data-kind="sparing">
+        <div class="pbg-title">🔎 Latar Cari Lawan Sparing</div>
+        <div class="pbg-preview"><img alt="Preview latar cari lawan sparing" id="pbg-img-sparing"><span class="pbg-empty" id="pbg-empty-sparing">Memakai gambar bawaan (latarsparing.png)</span></div>
+        <div class="pbg-file" data-kind="sparing">
+          <input type="file" id="pbg-file-sparing" class="pbg-file-input" accept="image/png,image/jpeg,.png,.jpg,.jpeg" onchange="pbgPick('sparing',this)">
+          <label for="pbg-file-sparing" class="pbg-file-btn">
+            <span class="pbg-file-ico">🖼️</span>
+            <span class="pbg-file-text"><strong>Pilih Gambar</strong><small id="pbg-fname-sparing">PNG atau JPG • rasio 9:16 • bisa tarik &amp; lepas</small></span>
+            <span class="pbg-file-arrow">›</span>
+          </label>
+        </div>
+        <div class="pbg-actions">
+          <button type="button" class="pbg-save" id="pbg-save-sparing" onclick="pbgSave('sparing')" disabled>SIMPAN</button>
+          <button type="button" class="pbg-reset" onclick="pbgReset('sparing')">RESET KE BAWAAN</button>
+        </div>
+        <div class="pbg-status" id="pbg-status-sparing"></div>
+      </div>
+      <div class="pbg-card" data-kind="lawan">
+        <div class="pbg-title">🤝 Latar Match Founded (Lawan)</div>
+        <div class="pbg-preview"><img alt="Preview latar match founded" id="pbg-img-lawan"><span class="pbg-empty" id="pbg-empty-lawan">Memakai gambar bawaan (latarlawan.png)</span></div>
+        <div class="pbg-file" data-kind="lawan">
+          <input type="file" id="pbg-file-lawan" class="pbg-file-input" accept="image/png,image/jpeg,.png,.jpg,.jpeg" onchange="pbgPick('lawan',this)">
+          <label for="pbg-file-lawan" class="pbg-file-btn">
+            <span class="pbg-file-ico">🖼️</span>
+            <span class="pbg-file-text"><strong>Pilih Gambar</strong><small id="pbg-fname-lawan">PNG atau JPG • rasio 9:16 • bisa tarik &amp; lepas</small></span>
+            <span class="pbg-file-arrow">›</span>
+          </label>
+        </div>
+        <div class="pbg-actions">
+          <button type="button" class="pbg-save" id="pbg-save-lawan" onclick="pbgSave('lawan')" disabled>SIMPAN</button>
+          <button type="button" class="pbg-reset" onclick="pbgReset('lawan')">RESET KE BAWAAN</button>
+        </div>
+        <div class="pbg-status" id="pbg-status-lawan"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="sparring-form-wrap">
     <div class="flex items-center justify-between gap-2 mb-3">
       <div>
@@ -10773,6 +10817,14 @@ body > header {
         <span class="sparing-chooser-copy">
           <strong>List Sparing</strong>
           <small>Lihat semua daftar sparing, lalu edit atau hapus datanya.</small>
+        </span>
+        <span class="sparing-chooser-arrow">›</span>
+      </button>
+      <button type="button" class="sparing-chooser-btn" onclick="openPosterBackgroundPanel()">
+        <span class="sparing-chooser-icon">🖼️</span>
+        <span class="sparing-chooser-copy">
+          <strong>Upload Latar Poster</strong>
+          <small>Ganti desain latar poster Cari Lawan Sparing & Match Founded (PNG/JPG).</small>
         </span>
         <span class="sparing-chooser-arrow">›</span>
       </button>
@@ -32490,6 +32542,220 @@ document.addEventListener('DOMContentLoaded', function(){
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',startObserver,{once:true});
   else startObserver();
+})();
+</script>
+
+<style id="poster-bg-admin-style">
+#poster-bg-panel{display:none;margin-bottom:16px}
+#page-sparring[data-sparring-mode="background"] #poster-bg-panel{display:block}
+#page-sparring[data-sparring-mode="background"] .sparring-summary-grid,
+#page-sparring[data-sparring-mode="background"] .sparring-form-wrap,
+#page-sparring[data-sparring-mode="background"] .sparring-list-wrap{display:none!important}
+#poster-bg-panel .pbg-head{padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.94);border:1px solid rgba(148,163,184,.28);margin-bottom:12px}
+#poster-bg-panel .pbg-head h3{margin:0;font-size:.95rem;font-weight:950;color:#0f172a}
+#poster-bg-panel .pbg-head p{margin:6px 0 0;font-size:.68rem;line-height:1.4;font-weight:700;color:#64748b}
+#poster-bg-panel .pbg-grid{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:700px){#poster-bg-panel .pbg-grid{grid-template-columns:1fr 1fr}}
+#poster-bg-panel .pbg-card{padding:14px;border-radius:16px;background:rgba(255,255,255,.94);border:1px solid rgba(148,163,184,.28);box-shadow:0 5px 18px rgba(15,23,42,.055)}
+#poster-bg-panel .pbg-title{font-size:.78rem;font-weight:950;color:#0f172a;margin-bottom:10px}
+#poster-bg-panel .pbg-preview{position:relative;width:min(100%,220px);aspect-ratio:9/16;margin:0 auto 10px;border-radius:12px;overflow:hidden;background:#0a0a0a;border:1px solid #cbd5e1;display:grid;place-items:center}
+#poster-bg-panel .pbg-preview img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
+#poster-bg-panel .pbg-empty{padding:10px;text-align:center;font-size:.62rem;font-weight:800;color:#cbd5e1;line-height:1.35}
+#poster-bg-panel .pbg-file{position:relative;margin-bottom:10px}
+#poster-bg-panel .pbg-file-input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
+#poster-bg-panel .pbg-file-btn{display:grid;grid-template-columns:44px minmax(0,1fr) 18px;align-items:center;gap:12px;width:100%;box-sizing:border-box;padding:11px 14px;border:2px dashed #93c5fd;border-radius:14px;background:linear-gradient(135deg,#eff6ff,#f8fafc);cursor:pointer;transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease,background .15s ease}
+#poster-bg-panel .pbg-file-btn:hover{transform:translateY(-1px);border-color:#3b82f6;background:linear-gradient(135deg,#dbeafe,#f1f5f9);box-shadow:0 8px 18px rgba(37,99,235,.14)}
+#poster-bg-panel .pbg-file-btn:active{transform:translateY(0)}
+#poster-bg-panel .pbg-file-input:focus-visible + .pbg-file-btn{outline:3px solid rgba(37,99,235,.35);outline-offset:2px}
+#poster-bg-panel .pbg-file.is-drag .pbg-file-btn{border-color:#2563eb;background:#dbeafe;box-shadow:0 0 0 4px rgba(37,99,235,.15)}
+#poster-bg-panel .pbg-file.has-file .pbg-file-btn{border-style:solid;border-color:#34d399;background:linear-gradient(135deg,#ecfdf5,#f8fafc)}
+#poster-bg-panel .pbg-file-ico{width:44px;height:44px;display:grid;place-items:center;border-radius:12px;background:#fff;border:1px solid #dbeafe;font-size:1.25rem;box-shadow:0 2px 6px rgba(15,23,42,.06)}
+#poster-bg-panel .pbg-file-text{min-width:0;text-align:left}
+#poster-bg-panel .pbg-file-text strong{display:block;font-size:.76rem;font-weight:950;color:#0f172a;line-height:1.2}
+#poster-bg-panel .pbg-file-text small{display:block;margin-top:3px;font-size:.6rem;font-weight:700;color:#64748b;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#poster-bg-panel .pbg-file-arrow{color:#94a3b8;font-size:1.3rem;font-weight:900;text-align:center}
+#poster-bg-panel .pbg-actions{display:flex;gap:8px;flex-wrap:wrap}
+#poster-bg-panel .pbg-actions button{flex:1 1 120px;border:0;border-radius:11px;padding:10px 12px;font-size:.68rem;font-weight:950;cursor:pointer}
+#poster-bg-panel .pbg-save{color:#fff;background:linear-gradient(135deg,#059669,#047857)}
+#poster-bg-panel .pbg-save:disabled{opacity:.45;cursor:not-allowed}
+#poster-bg-panel .pbg-reset{color:#475569;background:#e2e8f0}
+#poster-bg-panel .pbg-status{margin-top:8px;min-height:1.1em;font-size:.66rem;font-weight:800;color:#475569;line-height:1.35}
+#poster-bg-panel .pbg-status.ok{color:#047857}
+#poster-bg-panel .pbg-status.err{color:#b91c1c}
+</style>
+
+<script id="poster-bg-admin-script">
+(function(){
+  'use strict';
+  var PATH='settings/posterBackground';
+  var KINDS={sparing:'sparing',lawan:'lawan'};
+  var pending={sparing:null,lawan:null};
+  var MAX_INPUT=15*1024*1024;      // batas file asli 15 MB
+  var MAX_W=1080, MAX_H=1920;      // poster 9:16
+  var MAX_CHARS=900000;            // target ukuran hasil (teks base64) agar ringan dibuka customer
+
+  function $(id){return document.getElementById(id);}
+  function fb(){
+    return {db:window.__APP_FIREBASE_DB__,ref:window.__APP_FIREBASE_REF__,get:window.__APP_FIREBASE_GET__,update:window.__APP_FIREBASE_UPDATE__};
+  }
+  function setStatus(kind,msg,type){
+    var el=$('pbg-status-'+kind); if(!el) return;
+    el.textContent=msg||''; el.className='pbg-status'+(type?' '+type:'');
+  }
+  var FNAME_DEFAULT='PNG atau JPG \u2022 rasio 9:16 \u2022 bisa tarik & lepas';
+  function setFname(kind,name){
+    var el=$('pbg-fname-'+kind); if(el) el.textContent=name||FNAME_DEFAULT;
+    var box=document.querySelector('#poster-bg-panel .pbg-file[data-kind="'+kind+'"]');
+    if(box) box.classList.toggle('has-file',!!name);
+  }
+  function showImg(kind,src){
+    var img=$('pbg-img-'+kind), empty=$('pbg-empty-'+kind);
+    if(!img||!empty) return;
+    if(src){ img.src=src; img.style.display='block'; empty.style.display='none'; }
+    else { img.removeAttribute('src'); img.style.display='none'; empty.style.display='block'; }
+  }
+
+  function readFile(file){
+    return new Promise(function(res,rej){
+      var r=new FileReader();
+      r.onload=function(){res(r.result);};
+      r.onerror=function(){rej(new Error('File tidak bisa dibaca'));};
+      r.readAsDataURL(file);
+    });
+  }
+  function loadImage(src){
+    return new Promise(function(res,rej){
+      var im=new Image();
+      im.onload=function(){res(im);};
+      im.onerror=function(){rej(new Error('File bukan gambar yang valid'));};
+      im.src=src;
+    });
+  }
+  // Kecilkan + ubah ke JPEG supaya ringan. Rasio asli tidak diubah.
+  async function compress(file){
+    var im=await loadImage(await readFile(file));
+    var w=im.naturalWidth, h=im.naturalHeight;
+    var scale=Math.min(1, MAX_W/w, MAX_H/h);
+    var qualities=[0.92,0.85,0.78,0.7,0.62];
+    var out='';
+    for(var round=0; round<3; round++){
+      var cw=Math.max(1,Math.round(w*scale)), ch=Math.max(1,Math.round(h*scale));
+      var c=document.createElement('canvas'); c.width=cw; c.height=ch;
+      var ctx=c.getContext('2d');
+      ctx.fillStyle='#000'; ctx.fillRect(0,0,cw,ch);
+      ctx.drawImage(im,0,0,cw,ch);
+      for(var i=0;i<qualities.length;i++){
+        out=c.toDataURL('image/jpeg',qualities[i]);
+        if(out.length<=MAX_CHARS) return {dataUrl:out,w:cw,h:ch};
+      }
+      scale*=0.85;
+    }
+    return {dataUrl:out,w:Math.round(w*scale),h:Math.round(h*scale)};
+  }
+
+  window.pbgPick=async function(kind,input){
+    if(!KINDS[kind]) return;
+    var file=input&&input.files&&input.files[0];
+    pending[kind]=null;
+    var saveBtn=$('pbg-save-'+kind); if(saveBtn) saveBtn.disabled=true;
+    if(!file){ setFname(kind,''); setStatus(kind,''); return; }
+    var okType=/^image\/(png|jpe?g)$/i.test(file.type)||/\.(png|jpe?g)$/i.test(file.name);
+    if(!okType){ setStatus(kind,'Format harus PNG atau JPG.','err'); input.value=''; setFname(kind,''); return; }
+    if(file.size>MAX_INPUT){ setStatus(kind,'File terlalu besar (maksimal 15 MB).','err'); input.value=''; setFname(kind,''); return; }
+    setStatus(kind,'Memproses gambar...');
+    try{
+      var r=await compress(file);
+      pending[kind]=r.dataUrl;
+      setFname(kind,file.name);
+      showImg(kind,r.dataUrl);
+      if(saveBtn) saveBtn.disabled=false;
+      var ratio=r.h?(r.w/r.h):0;
+      var note=(Math.abs(ratio-9/16)>0.03)?' ⚠️ Rasio bukan 9:16, posisi teks/logo bisa meleset.':'';
+      setStatus(kind,'Siap disimpan ('+r.w+'×'+r.h+', '+Math.round(r.dataUrl.length*0.75/1024)+' KB).'+note, note?'err':'');
+    }catch(e){
+      console.error(e);
+      setStatus(kind,'Gagal memproses gambar: '+(e&&e.message?e.message:e),'err');
+    }
+  };
+
+  window.pbgSave=async function(kind){
+    if(!KINDS[kind]||!pending[kind]) return;
+    var F=fb(); if(!F.db||!F.update||!F.ref){ setStatus(kind,'Firebase belum siap, coba lagi.','err'); return; }
+    var btn=$('pbg-save-'+kind); if(btn) btn.disabled=true;
+    setStatus(kind,'Menyimpan...');
+    try{
+      var data={}; data[kind]=pending[kind]; data[kind+'UpdatedAt']=Date.now();
+      await F.update(F.ref(F.db,PATH),data);
+      pending[kind]=null;
+      var inp=$('pbg-file-'+kind); if(inp) inp.value='';
+      setFname(kind,'');
+      setStatus(kind,'✅ Tersimpan. Poster customer sekarang memakai gambar ini.','ok');
+    }catch(e){
+      console.error(e);
+      if(btn) btn.disabled=false;
+      setStatus(kind,'Gagal menyimpan: '+(e&&e.message?e.message:e),'err');
+    }
+  };
+
+  window.pbgReset=async function(kind){
+    if(!KINDS[kind]) return;
+    if(!confirm('Kembalikan ke gambar bawaan?')) return;
+    var F=fb(); if(!F.db||!F.update||!F.ref){ setStatus(kind,'Firebase belum siap, coba lagi.','err'); return; }
+    setStatus(kind,'Mengembalikan...');
+    try{
+      var data={}; data[kind]=null; data[kind+'UpdatedAt']=null;
+      await F.update(F.ref(F.db,PATH),data);
+      pending[kind]=null;
+      var inp=$('pbg-file-'+kind); if(inp) inp.value='';
+      var sb=$('pbg-save-'+kind); if(sb) sb.disabled=true;
+      setFname(kind,'');
+      showImg(kind,'');
+      setStatus(kind,'✅ Dikembalikan ke gambar bawaan.','ok');
+    }catch(e){
+      console.error(e);
+      setStatus(kind,'Gagal mereset: '+(e&&e.message?e.message:e),'err');
+    }
+  };
+
+  async function pbgLoad(){
+    var F=fb(); if(!F.db||!F.get||!F.ref) return;
+    try{
+      var snap=await F.get(F.ref(F.db,PATH));
+      var d=snap.val()||{};
+      ['sparing','lawan'].forEach(function(k){
+        if(pending[k]) return; // jangan timpa preview yang belum disimpan
+        showImg(k, (typeof d[k]==='string' && /^data:image\//i.test(d[k])) ? d[k] : '');
+      });
+    }catch(e){ console.warn('Gagal memuat latar poster:',e); }
+  }
+
+  // Tarik & lepas gambar ke tombol pilih gambar
+  function initDrop(){
+    document.querySelectorAll('#poster-bg-panel .pbg-file').forEach(function(box){
+      var kind=box.getAttribute('data-kind'), input=box.querySelector('input[type=file]');
+      ['dragenter','dragover'].forEach(function(ev){box.addEventListener(ev,function(e){e.preventDefault();box.classList.add('is-drag');});});
+      ['dragleave','drop'].forEach(function(ev){box.addEventListener(ev,function(e){e.preventDefault();box.classList.remove('is-drag');});});
+      box.addEventListener('drop',function(e){
+        var f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];
+        if(!f||!input) return;
+        try{ var dt=new DataTransfer(); dt.items.add(f); input.files=dt.files; }catch(err){ return; }
+        window.pbgPick(kind,input);
+      });
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',initDrop,{once:true}); else initDrop();
+
+  window.openPosterBackgroundPanel=function(){
+    var p=$('page-sparring'); if(!p) return;
+    if(typeof window.quickMoreOpen==='function') window.quickMoreOpen('sparring');
+    setTimeout(function(){
+      p.setAttribute('data-sparring-mode','background');
+      p.scrollTop=0;
+      window.scrollTo({top:0,left:0,behavior:'auto'});
+      if(typeof window.closeSparingChooser==='function') window.closeSparingChooser();
+      pbgLoad();
+    },30);
+  };
 })();
 </script>
 
