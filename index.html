@@ -13381,9 +13381,119 @@ function waDaftarNamaTim(){
    tindih menjadi satu render terakhir yang paling relevan. */
 window.__pendingRenderFns = new Set();
 window.__renderScheduled = false;
+
+/* =========================================================
+   SAVE HOLD — tahan proses latar sementara menyimpan data penting
+   (mis. penjualan Minuman). Selama hold aktif:
+   - pengambilan logo (listener lengkap & per-tim) DITUNDA,
+   - render ulang akibat data masuk dari Firebase DITUNDA,
+   supaya koneksi & CPU fokus ke proses simpan. Begitu simpan selesai
+   (atau maksimal 15 detik, sebagai pengaman) semuanya dilanjutkan.
+   ========================================================= */
+window.__saveHoldCount = 0;
+window.__saveHoldWaiters = [];
+window.__flushSaveHold = function() {
+    const waiters = window.__saveHoldWaiters.splice(0);
+    waiters.forEach(fn => { try { fn(); } catch (e) { console.error('saveHold waiter:', e); } });
+};
+window.beginSaveHold = function() {
+    window.__saveHoldCount++;
+    clearTimeout(window.__saveHoldSafety);
+    window.__saveHoldSafety = setTimeout(() => {
+        window.__saveHoldCount = 0;
+        window.__flushSaveHold();
+    }, 15000);
+};
+window.endSaveHold = function() {
+    if (window.__saveHoldCount > 0) window.__saveHoldCount--;
+    if (window.__saveHoldCount === 0) {
+        clearTimeout(window.__saveHoldSafety);
+        window.__flushSaveHold();
+    }
+};
+window.runAfterSaveHold = function(fn) {
+    if (!window.__saveHoldCount) { fn(); return; }
+    window.__saveHoldWaiters.push(fn);
+};
+window.waitSaveIdle = function() {
+    return new Promise(resolve => window.runAfterSaveHold(resolve));
+};
+
+/* =========================================================
+   STATUS KONEKSI + SINKRON TERTUNDA
+   Firebase menerapkan tulisan ke perangkat LEBIH DULU, lalu mengirimnya ke
+   server dan menunggu konfirmasi (ack). Kalau koneksi lambat/terputus, ack
+   bisa lama. Untuk data seperti penjualan Minuman, admin tidak perlu menunggu
+   ack: setelah beberapa detik proses dilanjutkan, dan statusnya tampil di chip
+   kecil sampai server mengonfirmasi.
+   ========================================================= */
+window.__fbConnected = true;
+window.__pendingSyncCount = 0;
+window.updateSyncChip = function(flash) {
+    let chip = document.getElementById('sync-pending-chip');
+    const n = window.__pendingSyncCount;
+    if (!n && !flash) { chip?.remove(); return; }
+    if (!chip) {
+        chip = document.createElement('div');
+        chip.id = 'sync-pending-chip';
+        chip.setAttribute('role', 'status');
+        document.body.appendChild(chip);
+    }
+    if (flash) {
+        chip.className = 'is-ok';
+        chip.textContent = flash;
+    } else if (window.__fbConnected === false) {
+        chip.className = 'is-offline';
+        chip.textContent = '⚠ Tidak terhubung ke server — ' + n + ' data akan dikirim otomatis saat tersambung';
+    } else {
+        chip.className = 'is-pending';
+        chip.textContent = '⏳ Mengirim ' + n + ' data ke server...';
+    }
+};
+window.trackPendingSync = function(promise, label, onSettled) {
+    window.__pendingSyncCount++;
+    window.updateSyncChip();
+    const finish = (ok, err) => {
+        window.__pendingSyncCount = Math.max(0, window.__pendingSyncCount - 1);
+        try { if (onSettled) onSettled(); } catch (_) {}
+        if (ok) {
+            if (window.__pendingSyncCount) window.updateSyncChip();
+            else {
+                window.updateSyncChip('✓ Terkirim ke server');
+                setTimeout(() => { if (!window.__pendingSyncCount) window.updateSyncChip(); }, 2500);
+            }
+        } else {
+            window.updateSyncChip();
+            alert(label + ' GAGAL tersimpan di server: ' + ((err && err.message) || err) + '\nSilakan input ulang.');
+        }
+    };
+    promise.then(() => finish(true), (e) => finish(false, e));
+};
+window.addEventListener('beforeunload', (e) => {
+    if (window.__pendingSyncCount > 0) { e.preventDefault(); e.returnValue = ''; }
+});
+try {
+    onValue(ref(db, '.info/connected'), (snap) => {
+        window.__fbConnected = snap.val() === true;
+        if (window.__pendingSyncCount) window.updateSyncChip();
+    });
+} catch (e) { console.warn('Gagal memantau status koneksi:', e); }
+
 function scheduleRender(fn) {
     if (typeof fn !== 'function') return;
     window.__pendingRenderFns.add(fn);
+    if (window.__saveHoldCount > 0) {
+        if (!window.__renderHoldQueued) {
+            window.__renderHoldQueued = true;
+            window.runAfterSaveHold(() => {
+                window.__renderHoldQueued = false;
+                const fns = Array.from(window.__pendingRenderFns);
+                window.__pendingRenderFns.clear();
+                fns.forEach(scheduleRender);
+            });
+        }
+        return;
+    }
     if (window.__renderScheduled) return;
     window.__renderScheduled = true;
     const runner = () => {
@@ -15247,17 +15357,78 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                     console.warn('DP manual tidak berhasil disinkronkan, tetapi Uang Masuk tetap disimpan:', dpError);
                 }
             }
+            // LOADING SIMPAN MINUMAN: tombol dikunci + overlay progres supaya admin
+            // tahu data masih diproses (kadang ada jeda sebelum tersimpan).
+            let minumanLoading = null;
+            const stopMinumanLoading = () => {
+                if(!minumanLoading) return;
+                clearInterval(minumanLoading.timer);
+                clearTimeout(minumanLoading.slowTimer);
+                clearTimeout(minumanLoading.hardStop);
+                try { minumanLoading.progress?.remove(); } catch(_) {}
+                minumanLoading.buttons.forEach(b => { b.disabled = false; b.classList.remove('is-saving'); });
+                minumanLoading = null;
+            };
+            if(type === 'minuman') {
+                // Tahan proses latar (logo, render ulang) selama menyimpan.
+                if(typeof window.beginSaveHold === 'function') window.beginSaveHold();
+                const buttons = Array.from(document.querySelectorAll('#page-minuman button[type="submit"]'));
+                buttons.forEach(b => { b.disabled = true; b.classList.add('is-saving'); });
+                let progress = null, pct = 12;
+                if(typeof window.showAppProgress === 'function') {
+                    progress = window.showAppProgress('Menyimpan penjualan...', 'Mohon tunggu, data minuman sedang disimpan.');
+                    progress.set(pct);
+                }
+                const timer = setInterval(() => {
+                    pct = Math.min(90, pct + (90 - pct) * 0.15);
+                    progress?.set(pct);
+                    if(window.__fbConnected === false) {
+                        progress?.set(pct, null, 'Tidak terhubung ke server. Data disimpan di perangkat dan dikirim otomatis saat tersambung.');
+                    }
+                }, 200);
+                const slowTimer = setTimeout(() => {}, 0);
+                // PENGAMAN: apa pun yang terjadi (error tak terduga, dsb), kotak loading
+                // TIDAK BOLEH menggantung lebih dari 6 detik.
+                const hardStop = setTimeout(() => { stopMinumanLoading(); }, 6000);
+                minumanLoading = { progress, timer, slowTimer, hardStop, buttons };
+            }
+            let minumanAcked = true, minumanAckPromise = null;
             try {
-                await push(ref(db, type), data);
+                if(type === 'minuman') {
+                    // Tulisan sudah langsung berlaku di perangkat; tunggu konfirmasi server
+                    // maksimal 3 detik, lalu lanjut tanpa membuat admin menunggu.
+                    minumanAcked = false;
+                    minumanAckPromise = Promise.resolve(push(ref(db, type), data)).then(() => { minumanAcked = true; });
+                    minumanAckPromise.catch(() => {});
+                    await Promise.race([minumanAckPromise, new Promise(r => setTimeout(r, 3000))]);
+                } else {
+                    await push(ref(db, type), data);
+                }
             } catch (saveError) {
                 if(type === 'minuman') {
+                    stopMinumanLoading();
+                    if(typeof window.endSaveHold === 'function') window.endSaveHold();
                     window.__savingMinuman = false;
                     alert('Gagal menyimpan penjualan minuman: ' + saveError.message);
                     return;
                 }
                 throw saveError;
             }
-            showSuccessPopup("Data berhasil disimpan dengan sukses.");
+            if(type === 'minuman') {
+                if(minumanAcked) {
+                    if(typeof window.endSaveHold === 'function') window.endSaveHold();
+                } else {
+                    // Belum dikonfirmasi server: tahan proses latar sampai ack datang
+                    // (maks. 15 dtk lewat pengaman), tampilkan status di chip.
+                    window.trackPendingSync(minumanAckPromise, 'Penjualan minuman ' + data.produk, () => {
+                        if(typeof window.endSaveHold === 'function') window.endSaveHold();
+                    });
+                }
+            }
+            stopMinumanLoading();
+            showSuccessPopup(minumanAcked
+                ? "Data berhasil disimpan dengan sukses."
+                : "Data tersimpan dan sedang dikirim ke server. Jangan tutup halaman sampai muncul tanda \"Terkirim ke server\".");
 
             /* UANG KELUAR:
                Setelah berhasil disimpan, form harus benar-benar kosong,
@@ -18103,8 +18274,18 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
         // booking, list tim, sparring) tidak menunggu logo selamanya kalau
         // Jadwal Hari Ini kebetulan kosong / belum sempat dirender.
         window.__adminTeamLogosListenerStarted = false;
+        function isOnMinumanPage() {
+            const el = document.getElementById('page-minuman');
+            return !!(el && !el.classList.contains('hidden'));
+        }
+        window.isOnMinumanPage = isOnMinumanPage;
         function startAdminTeamLogosListener() {
             if(window.__adminTeamLogosListenerStarted) return;
+            // Sedang menyimpan data penting -> tunda unduhan logo lengkap.
+            if(window.__saveHoldCount > 0) { window.runAfterSaveHold(startAdminTeamLogosListener); return; }
+            // Halaman Minuman tidak memakai logo -> JANGAN unduh daftar logo (besar, Base64)
+            // selama admin berada di sana. Dilanjutkan otomatis saat pindah halaman.
+            if(isOnMinumanPage()) { window.__logoListenerWaitingForPage = true; return; }
             window.__adminTeamLogosListenerStarted = true;
             onValue(ref(db, 'teamLogos'), (snapshot) => {
                 globalCache.teamLogos = snapshot.val() || {};
@@ -18112,11 +18293,38 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 // punya Jadwal Hari Ini (lihat preloadTodayScheduleLogosSequential) karena
                 // data resmi & lengkap sudah tersedia — tidak perlu lagi tebak per-tim.
                 globalCache.__teamLogosFullLoaded = true;
-                scheduleRender(renderTodaySchedule);
-                scheduleRender(renderTabelBooking);
-                scheduleRender(refreshTeamLogoIndicators);
-                if (typeof renderSparing === 'function') scheduleRender(renderSparing);
+                refreshAllTeamLogoViews();
             });
+            armAdminLogoGiveUp();
+        }
+        // Begitu admin KELUAR dari halaman Minuman, lanjutkan pengambilan logo yang tertunda.
+        (function watchMinumanPageForLogos() {
+            const el = document.getElementById('page-minuman');
+            if(!el || typeof MutationObserver === 'undefined') return;
+            new MutationObserver(() => {
+                if(isOnMinumanPage() || !window.__logoListenerWaitingForPage) return;
+                window.__logoListenerWaitingForPage = false;
+                // Prioritaskan logo Jadwal Hari Ini dulu (bertahap), lalu daftar lengkap menyusul.
+                if(typeof renderTodaySchedule === 'function') scheduleRender(renderTodaySchedule);
+                setTimeout(() => { if(!isOnMinumanPage()) startAdminTeamLogosListener(); }, 2500);
+            }).observe(el, { attributes: true, attributeFilter: ['class'] });
+        })();
+        function refreshAllTeamLogoViews() {
+            scheduleRender(renderTodaySchedule);
+            scheduleRender(renderTabelBooking);
+            scheduleRender(refreshTeamLogoIndicators);
+            if (typeof renderSparing === 'function') scheduleRender(renderSparing);
+            if (typeof window.renderTeamList === 'function') scheduleRender(window.renderTeamList);
+        }
+        // Batas tunggu: kalau daftar logo tak kunjung datang (mis. koneksi buruk),
+        // spinner diganti stempel "LOGO TIDAK ADA" supaya tidak berputar selamanya.
+        // Begitu logo akhirnya datang, listener di atas otomatis menimpanya.
+        function armAdminLogoGiveUp() {
+            setTimeout(() => {
+                if(globalCache.__teamLogosFullLoaded) return;
+                window.__adminLogoGiveUp = true;
+                refreshAllTeamLogoViews();
+            }, 20000);
         }
         window.startAdminTeamLogosListener = startAdminTeamLogosListener;
         // Jaga-jaga: kalau proses bertahap Jadwal Hari Ini tidak pernah
@@ -19513,6 +19721,59 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
         }
 
 
+        // =========================================================
+        // STATUS LOGO: 'found' | 'loading' | 'missing'
+        // Sama seperti web customer: selagi logo masih diambil tampil
+        // spinner berputar, dan kalau pasti tidak ada tampil stempel
+        // "LOGO TIDAK ADA".
+        // 'missing' bila: daftar logo lengkap sudah datang, ATAU key tim
+        // ini sudah dicek per-tim (tersimpan meski kosong {}), ATAU sudah
+        // lewat batas waktu tunggu (koneksi bermasalah).
+        // =========================================================
+        function getTeamLogoState(nama) {
+            if(getTeamLogo(nama)) return 'found';
+            const key = getTeamLogoKey(nama);
+            if(!key) return 'missing';
+            if(globalCache.__teamLogosFullLoaded) return 'missing';
+            if(globalCache.teamLogos && Object.prototype.hasOwnProperty.call(globalCache.teamLogos, key)) return 'missing';
+            if(window.__adminLogoGiveUp) return 'missing';
+            return 'loading';
+        }
+        function adminLogoSpinnerHtml() {
+            return '<i class="logo-loading-spinner" role="status" aria-label="Memuat logo"></i>';
+        }
+        function adminLogoStampHtml() {
+            return '<svg class="logo-none-stamp" viewBox="0 0 100 100" role="img" aria-label="Logo tidak ada" xmlns="http://www.w3.org/2000/svg">'
+                + '<g transform="rotate(-14 50 50)">'
+                + '<circle cx="50" cy="50" r="45" fill="rgba(255,255,255,.88)" stroke="#b91c1c" stroke-width="4"/>'
+                + '<circle cx="50" cy="50" r="37.5" fill="none" stroke="#b91c1c" stroke-width="1.6" stroke-dasharray="3.2 2.6"/>'
+                + '<text x="50" y="43" text-anchor="middle" font-family="Poppins,Arial,sans-serif" font-weight="900" font-size="15" letter-spacing=".6" fill="#b91c1c">LOGO</text>'
+                + '<text x="50" y="59" text-anchor="middle" font-family="Poppins,Arial,sans-serif" font-weight="900" font-size="15" letter-spacing=".6" fill="#b91c1c">TIDAK</text>'
+                + '<text x="50" y="75" text-anchor="middle" font-family="Poppins,Arial,sans-serif" font-weight="900" font-size="15" letter-spacing=".6" fill="#b91c1c">ADA</text>'
+                + '</g></svg>';
+        }
+        // Isi placeholder (spinner / stempel) menurut status.
+        function adminLogoPlaceholderHtml(state) {
+            return state === 'loading' ? adminLogoSpinnerHtml() : adminLogoStampHtml();
+        }
+        // Satu sisi logo untuk kartu sparing (2 tim) di Jadwal Hari Ini.
+        function adminLogoSideHtml(nama, fade) {
+            const state = getTeamLogoState(nama);
+            if(state === 'found') {
+                const logo = getTeamLogo(nama);
+                return `<img src="${escapeAttrLogo(logo)}" alt="Logo ${escapeHtmlSparing(nama)}"${fade ? ' class="today-schedule-logo-fade-in"' : ''} onerror="this.onerror=null;this.outerHTML=window.adminLogoSlotHtml('missing')">`;
+            }
+            return adminLogoSlotHtml(state);
+        }
+        function adminLogoSlotHtml(state) {
+            return `<b class="logo-slot" data-logo-state="${state}">${adminLogoPlaceholderHtml(state)}</b>`;
+        }
+        window.getTeamLogoState = getTeamLogoState;
+        window.adminLogoStampHtml = adminLogoStampHtml;
+        window.adminLogoSpinnerHtml = adminLogoSpinnerHtml;
+        window.adminLogoPlaceholderHtml = adminLogoPlaceholderHtml;
+        window.adminLogoSlotHtml = adminLogoSlotHtml;
+
         function renderSparingTeamLogoHtml(nama, extraClass='') {
             const teamName = String(nama || '').trim();
             if (!teamName) {
@@ -19521,10 +19782,12 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
 
             const rawLogo = getTeamLogo(teamName);
             if (rawLogo) {
-                return `<div class="${extraClass} sparing-team-logo-image"><img src="${escapeAttrLogo(rawLogo)}" alt="Logo ${escapeHtmlSparing(teamName)}"></div>`;
+                return `<div class="${extraClass} sparing-team-logo-image"><img src="${escapeAttrLogo(rawLogo)}" alt="Logo ${escapeHtmlSparing(teamName)}" onerror="this.onerror=null;this.outerHTML=window.adminLogoStampHtml()"></div>`;
             }
 
-            return `<div class="${extraClass} sparing-team-logo-placeholder" title="Logo belum diupload" aria-label="Logo belum diupload">⚽</div>`;
+            const state = getTeamLogoState(teamName);
+            const title = state === 'loading' ? 'Memuat logo...' : 'Logo tidak ditemukan';
+            return `<div class="${extraClass} sparing-team-logo-image logo-state-box" data-logo-state="${state}" title="${title}">${adminLogoPlaceholderHtml(state)}</div>`;
         }
 
         function refreshTeamLogoIndicators() {
@@ -19545,20 +19808,19 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             const safeLogo = escapeAttrLogo(logo);
             const dataAttr = ` data-team-logo-single="${encodeURIComponent(String(nama || ''))}"`;
             if(logo) {
-                return `<div class="today-schedule-logo ${extraClass}"${dataAttr} title="Logo ${escapeHtmlSparing(nama)}"><img src="${safeLogo}" alt="Logo ${escapeHtmlSparing(nama)}" onerror="this.parentElement.classList.add('logo-error');this.style.display='none';"></div>`;
+                return `<div class="today-schedule-logo ${extraClass}"${dataAttr} data-logo-state="found" title="Logo ${escapeHtmlSparing(nama)}"><img src="${safeLogo}" alt="Logo ${escapeHtmlSparing(nama)}" onerror="this.onerror=null;var p=this.parentElement;p.classList.add('logo-error');p.dataset.logoState='missing';p.title='Logo tidak ditemukan';this.outerHTML=window.adminLogoStampHtml();"></div>`;
             }
-            return `<div class="today-schedule-logo ${extraClass}"${dataAttr} title="Belum ada logo tim"><span>⚽</span></div>`;
+            const state = getTeamLogoState(nama);
+            const title = state === 'loading' ? 'Memuat logo...' : 'Logo tidak ditemukan';
+            return `<div class="today-schedule-logo ${extraClass}"${dataAttr} data-logo-state="${state}" title="${title}">${adminLogoPlaceholderHtml(state)}</div>`;
         }
 
         function renderSparingLogoHtml(timA, timB) {
-            const logoA = getTeamLogo(timA);
-            const logoB = getTeamLogo(timB);
-            if(!logoA && !logoB) return renderTeamLogoHtml(timA, 'today-schedule-logo-sparing');
-            const dataAttr = ` data-team-logo-a="${encodeURIComponent(String(timA || ''))}" data-team-logo-b="${encodeURIComponent(String(timB || ''))}"`;
-            return `<div class="today-schedule-logo today-schedule-logo-sparing"${dataAttr} title="Logo ${escapeHtmlSparing(timA)} vs ${escapeHtmlSparing(timB)}">
-                ${logoA ? `<img src="${escapeAttrLogo(logoA)}" alt="Logo ${escapeHtmlSparing(timA)}" onerror="this.style.display='none';">` : '<span>⚽</span>'}
-                ${logoB ? `<img src="${escapeAttrLogo(logoB)}" alt="Logo ${escapeHtmlSparing(timB)}" onerror="this.style.display='none';">` : '<span>⚽</span>'}
-            </div>`;
+            // Kartu sparing selalu dirender sebagai pasangan (A | B) supaya tiap sisi
+            // punya status sendiri-sendiri: spinner -> logo / stempel.
+            const sA = getTeamLogoState(timA), sB = getTeamLogoState(timB);
+            const dataAttr = ` data-team-logo-a="${encodeURIComponent(String(timA || ''))}" data-team-logo-b="${encodeURIComponent(String(timB || ''))}" data-logo-sig="${sA}|${sB}"`;
+            return `<div class="today-schedule-logo today-schedule-logo-sparing"${dataAttr} title="Logo ${escapeHtmlSparing(timA)} vs ${escapeHtmlSparing(timB)}">${adminLogoSideHtml(timA, false)}${adminLogoSideHtml(timB, false)}</div>`;
         }
 
         function showTeamLogoProgress(title='Mengupload logo...', text='Mohon tunggu, logo sedang diproses.') {
@@ -20734,26 +20996,41 @@ return;
         // Dengan menempel langsung ke elemen slotnya saja, kartu lain sama
         // sekali tidak tersentuh — hanya logo yang baru datang yang muncul,
         // dengan animasi fade-in singkat, persis satu per satu dari atas.
+        // Mengembalikan true bila slot sudah FINAL (tidak ada sisi yang masih
+        // loading), false bila masih ada yang menunggu.
         function applyTodayScheduleLogoSlot(el) {
             if(!el) return false;
             if(el.dataset.teamLogoSingle) {
                 const nama = decodeURIComponent(el.dataset.teamLogoSingle);
-                const logo = getTeamLogo(nama);
-                if(!logo) return false;
-                el.classList.remove('logo-error');
-                el.title = 'Logo ' + nama;
-                el.innerHTML = `<img src="${escapeAttrLogo(logo)}" alt="Logo ${escapeHtmlSparing(nama)}" class="today-schedule-logo-fade-in" onerror="this.parentElement.classList.add('logo-error');this.style.display='none';">`;
+                const state = getTeamLogoState(nama);
+                if(state === 'loading') return false;
+                if(el.dataset.logoState === state) return true; // sudah tampil sesuai status
+                el.dataset.logoState = state;
+                if(state === 'found') {
+                    const logo = getTeamLogo(nama);
+                    el.classList.remove('logo-error');
+                    el.title = 'Logo ' + nama;
+                    el.innerHTML = `<img src="${escapeAttrLogo(logo)}" alt="Logo ${escapeHtmlSparing(nama)}" class="today-schedule-logo-fade-in" onerror="this.onerror=null;var p=this.parentElement;p.classList.add('logo-error');p.dataset.logoState='missing';p.title='Logo tidak ditemukan';this.outerHTML=window.adminLogoStampHtml();">`;
+                } else {
+                    el.title = 'Logo tidak ditemukan';
+                    el.innerHTML = adminLogoStampHtml();
+                }
                 return true;
             }
             if(el.dataset.teamLogoA || el.dataset.teamLogoB) {
                 const timA = decodeURIComponent(el.dataset.teamLogoA || '');
                 const timB = decodeURIComponent(el.dataset.teamLogoB || '');
-                const logoA = getTeamLogo(timA);
-                const logoB = getTeamLogo(timB);
-                if(!logoA && !logoB) return false;
-                el.title = `Logo ${timA} vs ${timB}`;
-                el.innerHTML = `${logoA ? `<img src="${escapeAttrLogo(logoA)}" alt="Logo ${escapeHtmlSparing(timA)}" class="today-schedule-logo-fade-in" onerror="this.style.display='none';">` : '<span>⚽</span>'}${logoB ? `<img src="${escapeAttrLogo(logoB)}" alt="Logo ${escapeHtmlSparing(timB)}" class="today-schedule-logo-fade-in" onerror="this.style.display='none';">` : '<span>⚽</span>'}`;
-                return true;
+                const sA = getTeamLogoState(timA), sB = getTeamLogoState(timB);
+                const sig = sA + '|' + sB;
+                if(el.dataset.logoSig !== sig) {
+                    const [oldA, oldB] = String(el.dataset.logoSig || '').split('|');
+                    el.dataset.logoSig = sig;
+                    el.title = `Logo ${timA} vs ${timB}`;
+                    // Efek fade-in hanya untuk sisi yang BARU saja berubah jadi logo.
+                    el.innerHTML = adminLogoSideHtml(timA, sA === 'found' && oldA !== 'found')
+                                 + adminLogoSideHtml(timB, sB === 'found' && oldB !== 'found');
+                }
+                return sA !== 'loading' && sB !== 'loading';
             }
             return false;
         }
@@ -20762,6 +21039,12 @@ return;
         async function preloadTodayScheduleLogosSequential() {
             if(window.__todayLogoPreloadRunning) return;
             if(globalCache.__teamLogosFullLoaded) return;
+            if(window.__saveHoldCount > 0) {
+                window.runAfterSaveHold(() => { if(!globalCache.__teamLogosFullLoaded) preloadTodayScheduleLogosSequential(); });
+                return;
+            }
+            // Di halaman Minuman logo tidak dibutuhkan; ditunda sampai pindah halaman.
+            if(isOnMinumanPage()) { window.__logoListenerWaitingForPage = true; return; }
             const listEl = document.getElementById('today-schedule-list');
             if(!listEl) return;
             const db = window.__APP_FIREBASE_DB__;
@@ -20772,7 +21055,7 @@ return;
             // Urutan diambil langsung dari urutan kartu di DOM (atas ke bawah),
             // sama persis dengan urutan tampil di Jadwal Hari Ini.
             const logoSlots = Array.from(listEl.querySelectorAll('.today-schedule-logo'));
-            const pending = logoSlots.filter(el => !el.querySelector('img'));
+            const pending = logoSlots.filter(el => el.querySelector('.logo-loading-spinner'));
             if(!pending.length) {
                 // Tidak ada yang perlu diprioritaskan (mis. tidak ada jadwal hari
                 // ini, atau semua logo sudah tersedia) — langsung nyalakan listener
@@ -20788,7 +21071,7 @@ return;
                 // permintaan ke server benar-benar dikirim. Jadi denyutnya
                 // mewakili proses tunggu yang sesungguhnya, bukan cuma jeda
                 // kosmetik yang dipasang belakangan setelah data sudah ada.
-                pending.forEach(el => el.classList.add('today-schedule-logo-checking'));
+                // (Status "sedang dicek" kini ditampilkan sebagai spinner berputar di dalam slot logo.)
 
                 // Kumpulkan semua key logo yang dibutuhkan ke-N kartu ini,
                 // lalu minta SEKALIGUS secara paralel (bukan bergantian
@@ -20818,14 +21101,13 @@ return;
                 const tryApplyNow = (el) => {
                     if(globalCache.__teamLogosFullLoaded) return;
                     if(!document.body.contains(el)) return;
-                    if(applyTodayScheduleLogoSlot(el)) {
-                        el.classList.remove('today-schedule-logo-checking');
-                    }
+                    applyTodayScheduleLogoSlot(el);
                 };
 
                 await Promise.all(Array.from(keyToElements.keys()).map(async (key) => {
                     if(!globalCache.teamLogos?.[key]) {
                         try {
+                            await window.waitSaveIdle(); // jangan berebut koneksi dengan proses simpan
                             const snap = await getFn(refFn(db, 'teamLogos/' + key));
                             globalCache.teamLogos = globalCache.teamLogos || {};
                             // Simpan meski kosong ({}), supaya tim tanpa logo tidak
@@ -20842,9 +21124,9 @@ return;
                     keyToElements.get(key).forEach(tryApplyNow);
                 }));
 
-                // Sisa kartu yang ternyata dua-duanya tidak punya logo tetap
-                // dibersihkan dari status "sedang dicek" di akhir.
-                pending.forEach(el => el.classList.remove('today-schedule-logo-checking'));
+                // Pastikan semua slot yang sudah selesai dicek menampilkan hasil
+                // akhirnya (logo atau stempel "LOGO TIDAK ADA").
+                pending.forEach(el => { if(document.body.contains(el)) applyTodayScheduleLogoSlot(el); });
             } finally {
                 window.__todayLogoPreloadRunning = false;
                 // Proses prioritas untuk Jadwal Hari Ini sudah selesai (atau
@@ -21973,8 +22255,8 @@ return;
                         </div>`;
                     }
 
-                    const hasLogo = !!getTeamLogo(name);
-                    const editButton = !hasLogo
+                    const logoState = getTeamLogoState(name);
+                    const editButton = logoState === 'missing'
                         ? `<button type="button"
                                    class="sparring-logo-edit-btn"
                                    onclick="event.stopPropagation(); openTeamLogoEditor(decodeURIComponent('${encodeURIComponent(name)}'),'sparring')"
@@ -32119,6 +32401,9 @@ body.jadwal-uang-masuk-modal-active #page-masuk {
     }
     syncDate();
     document.getElementById('manual-uang-masuk-close').onclick=closeModal;
+    // pointerdown (bukan hanya click) supaya tidak ditelan global-modal-click-shield-v1,
+    // sama seperti popup Uang Keluar.
+    bd.addEventListener('pointerdown',e=>{if(e.target===bd)closeModal()});
     bd.addEventListener('click',e=>{if(e.target===bd)closeModal()});
     document.getElementById('manual-uang-masuk-date-btn').onclick=()=>{try{date.showPicker()}catch(_){date.click()}};
     date.addEventListener('change',syncDate);
@@ -32400,7 +32685,8 @@ function tlCard(item){
   const name=tlDisplayName(source);
   const logo=tlDisplayLogo(source);
   const wa=tlDisplayWa(source,item.wa || tlFindWaFromRecords(source));
-  const logoHtml=logo?`<img src="${tlAttr(logo)}" alt="Logo ${tlAttr(name)}" onerror="this.style.display='none'">`:'<span class="team-list-logo-placeholder">⚽</span>';
+  const logoState=(!logo&&typeof window.getTeamLogoState==='function')?window.getTeamLogoState(source):'';
+  const logoHtml=logo?`<img src="${tlAttr(logo)}" alt="Logo ${tlAttr(name)}" onerror="this.onerror=null;this.outerHTML=window.adminLogoStampHtml?window.adminLogoStampHtml():''">`:(logoState&&window.adminLogoPlaceholderHtml?window.adminLogoPlaceholderHtml(logoState):'<span class="team-list-logo-placeholder">⚽</span>');
   return `<article class="team-list-card" data-team-search="${tlAttr((name+' '+wa+' '+tlSourceLabel(item)).toLowerCase())}">
     <div class="team-list-logo">${logoHtml}</div>
     <div class="team-list-card-copy">
@@ -47374,5 +47660,102 @@ main.space-y-6 > #page-minuman {
   letter-spacing: .03em;
   vertical-align: middle;
   white-space: nowrap;
+}
+</style>
+
+<style id="admin-logo-loading-stamp-v1">
+/* ===== Spinner "memuat logo" + stempel "LOGO TIDAK ADA" (sama seperti web customer) ===== */
+@keyframes adminLogoSpin{to{transform:rotate(360deg)}}
+.logo-loading-spinner{
+  display:block;box-sizing:border-box;flex:0 0 auto;
+  width:46%;max-width:34px;min-width:14px;aspect-ratio:1/1;height:auto;
+  border-radius:50%;border:3px solid rgba(37,99,235,.2);border-top-color:#2563eb;
+  animation:adminLogoSpin .8s linear infinite;
+  background:none;opacity:1;font-style:normal;
+}
+.logo-none-stamp{
+  display:block;box-sizing:border-box;flex:0 0 auto;
+  width:100%;height:100%;max-width:84px;max-height:84px;padding:2px;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,.25));opacity:.95;
+}
+.logo-slot{
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  box-sizing:border-box;font-style:normal;font-weight:400;opacity:1;
+}
+/* Jadwal Hari Ini */
+#today-schedule-panel .today-schedule-logo > .logo-loading-spinner{width:min(46%,34px) !important;height:auto !important;padding:0 !important}
+#today-schedule-panel .today-schedule-logo > .logo-none-stamp{width:100% !important;height:100% !important;padding:3px !important}
+#today-schedule-panel .today-schedule-logo-sparing > .logo-slot{
+  flex:0 0 50% !important;width:50% !important;max-width:50% !important;height:100% !important;padding:3px !important;
+}
+#today-schedule-panel .today-schedule-logo-sparing > .logo-slot > .logo-none-stamp{width:100% !important;height:100% !important;padding:0 !important}
+#today-schedule-panel .today-schedule-logo-sparing > .logo-slot > .logo-loading-spinner{width:min(60%,28px) !important}
+/* Daftar member / riwayat booking */
+.member-list-team-logo > .logo-loading-spinner,.booking-history-team-logo > .logo-loading-spinner{width:18px;height:18px;min-width:0;border-width:2.5px}
+.member-list-team-logo > .logo-none-stamp,.booking-history-team-logo > .logo-none-stamp{padding:1px}
+/* Sparing */
+.logo-state-box{opacity:1 !important}
+.logo-state-box > .logo-loading-spinner{width:16px;height:16px;min-width:0;border-width:2.5px}
+.logo-state-box > .logo-none-stamp{padding:1px}
+/* List tim */
+.team-list-logo > .logo-loading-spinner{width:24px;height:24px;min-width:0;border-width:3px}
+.team-list-logo > .logo-none-stamp{padding:2px}
+@media (prefers-reduced-motion:reduce){.logo-loading-spinner{animation-duration:1.6s}}
+</style>
+
+<style id="minuman-saving-state-v1">
+@keyframes minumanSaveSpin{to{transform:rotate(360deg)}}
+#page-minuman button[type="submit"].is-saving{cursor:wait !important;opacity:.75 !important;pointer-events:none !important}
+#page-minuman button[type="submit"].is-saving .minuman-save-icon{
+  display:inline-block;width:1em;height:1em;box-sizing:border-box;font-size:0 !important;
+  border:3px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;
+  animation:minumanSaveSpin .8s linear infinite;
+}
+#page-minuman button[type="submit"].is-saving .minuman-save-icon{width:20px;height:20px}
+#page-minuman button[type="submit"].is-saving .minuman-save-label{font-size:0 !important}
+#page-minuman button[type="submit"].is-saving .minuman-save-label::after{content:"MENYIMPAN...";font-size:10px}
+#app-generic-progress-overlay{z-index:2147483647 !important}
+</style>
+
+<style id="sync-pending-chip-v1">
+#sync-pending-chip{
+  position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+  z-index:2147483645;max-width:min(92vw,460px);padding:9px 14px;border-radius:999px;
+  font:800 12px/1.3 Poppins,Arial,sans-serif;text-align:center;color:#fff;
+  box-shadow:0 10px 28px rgba(15,23,42,.28);pointer-events:none;
+}
+#sync-pending-chip.is-pending{background:#2563eb}
+#sync-pending-chip.is-offline{background:#b45309}
+#sync-pending-chip.is-ok{background:#059669}
+</style>
+
+<style id="app-success-popup-solid-v1">
+/* Popup "Berhasil disimpan" dibuat solid seperti popup loading supaya teks jelas terbaca. */
+.app-success-overlay{
+  background:rgba(15,23,42,.42) !important;
+  backdrop-filter:blur(8px) !important;
+  -webkit-backdrop-filter:blur(8px) !important;
+}
+.app-success-overlay .app-success-modal{
+  width:min(100%,390px) !important;
+  padding:24px !important;
+  border-radius:22px !important;
+  background:rgba(255,255,255,.97) !important;
+  border:1px solid rgba(255,255,255,.9) !important;
+  box-shadow:0 25px 70px rgba(15,23,42,.28) !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+}
+.app-success-overlay .app-success-title{
+  color:#0f172a !important;
+  font-size:17px !important;
+  font-weight:900 !important;
+}
+.app-success-overlay .app-success-message{
+  margin:6px 0 16px !important;
+  color:#475569 !important;
+  font-size:12.5px !important;
+  font-weight:700 !important;
+  line-height:1.5 !important;
 }
 </style>
