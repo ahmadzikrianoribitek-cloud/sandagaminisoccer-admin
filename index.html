@@ -18294,6 +18294,8 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 // data resmi & lengkap sudah tersedia — tidak perlu lagi tebak per-tim.
                 globalCache.__teamLogosFullLoaded = true;
                 refreshAllTeamLogoViews();
+            }, (error) => {
+                console.warn('Listener teamLogos lengkap gagal:', error);
             });
             armAdminLogoGiveUp();
         }
@@ -19736,8 +19738,65 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             if(!key) return 'missing';
             if(globalCache.__teamLogosFullLoaded) return 'missing';
             if(globalCache.teamLogos && Object.prototype.hasOwnProperty.call(globalCache.teamLogos, key)) return 'missing';
-            if(window.__adminLogoGiveUp) return 'missing';
+            if(window.__adminLogoGiveUp && !window.__logoOnDemandPending?.has(key)) return 'missing';
+            queueTeamLogoOnDemand(key);
             return 'loading';
+        }
+
+        // =========================================================
+        // AMBIL LOGO PER-TIM SECARA OTOMATIS (untuk Member, List Tim Main,
+        // Booking History, Sparing). Sebelumnya halaman-halaman ini hanya
+        // menunggu listener 'teamLogos' lengkap (data Base64 besar). Kalau
+        // listener itu lambat / gagal, spinner berubah jadi stempel
+        // "LOGO TIDAK ADA" padahal logonya ada. Sekarang tiap tim yang
+        // masih 'loading' langsung diambil per-key — cara yang sama
+        // dengan Jadwal Hari Ini.
+        // =========================================================
+        window.__logoOnDemandPending = window.__logoOnDemandPending || new Set();
+        window.__logoOnDemandQueue = window.__logoOnDemandQueue || new Set();
+        window.__logoOnDemandTimer = null;
+        window.__logoOnDemandRefreshTimer = null;
+        function queueTeamLogoOnDemand(key) {
+            if(!key || window.__logoOnDemandPending.has(key) || window.__logoOnDemandQueue.has(key)) return;
+            window.__logoOnDemandQueue.add(key);
+            if(window.__logoOnDemandTimer) return;
+            window.__logoOnDemandTimer = setTimeout(flushTeamLogoOnDemand, 60);
+        }
+        async function flushTeamLogoOnDemand() {
+            window.__logoOnDemandTimer = null;
+            const db = window.__APP_FIREBASE_DB__;
+            const refFn = window.__APP_FIREBASE_REF__;
+            const getFn = window.__APP_FIREBASE_GET__;
+            const keys = Array.from(window.__logoOnDemandQueue);
+            window.__logoOnDemandQueue.clear();
+            if(!keys.length || !db || !refFn || !getFn) return;
+            keys.forEach(k => window.__logoOnDemandPending.add(k));
+            const MAX_PARALLEL = 6;
+            let idx = 0;
+            const worker = async () => {
+                while(idx < keys.length) {
+                    const key = keys[idx++];
+                    try {
+                        if(!globalCache.teamLogos || !Object.prototype.hasOwnProperty.call(globalCache.teamLogos, key)) {
+                            const snap = await getFn(refFn(db, 'teamLogos/' + key));
+                            globalCache.teamLogos = globalCache.teamLogos || {};
+                            // Jangan menimpa data lengkap yang mungkin datang lebih dulu.
+                            if(!Object.prototype.hasOwnProperty.call(globalCache.teamLogos, key)) {
+                                globalCache.teamLogos[key] = snap.val() || {};
+                            }
+                        }
+                    } catch(error) {
+                        console.warn('Gagal memuat logo tim (' + key + '):', error);
+                    } finally {
+                        window.__logoOnDemandPending.delete(key);
+                    }
+                    clearTimeout(window.__logoOnDemandRefreshTimer);
+                    window.__logoOnDemandRefreshTimer = setTimeout(() => {
+                        if(typeof refreshAllTeamLogoViews === 'function') refreshAllTeamLogoViews();
+                    }, 150);
+                }
+            };
+            await Promise.all(Array.from({length: Math.min(MAX_PARALLEL, keys.length)}, worker));
         }
         function adminLogoSpinnerHtml() {
             return '<i class="logo-loading-spinner" role="status" aria-label="Memuat logo"></i>';
@@ -47757,5 +47816,227 @@ main.space-y-6 > #page-minuman {
   font-size:12.5px !important;
   font-weight:700 !important;
   line-height:1.5 !important;
+}
+</style>
+
+<style id="member-card-redesign-final-v1">
+/* =========================================================
+   MEMBER TERDAFTAR — DESAIN CARD BARU (visual saja)
+   Tidak mengubah markup, data, Firebase, atau logika.
+   Berlaku untuk card jadwal tetap & card tanpa jadwal tetap.
+   ========================================================= */
+
+/* ---------- Grid: 1 kolom di HP, otomatis 2+ kolom di desktop ---------- */
+#page-atur-member .member-cards-grid{
+  display:grid !important;
+  grid-template-columns:repeat(auto-fill,minmax(min(100%,400px),1fr)) !important;
+  gap:14px !important;
+  align-items:start !important;
+  background:transparent !important;border:0 !important;box-shadow:none !important;padding:0 !important;
+}
+
+/* ---------- Card ---------- */
+#page-atur-member .member-cards-grid .member-card{
+  position:relative !important;
+  display:flex !important;flex-direction:column !important;gap:12px !important;
+  padding:16px 16px 14px 20px !important;
+  border-radius:20px !important;
+  overflow:hidden !important;
+  background:rgba(255,255,255,.90) !important;
+  border:1px solid rgba(226,232,240,.95) !important;
+  box-shadow:0 8px 24px rgba(15,23,42,.08) !important;
+  -webkit-backdrop-filter:blur(10px) !important;backdrop-filter:blur(10px) !important;
+  transition:box-shadow .2s ease,transform .2s ease !important;
+}
+#page-atur-member .member-cards-grid .member-card::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:5px;
+  background:linear-gradient(180deg,#94a3b8,#cbd5e1);
+}
+#page-atur-member .member-cards-grid .member-card:has(.member-status-active)::before{
+  background:linear-gradient(180deg,#22c55e,#059669);
+}
+@media (hover:hover){
+  #page-atur-member .member-cards-grid .member-card:hover{
+    box-shadow:0 14px 32px rgba(15,23,42,.14) !important;transform:translateY(-2px);
+  }
+}
+
+/* ---------- Header: logo + nama ---------- */
+#page-atur-member .member-card .member-card-main{
+  display:flex !important;flex-direction:column !important;gap:12px !important;
+  grid-template-columns:none !important;padding:0 !important;margin:0 !important;
+}
+#page-atur-member .member-card .member-team-identity{
+  display:flex !important;align-items:center !important;gap:12px !important;min-width:0 !important;
+}
+#page-atur-member .member-card .member-team-logo-indicator{
+  flex:0 0 auto !important;width:58px !important;height:58px !important;
+  min-width:58px !important;max-width:58px !important;min-height:58px !important;max-height:58px !important;
+  margin:0 !important;padding:0 !important;
+}
+#page-atur-member .member-card .member-list-team-logo{
+  width:100% !important;height:100% !important;min-width:0 !important;min-height:0 !important;max-width:none !important;max-height:none !important;
+  margin:0 !important;padding:5px !important;box-sizing:border-box !important;
+  display:grid !important;place-items:center !important;overflow:hidden !important;
+  background:#fff !important;border:1px solid #e2e8f0 !important;border-radius:16px !important;
+  box-shadow:0 2px 8px rgba(15,23,42,.08) !important;
+}
+#page-atur-member .member-card .member-list-team-logo img,
+#page-atur-member .member-card .member-list-team-logo svg{
+  width:100% !important;height:100% !important;max-width:100% !important;max-height:100% !important;
+  object-fit:contain !important;border-radius:10px !important;
+}
+#page-atur-member .member-card .member-team-copy{
+  display:flex !important;flex-direction:column !important;gap:4px !important;min-width:0 !important;flex:1 1 auto !important;
+}
+#page-atur-member .member-card .member-team-name{
+  font-size:17px !important;line-height:1.2 !important;font-weight:900 !important;color:#0f172a !important;
+  letter-spacing:-.01em !important;
+  white-space:normal !important;overflow-wrap:anywhere !important;
+  display:-webkit-box !important;-webkit-line-clamp:2 !important;-webkit-box-orient:vertical !important;overflow:hidden !important;
+}
+#page-atur-member .member-card .member-team-count{
+  align-self:flex-start !important;
+  display:inline-flex !important;align-items:center !important;
+  padding:3px 10px !important;border-radius:999px !important;
+  font-size:11px !important;line-height:1.3 !important;font-weight:800 !important;letter-spacing:.01em !important;
+  color:#475569 !important;background:#f1f5f9 !important;border:1px solid #e2e8f0 !important;
+}
+
+/* ---------- Kotak jadwal ---------- */
+#page-atur-member .member-card .member-schedule-box{
+  margin:0 !important;padding:6px 12px !important;
+  background:rgba(248,250,252,.95) !important;border:1px solid #e8eef5 !important;border-radius:14px !important;
+  box-shadow:none !important;
+}
+#page-atur-member .member-card .member-schedule-groups{
+  display:flex !important;flex-direction:column !important;gap:0 !important;margin:0 !important;padding:0 !important;
+}
+#page-atur-member .member-card .member-day-group{
+  display:flex !important;align-items:flex-start !important;gap:10px !important;
+  padding:9px 0 !important;margin:0 !important;background:transparent !important;border:0 !important;box-shadow:none !important;
+}
+#page-atur-member .member-card .member-day-group + .member-day-group{border-top:1px dashed #dbe3ee !important;}
+#page-atur-member .member-card .member-day-label{
+  flex:0 0 auto !important;min-width:62px !important;text-align:center !important;
+  padding:5px 10px !important;border-radius:999px !important;margin:1px 0 !important;
+  font-size:11px !important;line-height:1.2 !important;font-weight:900 !important;letter-spacing:.02em !important;
+  color:#3730a3 !important;background:#eef2ff !important;border:1px solid #c7d2fe !important;
+}
+#page-atur-member .member-card .member-day-times{
+  display:flex !important;flex-wrap:wrap !important;gap:6px !important;flex:1 1 auto !important;min-width:0 !important;
+}
+#page-atur-member .member-card .member-schedule-chip{
+  display:inline-flex !important;align-items:center !important;gap:6px !important;
+  height:auto !important;min-height:28px !important;margin:0 !important;
+  padding:3px 4px 3px 11px !important;border-radius:999px !important;
+  font-size:12px !important;line-height:1.2 !important;font-weight:800 !important;
+  color:#166534 !important;background:#f0fdf4 !important;border:1px solid #bbf7d0 !important;box-shadow:none !important;
+}
+#page-atur-member .member-card .member-schedule-chip.stopped{
+  color:#64748b !important;background:#f1f5f9 !important;border-color:#cbd5e1 !important;
+}
+#page-atur-member .member-card .member-schedule-chip.stopped > span{text-decoration:line-through;}
+#page-atur-member .member-card .member-schedule-chip.member-tanpa-jadwal-chip{
+  padding:4px 12px !important;color:#6d28d9 !important;background:#f5f3ff !important;border-color:#ddd6fe !important;
+}
+#page-atur-member .member-card .member-schedule-delete{
+  display:grid !important;place-items:center !important;
+  width:22px !important;height:22px !important;min-width:22px !important;min-height:22px !important;
+  margin:0 !important;padding:0 !important;border-radius:50% !important;
+  font-size:14px !important;line-height:1 !important;font-weight:900 !important;
+  color:#be123c !important;background:#ffe4e6 !important;border:0 !important;box-shadow:none !important;
+  cursor:pointer;transition:background .15s ease,color .15s ease,transform .1s ease;
+}
+#page-atur-member .member-card .member-schedule-delete:hover{background:#e11d48 !important;color:#fff !important;}
+#page-atur-member .member-card .member-schedule-delete:active{transform:scale(.9);}
+
+/* ---------- Info: Mulai / WA / Status ---------- */
+#page-atur-member .member-card .member-card-meta{
+  display:grid !important;grid-template-columns:minmax(0,.9fr) minmax(0,1.5fr) minmax(0,1.1fr) !important;
+  gap:8px !important;margin:0 !important;padding:0 !important;
+}
+#page-atur-member .member-card .member-meta-item{
+  display:flex !important;flex-direction:column !important;justify-content:center !important;gap:4px !important;
+  min-width:0 !important;margin:0 !important;padding:9px 11px !important;
+  background:#f8fafc !important;border:1px solid #e8eef5 !important;border-radius:12px !important;box-shadow:none !important;
+}
+#page-atur-member .member-card .member-meta-item > span{
+  font-size:10px !important;line-height:1.2 !important;font-weight:900 !important;
+  text-transform:uppercase !important;letter-spacing:.07em !important;color:#64748b !important;
+}
+#page-atur-member .member-card .member-meta-item > strong{
+  display:block !important;font-size:13px !important;line-height:1.3 !important;font-weight:800 !important;color:#0f172a !important;
+  overflow:hidden !important;text-overflow:ellipsis !important;white-space:nowrap !important;
+}
+#page-atur-member .member-card .member-meta-item > strong > span{
+  white-space:normal !important;border-radius:999px !important;padding:3px 10px !important;
+  font-size:10.5px !important;line-height:1.3 !important;letter-spacing:.02em !important;
+}
+#page-atur-member .member-card .member-status-active{
+  color:#166534 !important;background:#dcfce7 !important;border:1px solid #86efac !important;box-shadow:none !important;
+}
+
+#page-atur-member .member-card .member-meta-item:nth-child(3) > strong{overflow:visible !important;white-space:normal !important;}
+#page-atur-member .member-card .member-meta-item > strong > span{display:inline-flex !important;align-items:center !important;}
+
+/* ---------- Tombol aksi ---------- */
+#page-atur-member .member-card .member-card-actions{
+  display:grid !important;grid-template-columns:repeat(3,minmax(0,1fr)) !important;align-items:stretch !important;gap:8px !important;
+  margin:0 !important;padding:12px 0 0 !important;border-top:1px solid #eef2f7 !important;
+}
+#page-atur-member .member-card .member-card-actions button{
+  --c:#334155;--bg:#f1f5f9;--bd:#e2e8f0;
+  width:100% !important;
+  display:inline-flex !important;align-items:center !important;justify-content:center !important;gap:5px !important;
+  min-height:38px !important;padding:0 8px !important;margin:0 !important;
+  border-radius:11px !important;
+  font-size:12px !important;line-height:1 !important;font-weight:800 !important;letter-spacing:.01em !important;
+  white-space:nowrap !important;cursor:pointer;
+  color:var(--c) !important;background:var(--bg) !important;border:1px solid var(--bd) !important;box-shadow:none !important;
+  transition:transform .12s ease,box-shadow .15s ease,filter .15s ease !important;
+  -webkit-tap-highlight-color:transparent;
+}
+#page-atur-member .member-card .member-card-actions button:hover{
+  transform:translateY(-1px);box-shadow:0 5px 12px rgba(15,23,42,.12) !important;filter:brightness(.98);
+}
+#page-atur-member .member-card .member-card-actions button:active{transform:scale(.96);box-shadow:none !important;}
+#page-atur-member .member-card .member-card-actions button:focus-visible{outline:3px solid rgba(99,102,241,.35);outline-offset:2px;}
+
+#page-atur-member .member-card .member-card-actions button.bg-blue-600{--c:#1d4ed8;--bg:#eff6ff;--bd:#bfdbfe;}
+#page-atur-member .member-card .member-card-actions button.bg-amber-500{--c:#b45309;--bg:#fffbeb;--bd:#fde68a;}
+#page-atur-member .member-card .member-card-actions button.bg-orange-600{--c:#c2410c;--bg:#fff7ed;--bd:#fed7aa;}
+#page-atur-member .member-card .member-card-actions button.bg-rose-600{--c:#be123c;--bg:#fff1f2;--bd:#fecdd3;}
+#page-atur-member .member-card .member-card-actions button.bg-emerald-600{--c:#047857;--bg:#ecfdf5;--bd:#a7f3d0;}
+#page-atur-member .member-card .member-card-actions button.bg-indigo-700{--c:#4338ca;--bg:#eef2ff;--bd:#c7d2fe;}
+
+/* Tombol utama: Perpanjang (hijau solid) */
+#page-atur-member .member-card .member-card-actions .member-renew-button{
+  order:99 !important;grid-column:1 / -1 !important;margin-left:0 !important;
+  min-height:42px !important;font-size:13px !important;
+  color:#fff !important;border-color:transparent !important;
+  background:linear-gradient(135deg,#22c55e,#059669) !important;
+  box-shadow:0 6px 14px rgba(5,150,105,.32) !important;
+}
+#page-atur-member .member-card .member-card-actions .member-renew-button:hover{
+  box-shadow:0 9px 18px rgba(5,150,105,.42) !important;filter:brightness(1.04);
+}
+
+/* ---------- HP ---------- */
+@media (max-width:640px){
+  #page-atur-member .member-cards-grid{grid-template-columns:1fr !important;gap:12px !important;}
+  #page-atur-member .member-cards-grid .member-card{padding:14px 14px 12px 18px !important;border-radius:18px !important;gap:11px !important;}
+  #page-atur-member .member-card .member-team-logo-indicator{
+    width:52px !important;height:52px !important;min-width:52px !important;max-width:52px !important;min-height:52px !important;max-height:52px !important;
+  }
+  #page-atur-member .member-card .member-team-name{font-size:16px !important;}
+  #page-atur-member .member-card .member-card-actions{gap:7px !important;}
+  #page-atur-member .member-card .member-card-actions button{min-height:40px !important;padding:0 4px !important;font-size:11.5px !important;}
+  #page-atur-member .member-card .member-card-actions .member-renew-button{min-height:44px !important;font-size:13px !important;}
+}
+@media (max-width:420px){
+  #page-atur-member .member-card .member-card-meta{grid-template-columns:minmax(0,1fr) minmax(0,1.4fr) !important;}
+  #page-atur-member .member-card .member-card-meta .member-meta-item:nth-child(3){grid-column:1 / -1 !important;}
+  #page-atur-member .member-card .member-day-label{min-width:56px !important;padding:5px 8px !important;}
 }
 </style>
