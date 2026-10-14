@@ -16148,8 +16148,14 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                         <button type="button" onclick="document.getElementById('modal-edit-member-permanent')?.remove()" class="text-slate-500 text-xl font-black">✕</button>
                     </div>
                     <div class="space-y-3">
+                        <div><label class="block text-xs font-black mb-1">Jenis Member</label>
+                            <select id="edit-member-jenis" onchange="toggleJenisEditMember()" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold text-sm">
+                                <option value="tetap" selected>Jadwal Tetap</option>
+                                <option value="tanpa">Tanpa Jadwal Tetap</option>
+                            </select></div>
                         <div><label class="block text-xs font-black mb-1">Nama Tim</label>
                             <input id="edit-member-nama" value="${esc(current.nama)}" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold text-sm"></div>
+                        <div id="edit-member-jadwal-fields" class="space-y-3">
                         <div><label class="block text-xs font-black mb-1">Hari</label>
                             <select id="edit-member-hari" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold text-sm">
                                 ${listHariKey.map(h=>`<option value="${esc(h)}" ${h===current.hari?'selected':''}>${esc(h)}</option>`).join('')}
@@ -16160,8 +16166,12 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                             </select></div>
                         <div><label class="block text-xs font-black mb-1">Mulai</label>
                             <input id="edit-member-mulai" type="date" value="${esc(current.mulai || '')}" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold text-sm"></div>
+                        </div>
                         <div><label class="block text-xs font-black mb-1">WhatsApp</label>
                             <input id="edit-member-wa" type="tel" value="${esc(current.wa || '')}" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold text-sm"></div>
+                    </div>
+                    <div id="edit-member-tanpa-note" class="hidden mt-4 rounded-xl bg-blue-50 border border-blue-200 p-3 text-[11px] font-bold text-blue-900">
+                        Semua jadwal tetap tim ini yang masih aktif akan <b>dihentikan mulai hari ini</b>. Jadwal sebelum hari ini tetap dipertahankan.
                     </div>
                     <div class="mt-4 rounded-xl bg-amber-50 border border-amber-200 p-3 text-[11px] font-bold text-amber-900">
                         Perubahan ini adalah <b>permanen</b>. Jika hanya ingin memindahkan member untuk satu tanggal, gunakan edit dari <b>Booking Schedule</b>.
@@ -16174,8 +16184,65 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             document.body.appendChild(modal);
         };
 
+        window.toggleJenisEditMember = () => {
+            const tanpa = document.getElementById('edit-member-jenis')?.value === 'tanpa';
+            document.getElementById('edit-member-jadwal-fields')?.classList.toggle('hidden', tanpa);
+            document.getElementById('edit-member-tanpa-note')?.classList.toggle('hidden', !tanpa);
+        };
+
+        // Jadwal tetap -> Tanpa jadwal tetap.
+        // Semua slot aktif tim ini dihentikan mulai hari ini (riwayat tetap ada,
+        // sama seperti tombol Berhenti). Slot yang belum mulai langsung dihapus.
+        window.konversiMemberKeTanpaJadwal = async (key, namaBaru, waBaru) => {
+            const today = getLocalDateString();
+            const lama = (globalCache.memberRawEntries || []).find(e => String(e.key) === String(key));
+            if(!lama) { alert('Data member tidak ditemukan.'); return false; }
+            const namaLama = String(lama.nama || '').trim().toLowerCase();
+            const slotAktif = (globalCache.memberRawEntries || []).filter(e =>
+                !e.isOff && !e.berhenti && String(e.nama || '').trim().toLowerCase() === namaLama);
+
+            const ok = await (window.appConfirm
+                ? window.appConfirm(`Jadikan ${namaBaru} member TANPA JADWAL TETAP?\n\n${slotAktif.length} jadwal tetap yang masih aktif akan dihentikan mulai ${today}. Jadwal sebelum tanggal ini tetap dipertahankan.`)
+                : Promise.resolve(true));
+            if(!ok) return false;
+
+            try {
+                await Promise.all(slotAktif.map(e => (e.mulai && String(e.mulai) > today)
+                    ? remove(ref(db, 'member/' + e.key))
+                    : update(ref(db, 'member/' + e.key), { berhenti: today })));
+
+                const wa = String(waBaru || '').replace(/[^\d+]/g, '').trim();
+                const sudahAda = Object.values(globalCache.memberTanpaJadwal || {})
+                    .find(x => String(x.nama || '').trim() === namaBaru);
+                if(sudahAda) {
+                    await update(ref(db, 'memberTanpaJadwal/' + sudahAda.id), { wa: wa || sudahAda.wa || '', updatedAt: Date.now() });
+                } else {
+                    await push(ref(db, 'memberTanpaJadwal'), {
+                        nama: namaBaru, wa, status: 'Member',
+                        tipeMember: 'Tanpa Jadwal Tetap', tanpaJadwalTetap: true, jadwalTetap: false,
+                        createdAt: Date.now(), updatedAt: Date.now()
+                    });
+                }
+                if(typeof window.muatMemberTanpaJadwal === 'function') window.muatMemberTanpaJadwal();
+                return true;
+            } catch(error) {
+                console.error(error);
+                alert('Gagal mengubah ke tanpa jadwal tetap: ' + error.message);
+                return false;
+            }
+        };
+
         window.simpanEditMember = async (key) => {
             const nama = document.getElementById('edit-member-nama')?.value.trim();
+            if(document.getElementById('edit-member-jenis')?.value === 'tanpa') {
+                if(!nama) { alert('Nama tim wajib diisi.'); return; }
+                const waTanpa = document.getElementById('edit-member-wa')?.value.trim() || '';
+                if(await window.konversiMemberKeTanpaJadwal(key, nama, waTanpa)) {
+                    document.getElementById('modal-edit-member-permanent')?.remove();
+                    showSuccessPopup('Member diubah menjadi tanpa jadwal tetap.');
+                }
+                return;
+            }
             const hari = document.getElementById('edit-member-hari')?.value;
             const jam = document.getElementById('edit-member-jam')?.value;
             const mulai = document.getElementById('edit-member-mulai')?.value;
@@ -16211,14 +16278,138 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 return;
             }
 
-            const bulan = new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date());
+            // Perpanjangan dilakukan tgl 25-30 untuk bulan berikutnya,
+            // jadi pesan memakai nama BULAN SELANJUTNYA (Desember -> Januari).
+            const now = new Date();
+            const bulanDepan = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+            const bulan = new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(bulanDepan);
             const pesan =
-                `Permisi kak, kami dari tim admin Sandaga Minisoccer 2 ingin konfirmasi untuk ${String(nama || 'tim ini')}, ` +
-                `apakah di bulan ${bulan} ini ingin melanjutkan menjadi member di Sandaga Minisoccer 2, ` +
-                `kami tunggu konfirmasinya kak, Terimakasih`;
+                `Permisi kak 🙏😊 kami dari tim admin Sandaga Minisoccer 2 ⚽ ingin konfirmasi untuk ${String(nama || 'tim ini')}, ` +
+                `apakah di bulan ${bulan} 📅 ingin melanjutkan menjadi member di Sandaga Minisoccer 2? ` +
+                `Kami tunggu konfirmasinya ya kak 🙌 Terimakasih 🙏✨`;
 
             const url = getWhatsAppUrl(nomor, pesan);
             if(url) window.open(url, '_blank', 'noopener,noreferrer');
+        };
+
+        // Edit member TANPA JADWAL TETAP (muncul sebagai modal, jadi berfungsi
+        // dari daftar member). Bisa juga diubah menjadi member JADWAL TETAP.
+        window.editMemberTanpaJadwal = (id) => {
+            const cur = (globalCache.memberTanpaJadwal || {})[id];
+            if(!cur) { alert('Data member tidak ditemukan.'); return; }
+            const esc = v => String(v ?? '')
+                .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+            document.getElementById('modal-edit-member-tanpa-jadwal')?.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'modal-edit-member-tanpa-jadwal';
+            modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center p-3 bg-slate-900/70 backdrop-blur-sm';
+            modal.innerHTML = `
+                <div class="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl p-4 sm:p-6 text-slate-900">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="font-black text-base sm:text-lg text-indigo-950">✏️ EDIT MEMBER</h3>
+                            <p class="text-[11px] text-slate-500 mt-1">Member tanpa jadwal tetap.</p>
+                        </div>
+                        <button type="button" onclick="document.getElementById('modal-edit-member-tanpa-jadwal')?.remove()" class="text-slate-500 text-xl font-black">✕</button>
+                    </div>
+                    <div class="space-y-3">
+                        <div><label class="block text-xs font-black mb-1">Jenis Member</label>
+                            <select id="edit-mtj-jenis" onchange="toggleJenisEditMemberTanpaJadwal()" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold text-sm">
+                                <option value="tanpa" selected>Tanpa Jadwal Tetap</option>
+                                <option value="tetap">Jadwal Tetap</option>
+                            </select></div>
+                        <div><label class="block text-xs font-black mb-1">Nama Tim</label>
+                            <input id="edit-mtj-nama" value="${esc(cur.nama)}" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold text-sm"></div>
+                        <div><label class="block text-xs font-black mb-1">WhatsApp</label>
+                            <input id="edit-mtj-wa" type="tel" value="${esc(cur.wa || '')}" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold text-sm"></div>
+                        <div id="edit-mtj-jadwal-fields" class="space-y-3 hidden">
+                            <div><label class="block text-xs font-black mb-1">Hari</label>
+                                <select id="edit-mtj-hari" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold text-sm">
+                                    ${listHariKey.map(h=>`<option value="${esc(h)}">${esc(h)}</option>`).join('')}
+                                </select></div>
+                            <div><label class="block text-xs font-black mb-1">Jam</label>
+                                <select id="edit-mtj-jam" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold text-sm">
+                                    ${listJam.map(j=>`<option value="${esc(j)}">${esc(j)}</option>`).join('')}
+                                </select></div>
+                            <div><label class="block text-xs font-black mb-1">Mulai</label>
+                                <input id="edit-mtj-mulai" type="date" value="${esc(getLocalDateString())}" oninput="updateInfoBerlakuMemberTanpaJadwal()" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold text-sm"></div>
+                        </div>
+                    </div>
+                    <div id="edit-mtj-note" class="hidden mt-4 rounded-xl bg-amber-50 border border-amber-200 p-3 text-[11px] font-bold text-amber-900">
+                        Member dipindahkan ke daftar <b>jadwal tetap</b> dan berlaku <b>1 bulan</b>: <b id="edit-mtj-berlaku">-</b>. Setelah itu jadwalnya otomatis berhenti (bisa diperpanjang lagi lewat tombol Perpanjang).
+                    </div>
+                    <div class="flex gap-2 mt-5">
+                        <button type="button" onclick="document.getElementById('modal-edit-member-tanpa-jadwal')?.remove()" class="flex-1 bg-slate-200 text-slate-800 px-4 py-2.5 rounded-xl text-sm font-black">Batal</button>
+                        <button type="button" onclick="simpanEditMemberTanpaJadwal('${esc(id)}')" class="flex-1 bg-indigo-700 hover:bg-indigo-800 text-white px-4 py-2.5 rounded-xl text-sm font-black">Simpan</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+        };
+
+        // Tanggal berhenti = tepat 1 bulan setelah tanggal mulai
+        // (berhenti bersifat eksklusif: jadwal tidak berlaku lagi MULAI tanggal itu).
+        // Contoh: mulai 2026-11-01 -> berhenti 2026-12-01 (aktif 1-30 November).
+        // Tanggal 29-31 dipotong ke akhir bulan tujuan (31 Jan -> 28 Feb).
+        const tambahSatuBulanIso = (iso) => {
+            const [y, m, d] = String(iso).split('-').map(Number);
+            if(!y || !m || !d) return '';
+            const akhir = new Date(y, m + 1, 0).getDate();
+            const t = new Date(y, m, Math.min(d, akhir));
+            return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+        };
+
+        window.updateInfoBerlakuMemberTanpaJadwal = () => {
+            const el = document.getElementById('edit-mtj-berlaku');
+            if(!el) return;
+            const mulai = document.getElementById('edit-mtj-mulai')?.value || getLocalDateString();
+            const berhenti = tambahSatuBulanIso(mulai);
+            if(!berhenti) { el.textContent = '-'; return; }
+            const fmt = iso => new Date(iso + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            const [y, m, d] = berhenti.split('-').map(Number);
+            const terakhir = new Date(y, m - 1, d - 1);
+            const terakhirIso = `${terakhir.getFullYear()}-${String(terakhir.getMonth() + 1).padStart(2, '0')}-${String(terakhir.getDate()).padStart(2, '0')}`;
+            el.textContent = `${fmt(mulai)} s/d ${fmt(terakhirIso)}`;
+        };
+
+        window.toggleJenisEditMemberTanpaJadwal = () => {
+            const tetap = document.getElementById('edit-mtj-jenis')?.value === 'tetap';
+            document.getElementById('edit-mtj-jadwal-fields')?.classList.toggle('hidden', !tetap);
+            document.getElementById('edit-mtj-note')?.classList.toggle('hidden', !tetap);
+            if(tetap) window.updateInfoBerlakuMemberTanpaJadwal();
+        };
+
+        window.simpanEditMemberTanpaJadwal = async (id) => {
+            const nama = document.getElementById('edit-mtj-nama')?.value.trim();
+            const wa = String(document.getElementById('edit-mtj-wa')?.value || '').replace(/[^\d+]/g, '').trim();
+            const jenis = document.getElementById('edit-mtj-jenis')?.value;
+            if(!nama) { alert('Nama tim wajib diisi.'); return; }
+
+            try {
+                if(jenis === 'tetap') {
+                    // Tanpa jadwal tetap -> jadwal tetap
+                    const hari = document.getElementById('edit-mtj-hari')?.value;
+                    const jam = document.getElementById('edit-mtj-jam')?.value;
+                    const mulai = document.getElementById('edit-mtj-mulai')?.value || getLocalDateString();
+                    if(!hari || !jam) { alert('Mohon pilih hari dan jam.'); return; }
+                    // Berlaku 1 bulan sejak tanggal mulai, lalu otomatis berhenti.
+                    const berhenti = tambahSatuBulanIso(mulai);
+                    const bentrok = bentrokCekMemberBaru({ nama, hari, jam, mulai, berhenti });
+                    if(bentrok.length) { alert(bentrokPesanMember({ nama, hari, jam, mulai }, bentrok)); return; }
+                    await push(ref(db, 'member'), { nama, wa, hari, jam, mulai, berhenti });
+                    await remove(ref(db, 'memberTanpaJadwal/' + id));
+                    showSuccessPopup('Member diubah menjadi jadwal tetap (berlaku 1 bulan).');
+                } else {
+                    await update(ref(db, 'memberTanpaJadwal/' + id), { nama, wa, updatedAt: Date.now() });
+                    showSuccessPopup('Member tanpa jadwal tetap berhasil diperbarui.');
+                }
+                document.getElementById('modal-edit-member-tanpa-jadwal')?.remove();
+                if(typeof window.muatMemberTanpaJadwal === 'function') window.muatMemberTanpaJadwal();
+            } catch(error) {
+                console.error(error);
+                alert('Gagal menyimpan perubahan: ' + error.message);
+            }
         };
 
         window.editWaMember = async (key) => {
@@ -18218,6 +18409,17 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                         `);
                     }
 
+                    // Jika semua jadwal tetap sudah berhenti tetapi member masih punya
+                    // record tanpa jadwal tetap, statusnya tetap AKTIF.
+                    {
+                        const statusMeta = Array.from(existingCard.querySelectorAll('.member-meta-item')).find(el =>
+                            String(el.querySelector('span')?.textContent || '').trim() === 'Status');
+                        const statusStrong = statusMeta?.querySelector('strong');
+                        if (statusStrong && String(statusStrong.textContent || '').trim() === 'BERHENTI') {
+                            statusStrong.innerHTML = '<span class="member-status-active inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-white text-emerald-800 border-2 border-emerald-700 shadow-sm text-[10px] font-black tracking-wide">● AKTIF</span>';
+                        }
+                    }
+
                     // Jika member jadwal tetap belum punya WA, gunakan WA dari
                     // record tanpa jadwal tetap.
                     if (m.wa) {
@@ -18308,6 +18510,10 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                             <button type="button"
                                     onclick="hapusMemberTanpaJadwal('${key}')"
                                     class="bg-rose-600 hover:bg-rose-700 text-white">🗑 Hapus</button>
+                            <button type="button"
+                                    onclick="konfirmasiPerpanjanganMember(decodeURIComponent('${encodeURIComponent(exactName)}'), decodeURIComponent('${encodeURIComponent(String(m.wa || ''))}'))"
+                                    class="bg-green-600 hover:bg-green-700 text-white member-renew-button"
+                                    title="Konfirmasi perpanjangan member melalui WhatsApp">📲 Perpanjang</button>
                             <button type="button"
                                     onclick="openTeamLogoEditor(decodeURIComponent('${encodeURIComponent(exactName)}'),'member')"
                                     class="bg-indigo-700 hover:bg-indigo-800 text-white">Logo</button>
@@ -27867,7 +28073,9 @@ function renderMemberTanpaJadwal() {
     `).join('');
 }
 
-function editMemberTanpaJadwal(id) {
+/* Versi lama (mengisi form inline yang tersembunyi di tampilan daftar).
+   Tombol Edit sekarang memakai window.editMemberTanpaJadwal (modal) di script utama. */
+function editMemberTanpaJadwalInline(id) {
     const item = memberTanpaJadwalCache.find(x => x.id === id);
     if (!item) return;
 
