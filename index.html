@@ -10541,6 +10541,24 @@ body > header {
 }
 </style>
 
+<style id="sumber-uang-v1">
+/* PILIHAN SUMBER UANG — form Uang Keluar */
+.keluar-sumber-uang-options{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.keluar-sumber-uang-option{position:relative;display:block;cursor:pointer;margin:0}
+.keluar-sumber-uang-option input{position:absolute;opacity:0;pointer-events:none}
+.keluar-sumber-uang-option>span{display:flex;flex-direction:column;gap:2px;padding:10px 11px;border-radius:13px;border:1.5px solid rgba(148,163,184,.55);background:rgba(255,255,255,.62);color:#334155;transition:all .15s ease;text-align:left}
+.keluar-sumber-uang-option>span b{font-size:12px;font-weight:950;color:#102a56}
+.keluar-sumber-uang-option>span small{font-size:9px;font-weight:700;color:#64748b;line-height:1.25}
+.keluar-sumber-uang-option input:checked+span{border-color:#be123c;background:rgba(255,241,242,.92);box-shadow:0 0 0 3px rgba(190,18,60,.13)}
+.keluar-sumber-uang-option input:checked+span b{color:#9f1239}
+.keluar-sumber-uang-option input:focus-visible+span{outline:2px solid #1d4ed8;outline-offset:2px}
+/* SETOR TUNAI — pilihan sumber uang */
+.setor-tunai-mode{margin:0 0 10px;padding:10px 12px;border:1px solid rgba(148,163,184,.35);border-radius:15px;background:rgba(255,255,255,.62);box-shadow:0 8px 22px rgba(8,20,45,.08),inset 0 1px 0 rgba(255,255,255,.65)}
+.setor-tunai-mode-label{margin:0 0 7px;color:#526784;font-size:8px;font-weight:950;letter-spacing:.08em}
+.setor-tunai-mode-buttons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.setor-tunai-mode-buttons button{padding:9px 6px;border-radius:11px;border:1.5px solid rgba(148,163,184,.5);background:#fff;color:#334155;font-size:10px;font-weight:950;cursor:pointer;transition:all .15s ease}
+.setor-tunai-mode-buttons button.active{background:linear-gradient(135deg,#173f78,#102a56);border-color:#102a56;color:#fff;box-shadow:0 6px 16px rgba(8,20,45,.2)}
+</style>
 </head>
 <body class="min-h-screen p-2 sm:p-4 pt-4 sm:pt-6 flex flex-col items-center text-slate-900 font-medium">
 
@@ -11057,7 +11075,7 @@ body > header {
 <h3 class="font-black text-sm sm:text-base text-emerald-950 flex items-center justify-center gap-2 text-center w-full" id="title-ringkasan-total">📌 RINGKASAN TOTAL KEUANGAN</h3>
 <p class="text-xs font-bold text-emerald-900" id="label-tanggal-ringkasan"></p>
 <p id="rekap-alur-pengeluaran" class="text-[11px] sm:text-xs font-black text-slate-700 bg-white/60 border border-emerald-200 rounded-xl px-3 py-2 mt-2 text-center">
-Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomatis mengambil dari Cash Minuman.
+Alur pengeluaran: dipotong dari sumber uang yang dipilih saat input (Uang Lapangan atau Uang Minuman). Data lama tanpa pilihan: Cash Lapangan dulu, jika kurang diambil dari Cash Minuman.
 </p>
 </div>
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 font-bold text-center">
@@ -11353,7 +11371,7 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 
 <div id="member-list-heading" class="member-list-heading-row">
   <h3 class="font-black text-sm text-slate-900">Daftar Jadwal / Member Aktif</h3>
-  <button type="button" id="btn-download-logo-member" class="member-logo-download-btn" onclick="downloadLogoMember()" title="Download semua logo tim member (PNG transparan)">⬇️ Download Logo</button>
+  <button type="button" id="btn-download-logo-member" class="member-logo-download-btn" onclick="downloadLogoMember()" title="Download semua logo tim member (PNG transparan)"><span class="mlb-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/></svg></span><span class="mlb-txt">Download Logo</span></button>
 </div>
 <div id="tabel-list-member" class="member-cards-grid"></div>
 </div>
@@ -12666,6 +12684,19 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
     <span class="uang-keluar-date-chevron" aria-hidden="true">⌄</span>
   </button>
 </div>
+<div class="keluar-sumber-uang mb-3">
+  <label class="block text-xs font-black text-rose-950 mb-2">PENGELUARAN DARI UANG</label>
+  <div class="keluar-sumber-uang-options" role="radiogroup" aria-label="Sumber uang pengeluaran">
+    <label class="keluar-sumber-uang-option">
+      <input type="radio" name="k-sumber-uang" id="k-sumber-uang-lapangan" value="lapangan" checked onchange="window.cekSaldoSumberCash&&window.cekSaldoSumberCash()"/>
+      <span><b>🏟️ Uang Lapangan</b><small>Dipotong dari cash lapangan</small></span>
+    </label>
+    <label class="keluar-sumber-uang-option">
+      <input type="radio" name="k-sumber-uang" id="k-sumber-uang-minuman" value="minuman" onchange="window.cekSaldoSumberCash&&window.cekSaldoSumberCash()"/>
+      <span><b>🥤 Uang Minuman</b><small>Dipotong dari cash minuman</small></span>
+    </label>
+  </div>
+</div>
 <div class="keluar-sumber-cash-simple mb-3">
   <label class="block text-xs font-black text-rose-950 mb-2">CASH DIAMBIL DARI TANGGAL</label>
     <div class="uang-keluar-source-date-wrap mb-3">
@@ -12821,6 +12852,14 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
       </div>
     </div>
     <div class="setor-tunai-period" id="setor-tunai-period">PERIODE: -</div>
+    <div class="setor-tunai-mode" role="group" aria-label="Pilih sumber uang setor tunai">
+      <div class="setor-tunai-mode-label">SETOR DARI</div>
+      <div class="setor-tunai-mode-buttons">
+        <button type="button" data-setor-mode="lapangan" aria-pressed="false" onclick="setSetorTunaiMode('lapangan')">🏟️ Uang Lapangan</button>
+        <button type="button" data-setor-mode="minuman" aria-pressed="false" onclick="setSetorTunaiMode('minuman')">🥤 Uang Minuman</button>
+        <button type="button" data-setor-mode="both" class="active" aria-pressed="true" onclick="setSetorTunaiMode('both')">💵 Keduanya</button>
+      </div>
+    </div>
     <div class="setor-tunai-sisa-card">
       <div class="setor-tunai-sisa-copy">
         <span class="setor-tunai-sisa-icon">💵</span>
@@ -12916,6 +12955,46 @@ Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu → jika kurang, otomati
 @media(max-width:640px){.sparring-chooser{padding:16px;border-radius:20px}.sparring-chooser-btn{grid-template-columns:42px minmax(0,1fr) 18px;padding:11px 12px}.sparring-chooser-icon{width:42px;height:42px;border-radius:12px}}
 </style>
 
+<script id="alokasi-pengeluaran-helper-v1">
+/* Alokasi pengeluaran terhadap cash Lapangan / Minuman pada satu tanggal sumber.
+   - item.sumberUang === 'lapangan' -> dipotong dari Cash Lapangan
+   - item.sumberUang === 'minuman'  -> dipotong dari Cash Minuman
+   - data lama (tanpa sumberUang)   -> otomatis: Lapangan dulu, kekurangannya dari Minuman */
+window.alokasiPengeluaranCash = function(items, tgl, lapCash, minCash){
+  lapCash = Math.max(0, Number(lapCash)||0);
+  minCash = Math.max(0, Number(minCash)||0);
+  var expLap = 0, expMin = 0, auto = 0;
+  (items || []).forEach(function(item){
+    if(!item) return;
+    var sumber = String(item.sumberTgl || item.tgl || '').split('T')[0];
+    if(sumber !== tgl) return;
+    var n = Number(item.jumlah || 0);
+    if(item.sumberUang === 'lapangan') expLap += n;
+    else if(item.sumberUang === 'minuman') expMin += n;
+    else auto += n;
+  });
+  var dariLap = Math.min(expLap, lapCash);
+  var dariMin = Math.min(expMin, minCash);
+  var kurang = (expLap - dariLap) + (expMin - dariMin);
+  var autoLap = Math.min(auto, lapCash - dariLap);
+  var autoMin = Math.min(Math.max(0, auto - autoLap), minCash - dariMin);
+  kurang += Math.max(0, auto - autoLap - autoMin);
+  dariLap += autoLap; dariMin += autoMin;
+  return {
+    total: expLap + expMin + auto,
+    dariLapangan: dariLap,
+    dariMinuman: dariMin,
+    kekurangan: kurang,
+    sisaLapangan: lapCash - dariLap,
+    sisaMinuman: minCash - dariMin
+  };
+};
+document.addEventListener('input', function(e){
+  if(e.target && e.target.id === 'k-jumlah' && typeof window.cekSaldoSumberCash === 'function'){
+    try{ window.cekSaldoSumberCash(); }catch(err){}
+  }
+});
+</script>
 <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getDatabase, ref, push, remove, update, onValue, get, query, orderByChild, startAt } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
@@ -13867,8 +13946,8 @@ function scheduleRender(fn) {
             let tglSumber = document.getElementById('k-sumber-tgl').value;
             if(!tglSumber) return;
 
-            let totalMasukCash = 0;
-            let totalKeluar = 0;
+            let lapCash = 0;
+            let minCash = 0;
 
             Object.values(globalCache.pemasukan).forEach(item => {
                 if(item.tgl === tglSumber) {
@@ -13880,38 +13959,41 @@ function scheduleRender(fn) {
                     const hasSplitPayment = item.jumlah1 !== undefined && item.jumlah1 !== null;
                     if(!hasSplitPayment && item.jumlah !== undefined && item.jumlah !== null) {
                         let singleMet = item.metode || 'Cash';
-                        if(singleMet === 'Cash') totalMasukCash += Number(item.jumlah || 0);
+                        if(singleMet === 'Cash') lapCash += Number(item.jumlah || 0);
                     } else {
-                        totalMasukCash += window.getPaymentCash(item,1);
-                        totalMasukCash += window.getPaymentCash(item,2);
-                        if(Number(item.totalKaosKaki || 0) > 0 && met1 === 'Cash') totalMasukCash += Number(item.totalKaosKaki || 0);
+                        lapCash += window.getPaymentCash(item,1);
+                        lapCash += window.getPaymentCash(item,2);
+                        if(Number(item.totalKaosKaki || 0) > 0 && met1 === 'Cash') lapCash += Number(item.totalKaosKaki || 0);
                     }
                 }
             });
 
             Object.values(globalCache.booking).forEach(item => {
                 if(item.tgl && item.tgl.split('T')[0] === tglSumber && (item.metode || 'Cash') === 'Cash') {
-                    totalMasukCash += Number(item.dp || 0);
+                    lapCash += Number(item.dp || 0);
                 }
             });
 
             Object.values(globalCache.minuman).forEach(item => {
                 if(item.tgl === tglSumber && (item.metode || 'Cash') === 'Cash') {
-                    totalMasukCash += Number(item.total || 0);
+                    minCash += Number(item.total || 0);
                 }
             });
 
-            Object.values(globalCache.pengeluaran).forEach(item => {
-                let sumberDana = item.sumberTgl || item.tgl;
-                if(sumberDana === tglSumber) {
-                    totalKeluar += Number(item.jumlah || 0);
-                }
-            });
+            const pilihan = document.querySelector('input[name="k-sumber-uang"]:checked');
+            const sumberUang = pilihan ? pilihan.value : 'lapangan';
+            const alok = window.alokasiPengeluaranCash(Object.values(globalCache.pengeluaran), tglSumber, lapCash, minCash);
+            const sisaCash = sumberUang === 'minuman' ? alok.sisaMinuman : alok.sisaLapangan;
+            const namaSumber = sumberUang === 'minuman' ? 'Minuman' : 'Lapangan';
 
-            let sisaCash = totalMasukCash - totalKeluar;
+            let nominal = 0;
+            const nominalEl = document.getElementById('k-jumlah');
+            if(nominalEl && typeof parseNominalInputValue === 'function') nominal = Number(parseNominalInputValue(nominalEl.value) || 0);
+
             let infoEl = document.getElementById('info-saldo-sumber');
             if(infoEl) {
-                infoEl.innerText = `Sisa Cash Tanggal ${tglSumber}: Rp ${sisaCash.toLocaleString('id-ID')}`;
+                infoEl.innerText = `Sisa Cash ${namaSumber} Tanggal ${tglSumber}: Rp ${sisaCash.toLocaleString('id-ID')}`
+                    + (nominal > sisaCash ? ` ⚠ Nominal melebihi sisa Cash ${namaSumber}` : '');
             }
         }
 
@@ -15342,7 +15424,8 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                     ket: document.getElementById('k-ket').value, 
                     jumlah: parseNominalInputValue(document.getElementById('k-jumlah').value),
                     tgl: document.getElementById('k-tgl').value,
-                    sumberTgl: document.getElementById('k-sumber-tgl').value 
+                    sumberTgl: document.getElementById('k-sumber-tgl').value,
+                    sumberUang: ((document.querySelector('input[name="k-sumber-uang"]:checked')||{}).value) || 'lapangan'
                 };
             }
             if(type === 'pemasukan') {
@@ -23194,9 +23277,8 @@ return;
                         );
                     }
 
-                    tr += `<td class="p-0.5 sm:p-1 ${bgClass} align-middle h-7 sm:h-14 overflow-hidden text-center relative">
+                    tr += `<td data-date="${day.dateStr}" class="p-0.5 sm:p-1 ${bgClass} align-middle h-7 sm:h-14 overflow-hidden text-center relative">
                         <div class="flex items-center justify-center h-full text-[6px] sm:text-[10px] text-center leading-tight line-clamp-2 font-black relative z-[2]">${textVal}</div>
-                        ${hariSudahLewat ? `<div class="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-1/2 bg-blue-400/90 text-white pointer-events-none z-[3] flex items-center justify-center overflow-hidden"><span class="font-black text-[7px] sm:text-[10px] leading-none whitespace-nowrap tracking-wide" style="transform:rotate(-90deg); transform-origin:center;">• DONE • DONE • DONE • DONE • DONE • DONE • DONE • DONE • DONE • DONE • DONE • DONE • DONE • DONE • DONE • DONE • DONE • DONE • DONE • DONE •</span></div>` : ''}
                     </td>`;
                 });
                 tr += `</tr>`;
@@ -23204,6 +23286,52 @@ return;
             });
 
             wrap.appendChild(tableWrap);
+
+            // Pita "DONE" dibuat SATU lapisan utuh per kolom hari yang sudah lewat
+            // (sama seperti halaman customer), bukan per-sel. Jadi pita membentang
+            // dari jam pertama sampai jam terakhir tanpa terputus di tiap baris.
+            // Posisi & tinggi dihitung dari ukuran tabel sebenarnya, dan dihitung
+            // ulang saat ukuran layar berubah atau halaman baru ditampilkan.
+            const renderDoneOverlays = () => {
+                tableWrap.querySelectorAll('.schedule-grid-done-overlay').forEach(el => el.remove());
+                const wrapRect = tableWrap.getBoundingClientRect();
+                const tbodyRect = tbody.getBoundingClientRect();
+                if(!tbodyRect.height) return;
+                weekDates.forEach((day, dayIdx) => {
+                    if(inactiveIndices.includes(dayIdx)) return;
+                    const hariSudahLewat = isActiveDate(day.dateStr) && day.date < nowTime;
+                    if(!hariSudahLewat) return;
+                    const sampleCell = tbody.querySelector(`td[data-date="${day.dateStr}"]`);
+                    if(!sampleCell) return;
+                    const cellRect = sampleCell.getBoundingClientRect();
+                    const overlay = document.createElement('div');
+                    overlay.className = 'schedule-grid-done-overlay absolute bg-blue-400/90 text-white pointer-events-none z-[3] flex items-center justify-center overflow-hidden';
+                    overlay.style.left = `${(cellRect.left - wrapRect.left) + cellRect.width * 0.25}px`;
+                    overlay.style.width = `${cellRect.width * 0.5}px`;
+                    overlay.style.top = `${tbodyRect.top - wrapRect.top}px`;
+                    overlay.style.height = `${tbodyRect.height}px`;
+                    overlay.innerHTML = `<span class="schedule-grid-done-overlay-text font-black text-[7px] sm:text-[10px] leading-none whitespace-nowrap tracking-wide" style="transform:rotate(-90deg);transform-origin:center;">${'• DONE '.repeat(80)}•</span>`;
+                    tableWrap.appendChild(overlay);
+                });
+            };
+
+            if(window.__scheduleDoneOverlayHandler) {
+                window.removeEventListener('resize', window.__scheduleDoneOverlayHandler);
+            }
+            if(window.__scheduleDoneOverlayObserver) {
+                window.__scheduleDoneOverlayObserver.disconnect();
+                window.__scheduleDoneOverlayObserver = null;
+            }
+            window.__scheduleDoneOverlayHandler = renderDoneOverlays;
+            window.addEventListener('resize', window.__scheduleDoneOverlayHandler);
+            if(typeof ResizeObserver === 'function') {
+                // Admin sering merender grid saat halaman masih tersembunyi;
+                // observer ini menggambar ulang pita begitu tabel benar-benar tampil.
+                window.__scheduleDoneOverlayObserver = new ResizeObserver(() => renderDoneOverlays());
+                window.__scheduleDoneOverlayObserver.observe(tableWrap);
+            }
+            requestAnimationFrame(renderDoneOverlays);
+
             renderNonMemberWABookingSchedule();
         };
 
@@ -23655,6 +23783,7 @@ return;
                 let sumberTanggal = item.sumberTgl || item.tgl;
                 if(item.tgl === filterTgl || sumberTanggal === filterTgl) {
                     let nominal = Number(item.jumlah || 0);
+                    const labelSumberUang = item.sumberUang === 'minuman' ? '🥤 Uang Minuman' : (item.sumberUang === 'lapangan' ? '🏟️ Uang Lapangan' : 'Otomatis');
                     if(sumberTanggal === filterTgl) {
                         totalKeluar += nominal;
                     }
@@ -23662,7 +23791,7 @@ return;
                     if(tbodyKeluar) {
                         tbodyKeluar.innerHTML += `<tr class="border-b border-slate-900/40 text-center font-bold">
                             <td class="p-2 border border-slate-900/40 text-left">${item.ket} (Catat: ${item.tgl})</td>
-                            <td class="p-2 border border-slate-900/40 text-xs">Dari Cash: ${sumberTanggal}</td>
+                            <td class="p-2 border border-slate-900/40 text-xs">Dari Cash: ${sumberTanggal}<br><span class="font-black">${labelSumberUang}</span></td>
                             <td class="p-2 border border-slate-900/40 text-rose-800 font-black">Rp ${nominal.toLocaleString('id-ID')}</td>
                             <td class="p-2 border border-slate-900/40 text-center"><button type="button" onclick="hapusDataKeuangan('pengeluaran', '${key}')" class="bg-rose-700 hover:bg-rose-800 text-white px-2 py-1 rounded text-xs">Hapus</button></td>
                         </tr>`;
@@ -23671,20 +23800,19 @@ return;
             });
 
             // Alokasi pengeluaran:
-            // 1. Utamakan Cash Lapangan.
-            // 2. Jika pengeluaran lebih besar dari Cash Lapangan,
-            //    kekurangannya otomatis diambil dari Cash Minuman.
+            // 1. Pengeluaran baru dipotong dari sumber yang dipilih saat input (Lapangan / Minuman).
+            // 2. Data lama tanpa pilihan: Cash Lapangan dulu, kekurangannya dari Cash Minuman.
             // 3. Sisa Cash masing-masing sumber tidak boleh dihitung negatif.
-            const pengeluaranDariLapangan = Math.min(totalKeluar, totalLapanganCash);
-            const pengeluaranDariMinuman = Math.min(
-                Math.max(0, totalKeluar - pengeluaranDariLapangan),
-                totalMinumanCash
+            const alokasiPengeluaran = window.alokasiPengeluaranCash(
+                Object.values(globalCache.pengeluaran), filterTgl, totalLapanganCash, totalMinumanCash
             );
+            const pengeluaranDariLapangan = alokasiPengeluaran.dariLapangan;
+            const pengeluaranDariMinuman = alokasiPengeluaran.dariMinuman;
             const totalPengeluaranTercover = pengeluaranDariLapangan + pengeluaranDariMinuman;
-            const kekuranganCash = Math.max(0, totalKeluar - totalPengeluaranTercover);
+            const kekuranganCash = alokasiPengeluaran.kekurangan;
 
-            const sisaCashLapangan = Math.max(0, totalLapanganCash - pengeluaranDariLapangan);
-            const sisaCashMinuman = Math.max(0, totalMinumanCash - pengeluaranDariMinuman);
+            const sisaCashLapangan = alokasiPengeluaran.sisaLapangan;
+            const sisaCashMinuman = alokasiPengeluaran.sisaMinuman;
             const totalSisaCash = sisaCashLapangan + sisaCashMinuman;
 
             // Render Subtotals
@@ -24816,7 +24944,7 @@ window.downloadDailyRecapJPGFull = async function() {
         if (item.key === 'ringkasan') {
             const note = document.createElement('div');
             note.className = 'report-summary-note';
-            note.textContent = 'Alur pengeluaran: Cash Lapangan dipakai terlebih dahulu. Jika tidak mencukupi, sisanya diambil dari Cash Minuman.';
+            note.textContent = 'Alur pengeluaran: dipotong dari sumber uang yang dipilih saat input (Uang Lapangan atau Uang Minuman). Data lama tanpa pilihan: Cash Lapangan dulu, jika kurang diambil dari Cash Minuman.';
             section.appendChild(note);
 
             const grid = document.createElement('div');
@@ -38679,7 +38807,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')tutupPemilihTanggalJ
       pengeluaranRows.push({
         tanggal:String(item.tgl).split('T')[0],
         keterangan:item.ket || 'Pengeluaran',
-        metode:'Cash',
+        metode:item.sumberUang === 'minuman' ? 'Cash Minuman' : (item.sumberUang === 'lapangan' ? 'Cash Lapangan' : 'Cash'),
         jumlah
       });
     });
@@ -45212,8 +45340,45 @@ body > header .admin-global-header-brand-title{
     'daily-recap':'DAILY RECAP',
     'more':'MENU LAINNYA',
     'setor-tunai':'SETOR TUNAI',
-    'gaji-admin':'GAJI ADMIN'
+    'gaji-admin':'GAJI ADMIN',
+    'admin-jaga':'ADMIN JAGA',
+    'sparring':'SPARING',
+    'booking-schedule':'BOOKING SCHEDULE',
+    'laporan':'LAPORAN',
+    'monthly-recap':'MONTHLY RECAP',
+    'booking-history':'BOOKING HISTORY',
+    'atur-member':'ATUR MEMBER',
+    'pelunasan-member':'PELUNASAN MEMBER',
+    'booking':'BOOKING',
+    'masuk':'UANG MASUK',
+    'keluar':'UANG KELUAR',
+    'team-list':'LIST TIM MAIN'
   };
+  /* Sub-tampilan di dalam satu halaman (dipilih lewat pop-up pilihan). */
+  const MEMBER_SECTION_TITLE={
+    'schedule':'MEMBER BERJADWAL',
+    'without-schedule':'MEMBER TANPA JADWAL',
+    'list':'LIST MEMBER'
+  };
+  const SPARING_MODE_TITLE={
+    'form':'TAMBAH SPARING',
+    'opponent':'LAWAN SPARING',
+    'list':'LIST SPARING'
+  };
+
+  function resolvePageTitle(id){
+    if(id==='atur-member'){
+      const pg=document.getElementById('page-atur-member');
+      const sec=pg && pg.getAttribute('data-member-section');
+      if(sec && MEMBER_SECTION_TITLE[sec]) return MEMBER_SECTION_TITLE[sec];
+    }
+    if(id==='sparring'){
+      const pg=document.getElementById('page-sparring');
+      const mode=pg && pg.getAttribute('data-sparring-mode');
+      if(mode && SPARING_MODE_TITLE[mode]) return SPARING_MODE_TITLE[mode];
+    }
+    return TITLE[id] || TITLE.more;
+  }
 
   function getCurrentPageId(){
     const pages=document.querySelectorAll('main > div[id^="page-"]');
@@ -45244,8 +45409,8 @@ body > header .admin-global-header-brand-title{
       }
       return;
     }
-    /* Semua halaman selain 3 halaman utama dianggap berada di MENU LAINNYA. */
-    mainTitle.textContent=TITLE[id] || TITLE.more;
+    /* Judul header mengikuti halaman/sub-tampilan yang sedang dibuka. */
+    mainTitle.textContent=resolvePageTitle(id);
   }
 
   function init(){
@@ -45255,13 +45420,14 @@ body > header .admin-global-header-brand-title{
       const observer=new MutationObserver(function(){
         updateGlobalHeaderTitle();
       });
-      observer.observe(main,{subtree:true,attributes:true,attributeFilter:['class']});
+      observer.observe(main,{subtree:true,attributes:true,attributeFilter:['class','data-member-section','data-sparring-mode']});
     }
     /* Jaga-jaga bila navigasi mengubah class setelah beberapa frame. */
     let last='';
     setInterval(function(){
       const id=getCurrentPageId();
-      if(id!==last){last=id;updateGlobalHeaderTitle();}
+      const key=id+'|'+resolvePageTitle(id);
+      if(key!==last){last=key;updateGlobalHeaderTitle();}
     },120);
   }
 
@@ -46849,32 +47015,45 @@ body > header .admin-global-header-brand-title{
   // 2. Pengeluaran yang sumber cash-nya tanggal tersebut dipotong dari Cash Lapangan terlebih dahulu.
   // 3. Jika pengeluaran masih tersisa, kekurangannya dipotong dari Cash Minuman.
   // 4. QRIS/Transfer, Free, dan Belum Bayar tidak masuk ke saldo cash.
+  let setorTunaiMode='both'; // 'lapangan' | 'minuman' | 'both'
+  function setorModeTotal(lap,min){
+    return setorTunaiMode==='lapangan'?lap:(setorTunaiMode==='minuman'?min:lap+min);
+  }
   function cashSisaSetor(tgl){
     const lapMasuk=cashLapanganMasuk(tgl);
     const minMasuk=cashMinumanMasuk(tgl);
-
-    let totalKeluar=0;
-    Object.values((window.__sandagaGlobalCache&&window.__sandagaGlobalCache.pengeluaran)||{}).forEach(item=>{
-      if(!item)return;
-      const sumberTanggal=item.sumberTgl||item.tgl;
-      if(sumberTanggal===tgl) totalKeluar+=Number(item.jumlah||0);
-    });
-
-    const pengeluaranDariLapangan=Math.min(totalKeluar,lapMasuk);
-    const pengeluaranDariMinuman=Math.min(
-      Math.max(0,totalKeluar-pengeluaranDariLapangan),
-      minMasuk
-    );
-
-    const sisaLapangan=Math.max(0,lapMasuk-pengeluaranDariLapangan);
-    const sisaMinuman=Math.max(0,minMasuk-pengeluaranDariMinuman);
-
+    const items=Object.values((window.__sandagaGlobalCache&&window.__sandagaGlobalCache.pengeluaran)||{});
+    const alok=window.alokasiPengeluaranCash(items,tgl,lapMasuk,minMasuk);
     return {
-      lapangan:sisaLapangan,
-      minuman:sisaMinuman,
-      total:sisaLapangan+sisaMinuman
+      lapangan:alok.sisaLapangan,
+      minuman:alok.sisaMinuman,
+      total:alok.sisaLapangan+alok.sisaMinuman
     };
   }
+  function syncSetorTunaiModeButtons(){
+    document.querySelectorAll('#page-setor-tunai [data-setor-mode]').forEach(btn=>{
+      const on=btn.dataset.setorMode===setorTunaiMode;
+      btn.classList.toggle('active',on);
+      btn.setAttribute('aria-pressed',on?'true':'false');
+    });
+  }
+  function buildSetorTunaiTableShell(){
+    const thead=document.querySelector('#page-setor-tunai .setor-tunai-table thead');
+    const tfoot=document.querySelector('#page-setor-tunai .setor-tunai-table tfoot');
+    if(!thead||!tfoot)return;
+    const both=setorTunaiMode==='both';
+    const lapOnly=setorTunaiMode==='lapangan';
+    const head=both?'<th>LAPANGAN</th><th>MINUMAN</th>':(lapOnly?'<th>LAPANGAN</th>':'<th>MINUMAN</th>');
+    const totals=both?'<td id="setor-tunai-total-lapangan">Rp0</td><td id="setor-tunai-total-minuman">Rp0</td>':(lapOnly?'<td id="setor-tunai-total-lapangan">Rp0</td>':'<td id="setor-tunai-total-minuman">Rp0</td>');
+    const span=both?2:1;
+    thead.innerHTML=`<tr><th>TANGGAL</th>${head}</tr>`;
+    tfoot.innerHTML=`<tr class="setor-tunai-kembalian-row"><td colspan="${span}">UANG UNTUK KEMBALIAN</td><td id="setor-tunai-kembalian">Rp0</td></tr><tr><td>TOTAL</td>${totals}</tr><tr class="setor-tunai-grand-row"><td colspan="${span}">JUMLAH SETOR TUNAI</td><td id="setor-tunai-grand-total">Rp0</td></tr>`;
+  }
+  window.setSetorTunaiMode=function(mode){
+    if(mode!=='lapangan'&&mode!=='minuman'&&mode!=='both')return;
+    setorTunaiMode=mode;
+    window.renderSetorTunai();
+  };
   function updateSetorTunaiHeaderDate(){
     const dateEl=document.getElementById('setor-tunai-title-date-value');
     if(!dateEl)return;
@@ -46909,9 +47088,8 @@ body > header .admin-global-header-brand-title{
       const digits=String(input.value||'').replace(/\D/g,'');
       input.value=digits?Number(digits).toLocaleString('id-ID'):'';
     }
-    const lap=Number(String(document.getElementById('setor-tunai-total-lapangan')?.textContent||'').replace(/[^0-9]/g,''))||0;
-    const min=Number(String(document.getElementById('setor-tunai-total-minuman')?.textContent||'').replace(/[^0-9]/g,''))||0;
-    updateSetorTunaiGrandTotal(lap+min);
+    const t=window.__setorTunaiTotals||{lap:0,min:0};
+    updateSetorTunaiGrandTotal(setorModeTotal(t.lap,t.min));
   };
 
   window.renderSetorTunai=function(){
@@ -46921,18 +47099,35 @@ body > header .admin-global-header-brand-title{
     a.value=mulai;b.value=akhir;
     syncDateButtons();
     updateSetorTunaiHeaderDate();
-    if(mulai>akhir){tbody.innerHTML='<tr><td colspan="3" style="text-align:center;color:#b91c1c;font-weight:900;padding:16px">Tanggal awal tidak boleh melebihi tanggal akhir.</td></tr>';document.getElementById('setor-tunai-total-lapangan').textContent='Rp0';document.getElementById('setor-tunai-total-minuman').textContent='Rp0';document.getElementById('setor-tunai-grand-total').textContent='Rp0';document.getElementById('setor-tunai-period').textContent='PERIODE: TANGGAL TIDAK VALID';return}
+    syncSetorTunaiModeButtons();
+    buildSetorTunaiTableShell();
+    const setText=(id,t)=>{const el=document.getElementById(id);if(el)el.textContent=t};
+    const colCount=setorTunaiMode==='both'?3:2;
+    if(mulai>akhir){
+      tbody.innerHTML=`<tr><td colspan="${colCount}" style="text-align:center;color:#b91c1c;font-weight:900;padding:16px">Tanggal awal tidak boleh melebihi tanggal akhir.</td></tr>`;
+      window.__setorTunaiTotals={lap:0,min:0};
+      setText('setor-tunai-total-lapangan','Rp0');setText('setor-tunai-total-minuman','Rp0');setText('setor-tunai-grand-total','Rp0');
+      setText('setor-tunai-period','PERIODE: TANGGAL TIDAK VALID');
+      return;
+    }
     const periodKey=`${mulai}|${akhir}`;
     const input=document.getElementById('setor-tunai-uang-sisa');
     if(setorTunaiLastPeriod && setorTunaiLastPeriod!==periodKey && input)input.value='';
     setorTunaiLastPeriod=periodKey;
-    document.getElementById('setor-tunai-period').textContent=`PERIODE: ${formatDate(mulai)} — ${formatDate(akhir)}`;
+    setText('setor-tunai-period',`PERIODE: ${formatDate(mulai)} — ${formatDate(akhir)}`);
     const cur=parseDate(mulai),end=parseDate(akhir);let lapTotal=0,minTotal=0,rows='';
-    while(cur<=end){const tgl=dateKey(cur),sisa=cashSisaSetor(tgl),lap=sisa.lapangan,min=sisa.minuman;lapTotal+=lap;minTotal+=min;rows+=`<tr><td>${formatDate(tgl)}</td><td>${money(lap)}</td><td>${money(min)}</td></tr>`;cur.setDate(cur.getDate()+1)}
-    tbody.innerHTML=rows||'<tr><td colspan="3" style="text-align:center;padding:16px">Belum ada data.</td></tr>';
-    document.getElementById('setor-tunai-total-lapangan').textContent=money(lapTotal);
-    document.getElementById('setor-tunai-total-minuman').textContent=money(minTotal);
-    updateSetorTunaiGrandTotal(lapTotal+minTotal);
+    while(cur<=end){
+      const tgl=dateKey(cur),sisa=cashSisaSetor(tgl),lap=sisa.lapangan,min=sisa.minuman;
+      lapTotal+=lap;minTotal+=min;
+      const cells=setorTunaiMode==='both'?`<td>${money(lap)}</td><td>${money(min)}</td>`:(setorTunaiMode==='lapangan'?`<td>${money(lap)}</td>`:`<td>${money(min)}</td>`);
+      rows+=`<tr><td>${formatDate(tgl)}</td>${cells}</tr>`;
+      cur.setDate(cur.getDate()+1);
+    }
+    tbody.innerHTML=rows||`<tr><td colspan="${colCount}" style="text-align:center;padding:16px">Belum ada data.</td></tr>`;
+    window.__setorTunaiTotals={lap:lapTotal,min:minTotal};
+    setText('setor-tunai-total-lapangan',money(lapTotal));
+    setText('setor-tunai-total-minuman',money(minTotal));
+    updateSetorTunaiGrandTotal(setorModeTotal(lapTotal,minTotal));
   };
 
   document.addEventListener('input',function(e){
@@ -47066,7 +47261,7 @@ body > header .admin-global-header-brand-title{
     ].join(';');
 
     const title=document.createElement('div');
-    title.textContent=`SETOR TUNAI TANGGAL ${label}`;
+    title.textContent=`SETOR TUNAI TANGGAL ${label}${setorTunaiMode==='lapangan'?' (UANG LAPANGAN)':(setorTunaiMode==='minuman'?' (UANG MINUMAN)':'')}`;
     title.style.cssText='margin:0 0 18px;text-align:center;color:#102a56;font-size:26px;line-height:1.15;font-weight:900;letter-spacing:.04em;';
 
     const table=document.querySelector('#page-setor-tunai .setor-tunai-table')?.cloneNode(true);
@@ -47109,7 +47304,7 @@ body > header .admin-global-header-brand-title{
         windowWidth:900
       });
       const dataUrl=canvas.toDataURL('image/jpeg',.95);
-      const fileName=`Setor Tunai ${label.replace(/\s+/g,' ')}.jpg`;
+      const fileName=`Setor Tunai ${label.replace(/\s+/g,' ')}${setorTunaiMode==='lapangan'?' Lapangan':(setorTunaiMode==='minuman'?' Minuman':'')}.jpg`;
       if(typeof window.dailyReportSaveFile==='function'){
         window.dailyReportSaveFile(dataUrl,fileName);
       }else{
@@ -48040,3 +48235,483 @@ main.space-y-6 > #page-minuman {
   #page-atur-member .member-card .member-day-label{min-width:56px !important;padding:5px 8px !important;}
 }
 </style>
+
+<style id="member-list-final-v1">
+/* =========================================================
+   LIST MEMBER — rapi & sejajar Header/Dock (visual saja)
+   - Judul "KELOLA JADWAL MEMBER" + garis dihilangkan
+   - Card selebar Header & Dock
+   - Desktop 2 kolom, HP 1 kolom
+   - Daftar di-scroll dalam area antara Header & Dock, ujungnya
+     terpotong halus (fade) agar tidak melewati keduanya
+   ========================================================= */
+#page-atur-member.sub-menu-modern > div:first-child,
+#page-atur-member.sub-menu-modern > div:first-child h2{display:none !important;height:0 !important;margin:0 !important;padding:0 !important;overflow:hidden !important}
+#page-atur-member.sub-menu-modern > div:first-child h2::after{display:none !important;content:none !important}
+
+/* Semua mode: panel mengikuti lebar header/dock (tanpa padding samping) */
+#page-atur-member.sub-menu-modern{
+  padding-left:0 !important;padding-right:0 !important;
+  width:100% !important;max-width:100% !important;
+  margin-left:0 !important;margin-right:0 !important;
+  box-sizing:border-box !important;
+}
+
+/* Mode LIST: area scroll antara header dan dock */
+#page-atur-member.sub-menu-modern[data-member-section="list"]{
+  position:fixed !important;
+  top:var(--mc-top,84px) !important;
+  bottom:var(--mc-bottom,100px) !important;
+  left:var(--mc-left,0px) !important;
+  width:var(--mc-width,100%) !important;
+  max-width:none !important;
+  margin:0 !important;
+  padding:20px var(--mc-pr,8px) 24px var(--mc-pl,8px) !important;
+  z-index:400 !important;
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 20px,#000 calc(100% - 24px),transparent 100%);
+          mask-image:linear-gradient(to bottom,transparent 0,#000 20px,#000 calc(100% - 24px),transparent 100%);
+}
+#page-atur-member.sub-menu-modern[data-member-section="list"]::-webkit-scrollbar{display:none;width:0;height:0}
+#page-atur-member.sub-menu-modern[data-member-section="list"]::before{display:none !important}
+
+/* Kartu heading + tombol download */
+#page-atur-member .member-list-heading-row{
+  display:flex !important;flex-direction:column !important;align-items:stretch !important;
+  gap:10px !important;flex-wrap:nowrap !important;
+  width:100% !important;box-sizing:border-box !important;
+  margin:0 0 12px !important;padding:12px !important;
+  border-radius:20px !important;
+  background:linear-gradient(135deg,rgba(255,255,255,.72),rgba(226,236,255,.50)) !important;
+  border:1px solid rgba(255,255,255,.80) !important;
+  box-shadow:0 8px 22px rgba(15,23,42,.12),inset 0 1px 0 rgba(255,255,255,.75) !important;
+  -webkit-backdrop-filter:blur(14px) saturate(140%) !important;
+          backdrop-filter:blur(14px) saturate(140%) !important;
+}
+#page-atur-member .member-list-heading-row h3{
+  margin:0 !important;padding:0 2px !important;
+  font-size:.78rem !important;font-weight:950 !important;
+  letter-spacing:.06em !important;text-transform:uppercase !important;
+  color:#1e1b4b !important;text-align:left !important;
+}
+#page-atur-member .member-logo-download-btn{
+  display:inline-flex !important;align-items:center !important;justify-content:center !important;gap:9px !important;
+  width:100% !important;min-height:46px !important;box-sizing:border-box !important;
+  padding:0 16px !important;border:1px solid rgba(255,255,255,.22) !important;border-radius:14px !important;
+  font-size:13px !important;font-weight:900 !important;letter-spacing:.02em !important;color:#fff !important;
+  background:linear-gradient(135deg,#6366f1 0%,#4338ca 55%,#312e81 100%) !important;
+  box-shadow:0 8px 18px rgba(67,56,202,.32),inset 0 1px 0 rgba(255,255,255,.28) !important;
+  cursor:pointer;white-space:nowrap;transition:transform .15s ease,filter .15s ease,box-shadow .15s ease;
+}
+#page-atur-member .member-logo-download-btn .mlb-ico{
+  display:grid;place-items:center;width:26px;height:26px;border-radius:9px;
+  background:rgba(255,255,255,.20);flex:0 0 auto;
+}
+#page-atur-member .member-logo-download-btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+#page-atur-member .member-logo-download-btn:active{transform:scale(.98)}
+#page-atur-member .member-logo-download-btn:disabled{opacity:.6;cursor:wait;transform:none}
+
+/* Grid & card: selebar area (header/dock), HP 1 kolom, desktop 2 kolom */
+#page-atur-member .member-cards-grid{
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) !important;
+  gap:12px !important;
+  width:100% !important;max-width:100% !important;
+  margin:0 !important;padding:0 !important;
+  box-sizing:border-box !important;
+}
+#page-atur-member .member-cards-grid .member-card{
+  width:100% !important;max-width:100% !important;min-width:0 !important;
+  margin:0 !important;box-sizing:border-box !important;
+}
+@media (min-width:768px){
+  #page-atur-member .member-cards-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    gap:14px !important;
+  }
+  #page-atur-member .member-list-heading-row{
+    flex-direction:row !important;align-items:center !important;justify-content:space-between !important;
+    padding:12px 14px !important;
+  }
+  #page-atur-member .member-logo-download-btn{width:auto !important;min-width:220px !important}
+}
+</style>
+<script id="member-list-clip-sync-v1">
+/* Menyelaraskan area scroll daftar member dengan posisi/lebar Header & Dock. */
+(function(){
+  var last='';
+  function sync(){
+    var pg=document.getElementById('page-atur-member');
+    var h=document.querySelector('body > header');
+    var d=document.getElementById('quick-bottom-nav');
+    if(!pg||!h||!d||pg.classList.contains('hidden')) return;
+    var hr=h.getBoundingClientRect(), dr=d.getBoundingClientRect();
+    var vw=document.documentElement.clientWidth, vh=window.innerHeight;
+    var gut=10;
+    var left=Math.max(0,Math.round(hr.left)-gut);
+    var right=Math.min(vw,Math.round(hr.right)+gut);
+    var top=Math.round(hr.bottom);
+    var bottom=Math.max(0,Math.round(vh-dr.top));
+    var key=[left,right,top,bottom,Math.round(hr.left),Math.round(hr.right)].join('|');
+    if(key===last) return; last=key;
+    var s=pg.style;
+    s.setProperty('--mc-left',left+'px');
+    s.setProperty('--mc-width',(right-left)+'px');
+    s.setProperty('--mc-pl',(Math.round(hr.left)-left)+'px');
+    s.setProperty('--mc-pr',(right-Math.round(hr.right))+'px');
+    s.setProperty('--mc-top',top+'px');
+    s.setProperty('--mc-bottom',bottom+'px');
+  }
+  function start(){
+    sync();
+    window.addEventListener('resize',sync);
+    window.addEventListener('orientationchange',sync);
+    if(window.visualViewport) window.visualViewport.addEventListener('resize',sync);
+    var main=document.querySelector('main');
+    if(main && window.MutationObserver){
+      new MutationObserver(function(){requestAnimationFrame(sync)})
+        .observe(main,{subtree:true,attributes:true,attributeFilter:['class','data-member-section']});
+    }
+    setInterval(sync,500);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
+})();
+</script>
+
+<style id="edge-fade-global-v1">
+/* =========================================================
+   PERPOTONGAN HALUS — semua menu
+   1) Halaman: strip tipis di bawah Header & di atas Dock yang
+      "melebur" ke latar, sehingga card terpotong halus.
+   2) Elemen yang bisa di-scroll (list, tabel, popup): ujung
+      atas/bawah/kiri/kanan memudar hanya bila masih ada isi
+      di arah tersebut.
+   ========================================================= */
+.edge-fade{
+  position:fixed;left:0;width:100%;pointer-events:none;overflow:hidden;
+  opacity:0;transition:opacity .18s ease;contain:strict;
+}
+.edge-fade>i{position:absolute;left:0;top:var(--ef-off,0px);width:var(--ef-vw,100vw);height:var(--ef-vh,100vh);background-repeat:no-repeat}
+#edge-fade-top{
+  top:0;z-index:450;height:calc(var(--ef-hb,70px) + 24px);
+  -webkit-mask-image:linear-gradient(to bottom,#000 0,#000 var(--ef-hb,70px),transparent 100%);
+          mask-image:linear-gradient(to bottom,#000 0,#000 var(--ef-hb,70px),transparent 100%);
+}
+#edge-fade-bottom{
+  top:var(--ef-bt,0px);z-index:900;height:var(--ef-bh,0px);
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 28px,#000 100%);
+          mask-image:linear-gradient(to bottom,transparent 0,#000 28px,#000 100%);
+}
+
+.ef-scroll{
+  -webkit-mask-image:
+    linear-gradient(to bottom,transparent 0,#000 var(--ef-t,0px),#000 calc(100% - var(--ef-b,0px)),transparent 100%),
+    linear-gradient(to right,transparent 0,#000 var(--ef-l,0px),#000 calc(100% - var(--ef-r,0px)),transparent 100%);
+  -webkit-mask-composite:source-in;
+          mask-image:
+    linear-gradient(to bottom,transparent 0,#000 var(--ef-t,0px),#000 calc(100% - var(--ef-b,0px)),transparent 100%),
+    linear-gradient(to right,transparent 0,#000 var(--ef-l,0px),#000 calc(100% - var(--ef-r,0px)),transparent 100%);
+          mask-composite:intersect;
+}
+</style>
+<script id="edge-fade-global-v1-js">
+(function(){
+  var FADE=18;
+  var topEl,botEl,lastKey='';
+  function mk(id){
+    var d=document.createElement('div');
+    d.id=id;d.className='edge-fade';d.setAttribute('aria-hidden','true');
+    d.appendChild(document.createElement('i'));
+    document.body.appendChild(d);
+    return d;
+  }
+  function pageScroller(){
+    var b=document.body,de=document.documentElement;
+    if(b.scrollHeight>b.clientHeight+2){
+      var oy=getComputedStyle(b).overflowY;
+      if((oy==='auto'||oy==='scroll')&&b.clientHeight<de.clientHeight+2) return b;
+    }
+    return document.scrollingElement||de;
+  }
+  function memberListActive(){
+    var pg=document.getElementById('page-atur-member');
+    if(pg&&!pg.classList.contains('hidden')&&pg.getAttribute('data-member-section')==='list') return true;
+    var ids=['page-booking-schedule','page-booking-history','page-monthly-recap'];
+    for(var i=0;i<ids.length;i++){
+      var e=document.getElementById(ids[i]);
+      if(e&&!e.classList.contains('hidden')) return true;
+    }
+    return false;
+  }
+  function updatePage(){
+    if(!topEl||!botEl) return;
+    var h=document.querySelector('body > header');
+    var d=document.getElementById('quick-bottom-nav');
+    var vw=document.documentElement.clientWidth, vh=window.innerHeight;
+    var root=document.documentElement.style;
+    var skip=memberListActive();
+
+    var hb=h?Math.max(0,Math.round(h.getBoundingClientRect().bottom)):0;
+    var dr=d?d.getBoundingClientRect():null;
+    var dockOk=!!(dr&&dr.height>10&&getComputedStyle(d).display!=='none');
+    var bt=dockOk?Math.max(0,Math.round(dr.top)-28):vh;
+    var bh=Math.max(0,vh-bt);
+
+    var cs=getComputedStyle(document.body,'::before');
+    var bgi=cs.backgroundImage,bgs=cs.backgroundSize,bgp=cs.backgroundPosition,bgc=cs.backgroundColor;
+    var key=[vw,vh,hb,bt,bgi,bgs,bgp,bgc].join('|');
+    if(key!==lastKey){
+      lastKey=key;
+      root.setProperty('--ef-vw',vw+'px');root.setProperty('--ef-vh',vh+'px');
+      root.setProperty('--ef-hb',hb+'px');
+      root.setProperty('--ef-bt',bt+'px');root.setProperty('--ef-bh',bh+'px');
+      var ti=topEl.firstChild,bi=botEl.firstChild;
+      [ti,bi].forEach(function(i){
+        i.style.backgroundImage=bgi;i.style.backgroundSize=bgs;
+        i.style.backgroundPosition=bgp;i.style.backgroundColor=(bgc&&bgc!=='rgba(0, 0, 0, 0)')?bgc:'#eef6ff';
+      });
+      ti.style.setProperty('--ef-off','0px');
+      bi.style.setProperty('--ef-off',(-bt)+'px');
+    }
+
+    var sc=pageScroller();
+    var st=sc.scrollTop||0;
+    var ch=(sc===document.scrollingElement||sc===document.documentElement)?vh:sc.clientHeight;
+    var maxS=sc.scrollHeight-ch;
+    topEl.style.opacity=(skip||st<=1)?'0':String(Math.min(1,st/28));
+    botEl.style.opacity=(skip||!dockOk||maxS<=1)?'0':String(Math.max(0,Math.min(1,(maxS-st)/28)));
+  }
+
+  /* ---------- Elemen scroll internal ---------- */
+  function skipEl(el,cs,vw,vh){
+    if(el===document.body||el===document.documentElement) return true;
+    var tag=el.tagName;
+    if(tag==='MAIN'||tag==='HEADER'||tag==='TEXTAREA'||tag==='SELECT'||tag==='INPUT'||tag==='HTML'||tag==='BODY') return true;
+    if(el.id==='quick-bottom-nav'||el.id==='page-atur-member'||el.id==='page-booking-schedule'||el.id==='page-booking-history'||el.id==='page-monthly-recap'||el.classList.contains('edge-fade')) return true;
+    if(el.closest&&el.closest('#quick-bottom-nav,.edge-fade')) return true;
+    var r=el.getBoundingClientRect();
+    if(r.height<40||r.width<40) return true;
+    if(cs.position==='fixed'&&r.width>=vw*0.95&&r.height>=vh*0.95) return true;
+    return false;
+  }
+  function updateEl(el){
+    var st=el.scrollTop,sl=el.scrollLeft;
+    var mv=el.scrollHeight-el.clientHeight, mh=el.scrollWidth-el.clientWidth;
+    var t=(mv>2&&st>1)?FADE:0;
+    var b=(mv>2&&st<mv-1)?FADE:0;
+    var l=(mh>2&&sl>1)?FADE:0;
+    var r=(mh>2&&sl<mh-1)?FADE:0;
+    var s=el.style;
+    s.setProperty('--ef-t',t+'px');s.setProperty('--ef-b',b+'px');
+    s.setProperty('--ef-l',l+'px');s.setProperty('--ef-r',r+'px');
+  }
+  function scan(){
+    var vw=document.documentElement.clientWidth,vh=window.innerHeight;
+    var all=document.body.getElementsByTagName('*');
+    for(var i=0;i<all.length;i++){
+      var el=all[i];
+      var canV=el.scrollHeight>el.clientHeight+2, canH=el.scrollWidth>el.clientWidth+2;
+      if(!canV&&!canH){
+        if(el.classList.contains('ef-scroll')) el.classList.remove('ef-scroll');
+        continue;
+      }
+      var cs=getComputedStyle(el);
+      var oy=cs.overflowY,ox=cs.overflowX;
+      var sv=canV&&(oy==='auto'||oy==='scroll'), sh=canH&&(ox==='auto'||ox==='scroll');
+      if(!(sv||sh)||skipEl(el,cs,vw,vh)){
+        if(el.classList.contains('ef-scroll')) el.classList.remove('ef-scroll');
+        continue;
+      }
+      if(cs.maskImage&&cs.maskImage!=='none'&&!el.classList.contains('ef-scroll')) continue;
+      if(!el.classList.contains('ef-scroll')) el.classList.add('ef-scroll');
+      updateEl(el);
+    }
+  }
+  var scanT=null;
+  function scheduleScan(){
+    if(scanT) return;
+    scanT=setTimeout(function(){scanT=null;try{scan();}catch(e){}},350);
+  }
+
+  function start(){
+    topEl=mk('edge-fade-top');botEl=mk('edge-fade-bottom');
+    updatePage();scan();
+    var raf=0;
+    function onScroll(e){
+      var t=e.target;
+      if(t&&t.nodeType===1&&t!==document.body&&t!==document.documentElement&&t.classList.contains('ef-scroll')){
+        updateEl(t);return;
+      }
+      if(raf) return;
+      raf=requestAnimationFrame(function(){raf=0;updatePage();});
+    }
+    document.addEventListener('scroll',onScroll,true);
+    window.addEventListener('resize',function(){lastKey='';updatePage();scheduleScan();});
+    window.addEventListener('orientationchange',function(){lastKey='';updatePage();scheduleScan();});
+    if(window.MutationObserver){
+      new MutationObserver(function(){scheduleScan();requestAnimationFrame(updatePage);})
+        .observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','data-member-section','hidden']});
+    }
+    setInterval(function(){updatePage();},500);
+    setInterval(scheduleScan,2500);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
+})();
+</script>
+
+<style id="standalone-cards-pages-v1">
+/* =========================================================
+   BOOKING SCHEDULE · BOOKING HISTORY · MONTHLY RECAP
+   Mengikuti pola LIST MEMBER (visual saja):
+   - Kaca pembungkus besar dihilangkan, tiap card berdiri sendiri
+   - Lebar card = lebar Header & Dock Bar
+   - Area scroll berada di antara Header & Dock, ujung memudar halus
+   ========================================================= */
+#page-booking-schedule.sub-menu-modern,
+#page-booking-history.sub-menu-modern,
+#page-monthly-recap.sub-menu-modern{
+  position:fixed !important;
+  top:var(--mc-top,84px) !important;
+  bottom:var(--mc-bottom,100px) !important;
+  left:var(--mc-left,0px) !important;
+  width:var(--mc-width,100%) !important;
+  max-width:none !important;
+  margin:0 !important;
+  padding:20px var(--mc-pr,8px) 24px var(--mc-pl,8px) !important;
+  z-index:400 !important;
+  box-sizing:border-box !important;
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+  isolation:auto !important;
+  /* tanpa kaca pembungkus */
+  background:transparent !important;
+  background-image:none !important;
+  background-color:transparent !important;
+  border:0 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 20px,#000 calc(100% - 24px),transparent 100%);
+          mask-image:linear-gradient(to bottom,transparent 0,#000 20px,#000 calc(100% - 24px),transparent 100%);
+}
+#page-booking-schedule.sub-menu-modern::-webkit-scrollbar,
+#page-booking-history.sub-menu-modern::-webkit-scrollbar,
+#page-monthly-recap.sub-menu-modern::-webkit-scrollbar{display:none;width:0;height:0}
+#page-booking-schedule.sub-menu-modern::before,
+#page-booking-schedule.sub-menu-modern::after,
+#page-booking-history.sub-menu-modern::before,
+#page-booking-history.sub-menu-modern::after,
+#page-monthly-recap.sub-menu-modern::before,
+#page-monthly-recap.sub-menu-modern::after{display:none !important;content:none !important}
+
+/* Judul halaman sudah tampil di Header, jadi baris judul disembunyikan (sama seperti List Member) */
+#page-booking-schedule.sub-menu-modern > div:first-child,
+#page-booking-history.sub-menu-modern > div:first-child,
+#page-monthly-recap.sub-menu-modern > div:first-child{
+  display:none !important;height:0 !important;margin:0 !important;padding:0 !important;border:0 !important;overflow:hidden !important;
+}
+
+/* Semua card selebar area Header/Dock */
+#page-booking-schedule.sub-menu-modern > *,
+#page-booking-history.sub-menu-modern > *,
+#page-monthly-recap.sub-menu-modern > *{max-width:100% !important;box-sizing:border-box !important}
+
+/* ---------- BOOKING SCHEDULE ---------- */
+#page-booking-schedule.sub-menu-modern > .flex.flex-col.items-center.justify-center{
+  width:100% !important;margin:0 0 12px !important;padding:12px !important;
+  border-radius:20px !important;
+  background:linear-gradient(135deg,rgba(255,255,255,.72),rgba(226,236,255,.50)) !important;
+  border:1px solid rgba(255,255,255,.80) !important;
+  box-shadow:0 8px 22px rgba(15,23,42,.12),inset 0 1px 0 rgba(255,255,255,.75) !important;
+}
+#page-booking-schedule.sub-menu-modern > .flex.flex-col.items-center.justify-center > div{
+  border:0 !important;padding:0 !important;background:transparent !important;box-shadow:none !important;
+  backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
+}
+#page-booking-schedule.sub-menu-modern #booking-schedule-grid-wrap{
+  width:100% !important;margin:0 0 12px !important;padding:0 !important;
+  background:transparent !important;border:0 !important;box-shadow:none !important;
+  backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
+  border-radius:0 !important;overflow:visible !important;
+}
+#page-booking-schedule.sub-menu-modern #booking-schedule-periods{width:100% !important;gap:12px !important}
+#page-booking-schedule.sub-menu-modern .booking-month-panel{
+  width:100% !important;margin:0 !important;
+  background:rgba(255,255,255,.42) !important;
+  border:1px solid rgba(255,255,255,.80) !important;
+  box-shadow:0 8px 22px rgba(15,23,42,.12),inset 0 1px 0 rgba(255,255,255,.75) !important;
+}
+#page-booking-schedule.sub-menu-modern .schedule-legend{
+  width:100% !important;margin:0 !important;
+  background:rgba(255,255,255,.42) !important;
+  border:1px solid rgba(255,255,255,.80) !important;
+  box-shadow:0 8px 22px rgba(15,23,42,.12),inset 0 1px 0 rgba(255,255,255,.75) !important;
+}
+
+/* ---------- BOOKING HISTORY ---------- */
+#page-booking-history.sub-menu-modern .booking-history-section{width:100% !important;margin:0 0 14px !important}
+#page-booking-history.sub-menu-modern .booking-history-list{width:100% !important}
+
+/* ---------- MONTHLY RECAP ---------- */
+#page-monthly-recap.sub-menu-modern > *{width:100% !important}
+#page-monthly-recap.sub-menu-modern > .space-y-4{width:100% !important}
+#page-monthly-recap.sub-menu-modern .space-y-4 > div,
+#page-monthly-recap.sub-menu-modern > .shadow-2xl,
+#page-monthly-recap.sub-menu-modern > .rounded-xl{
+  background:rgba(255,255,255,.42) !important;
+  border:1px solid rgba(255,255,255,.80) !important;
+  box-shadow:0 8px 22px rgba(15,23,42,.12),inset 0 1px 0 rgba(255,255,255,.75) !important;
+}
+</style>
+<script id="standalone-cards-pages-sync-v1">
+/* Menyelaraskan area scroll 3 halaman dengan posisi/lebar Header & Dock (sama seperti List Member). */
+(function(){
+  var IDS=['page-booking-schedule','page-booking-history','page-monthly-recap'];
+  var last='';
+  function sync(){
+    var h=document.querySelector('body > header');
+    var d=document.getElementById('quick-bottom-nav');
+    if(!h||!d) return;
+    var hr=h.getBoundingClientRect(), dr=d.getBoundingClientRect();
+    var vw=document.documentElement.clientWidth, vh=window.innerHeight;
+    var gut=10;
+    var left=Math.max(0,Math.round(hr.left)-gut);
+    var right=Math.min(vw,Math.round(hr.right)+gut);
+    var top=Math.round(hr.bottom);
+    var bottom=Math.max(0,Math.round(vh-dr.top));
+    var key=[left,right,top,bottom,Math.round(hr.left),Math.round(hr.right)].join('|');
+    if(key===last) return; last=key;
+    IDS.forEach(function(id){
+      var pg=document.getElementById(id); if(!pg) return;
+      var s=pg.style;
+      s.setProperty('--mc-left',left+'px');
+      s.setProperty('--mc-width',(right-left)+'px');
+      s.setProperty('--mc-pl',(Math.round(hr.left)-left)+'px');
+      s.setProperty('--mc-pr',(right-Math.round(hr.right))+'px');
+      s.setProperty('--mc-top',top+'px');
+      s.setProperty('--mc-bottom',bottom+'px');
+    });
+  }
+  function start(){
+    sync();
+    window.addEventListener('resize',sync);
+    window.addEventListener('orientationchange',sync);
+    if(window.visualViewport) window.visualViewport.addEventListener('resize',sync);
+    var main=document.querySelector('main');
+    if(main && window.MutationObserver){
+      new MutationObserver(function(){requestAnimationFrame(sync)})
+        .observe(main,{subtree:true,attributes:true,attributeFilter:['class']});
+    }
+    setInterval(sync,500);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
+})();
+</script>
