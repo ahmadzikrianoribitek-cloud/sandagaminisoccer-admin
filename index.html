@@ -48431,6 +48431,13 @@ main.space-y-6 > #page-minuman {
           mask-composite:intersect;
 }
 </style>
+
+<style id="desktop-edge-fade-white-fix">
+/* Desktop: strip fade harus memakai latar yang sama (dari html), tanpa warna putih */
+@media (min-width:768px){
+  .edge-fade>i{background-attachment:scroll !important;background-repeat:no-repeat !important;}
+}
+</style>
 <script id="edge-fade-global-v1-js">
 (function(){
   var FADE=18;
@@ -48475,6 +48482,11 @@ main.space-y-6 > #page-minuman {
     var bh=Math.max(0,vh-bt);
 
     var cs=getComputedStyle(document.body,'::before');
+    /* DESKTOP FIX: di desktop latar ada di <html> (body::before dimatikan),
+       jadi baca latar dari <html> agar strip fade tidak jatuh ke warna putih. */
+    if(!cs.backgroundImage||cs.backgroundImage==='none'||cs.content==='none'||cs.display==='none'){
+      cs=getComputedStyle(document.documentElement);
+    }
     var bgi=cs.backgroundImage,bgs=cs.backgroundSize,bgp=cs.backgroundPosition,bgc=cs.backgroundColor;
     var key=[vw,vh,hb,bt,bgi,bgs,bgp,bgc].join('|');
     if(key!==lastKey){
@@ -48485,7 +48497,7 @@ main.space-y-6 > #page-minuman {
       var ti=topEl.firstChild,bi=botEl.firstChild;
       [ti,bi].forEach(function(i){
         i.style.backgroundImage=bgi;i.style.backgroundSize=bgs;
-        i.style.backgroundPosition=bgp;i.style.backgroundColor=(bgc&&bgc!=='rgba(0, 0, 0, 0)')?bgc:'#eef6ff';
+        i.style.backgroundPosition=bgp;i.style.backgroundColor=(bgc&&bgc!=='rgba(0, 0, 0, 0)')?bgc:'transparent';
       });
       ti.style.setProperty('--ef-off','0px');
       bi.style.setProperty('--ef-off',(-bt)+'px');
