@@ -48870,3 +48870,370 @@ html body #page-booking-schedule .bs-legend-item b{white-space:nowrap;font-size:
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
 </script>
+
+<style id="uang-masuk-redesign-v4">
+/* =====================================================================
+   UANG MASUK / PELUNASAN — REDESAIN V4
+   Tujuan: tampilan bersih & modern, tombol mudah dijangkau jempol,
+   target sentuh besar (>=48px), grid ringkas supaya tidak terlalu panjang.
+   Blok ini sengaja ditaruh PALING AKHIR agar menimpa gaya lama.
+   Hanya mengubah tampilan (CSS) — logika/JS tidak disentuh.
+   ===================================================================== */
+html #page-masuk{
+  --um-pad:14px;
+  --um-green:#16a34a; --um-green-d:#059669;
+  --um-ink:#0f172a; --um-mute:#64748b;
+  --um-line:#e2e8f0; --um-bg:#f8fafc;
+  -webkit-tap-highlight-color:transparent;
+}
+@media(min-width:641px){ html #page-masuk{--um-pad:18px} }
+
+/* ---------- CANGKANG POPUP ---------- */
+html body.jadwal-uang-masuk-modal-active #page-masuk{
+  padding:0 var(--um-pad) 0 !important;
+  background:linear-gradient(180deg,#ffffff 0%,#f4f8ff 100%) !important;
+  border:1px solid rgba(255,255,255,.9) !important;
+  box-shadow:0 30px 80px rgba(15,23,42,.32) !important;
+}
+@media(max-width:640px){
+  /* HP: popup menempel di bawah (bottom-sheet) → semua tombol dekat jempol */
+  html #jadwal-uang-masuk-modal-backdrop{align-items:flex-end !important;padding:0 !important}
+  html body.jadwal-uang-masuk-modal-active #page-masuk{
+    width:100vw !important;max-width:100vw !important;
+    height:auto !important;max-height:94dvh !important;
+    border-radius:26px 26px 0 0 !important;
+    padding:0 var(--um-pad) 0 !important;
+  }
+}
+
+/* ---------- HEADER ---------- */
+html body.jadwal-uang-masuk-modal-active #page-masuk > h2{
+  top:0 !important;
+  width:calc(100% + (var(--um-pad) * 2)) !important;
+  margin:0 calc(var(--um-pad) * -1) 0 !important;
+  padding:22px 60px 14px var(--um-pad) !important;
+  min-height:0 !important;
+  justify-content:flex-start !important;
+  text-align:left !important;
+  font-size:14px !important;
+  line-height:1.3 !important;
+  font-weight:900 !important;
+  letter-spacing:.05em !important;
+  color:#0f172a !important;
+  background:rgba(255,255,255,.97) !important;
+  border-bottom:1px solid #eef2f7 !important;
+  box-shadow:none !important;
+  border-radius:26px 26px 0 0 !important;
+}
+html body.jadwal-uang-masuk-modal-active #page-masuk > h2::before{
+  content:"" !important;position:absolute !important;top:8px !important;left:50% !important;
+  width:44px !important;height:5px !important;border-radius:5px !important;
+  background:#cbd5e1 !important;transform:translateX(-50%) !important;
+}
+html body.jadwal-uang-masuk-modal-active #page-masuk > h2::after{
+  width:56px !important;height:3px !important;left:var(--um-pad) !important;
+  background:linear-gradient(90deg,#16a34a,#34d399) !important;
+}
+html body.jadwal-uang-masuk-modal-active #jadwal-uang-masuk-modal-close{
+  top:14px !important;right:12px !important;width:42px !important;height:42px !important;
+  border-radius:14px !important;background:#f1f5f9 !important;border:0 !important;
+  box-shadow:none !important;color:#475569 !important;
+}
+html body.jadwal-uang-masuk-modal-active #jadwal-uang-masuk-modal-close:active{background:#e2e8f0 !important}
+
+/* ---------- FORM = GRID 2 KOLOM ---------- */
+html #page-masuk > form{
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+  gap:10px !important;
+  padding:14px 0 0 !important;
+}
+html #page-masuk > form > *{grid-column:1 / -1;order:20;margin:0 !important;min-width:0}
+html #page-masuk > form > [data-control="in-tgl"]{grid-column:1;order:1}
+html #page-masuk > form > [data-control="in-jam-main"]{grid-column:2;order:2}
+html #page-masuk > form > [data-control="in-tim"]{order:3}
+html #page-masuk > form > [data-control="in-tambahan-waktu"]{grid-column:1;order:4}
+html #page-masuk > form > [data-control="in-jenis-pembayaran"]{grid-column:2;order:5}
+html #page-masuk > form > #in-keterangan-manual{order:6}
+html #page-masuk > form > #info-tagihan-tim{order:7}
+html #page-masuk > form > .uang-masuk-payment-wrap{order:12}
+html #page-masuk > form > .uang-masuk-option-panel{order:10}
+html #page-masuk > form > #member-discount-allocation-wrap{order:11}
+html #page-masuk > form > #uang-masuk-sticky-actions{order:99}
+
+/* ---------- KOTAK PILIHAN (tanggal, tim, jam, dst.) ---------- */
+html #page-masuk .masuk-field-card{
+  min-height:56px !important;margin:0 !important;padding:0 !important;
+  background:#fff !important;border:1.5px solid var(--um-line) !important;
+  border-radius:16px !important;box-shadow:0 1px 2px rgba(15,23,42,.04) !important;
+  transition:border-color .15s,box-shadow .15s,transform .1s !important;
+}
+html #page-masuk .masuk-field-card:focus-within{
+  border-color:var(--um-green) !important;
+  box-shadow:0 0 0 4px rgba(22,163,74,.13) !important;
+}
+html #page-masuk .masuk-field-card:active{transform:scale(.985)}
+html #page-masuk .masuk-field-value{
+  min-height:54px !important;padding:6px 44px 6px 14px !important;
+  justify-content:flex-start !important;
+}
+html #page-masuk .masuk-field-value > span:first-child{
+  text-align:left !important;font-size:13.5px !important;font-weight:800 !important;
+  color:var(--um-ink) !important;line-height:1.25 !important;
+}
+html #page-masuk .masuk-field-icon{
+  right:10px !important;width:30px !important;height:30px !important;border-radius:10px !important;
+  display:flex !important;align-items:center !important;justify-content:center !important;
+  background:#ecfdf5 !important;color:var(--um-green-d) !important;font-size:15px !important;
+}
+
+/* ---------- KARTU TAGIHAN TIM ---------- */
+html #page-masuk #info-tagihan-tim{
+  display:grid !important;grid-template-columns:minmax(0,1fr) !important;gap:10px !important;
+}
+html #page-masuk #info-tagihan-tim > div{
+  background:#fff !important;border:1px solid #dbeafe !important;
+  border-left:5px solid #2563eb !important;border-radius:18px !important;
+  padding:14px !important;box-shadow:0 8px 22px rgba(37,99,235,.09) !important;
+}
+html #page-masuk #info-tagihan-tim [class*="text-[10px]"],
+html #page-masuk #info-tagihan-tim [class*="text-[9px]"]{font-size:11.5px !important}
+html #page-masuk #info-tagihan-tim .rounded-full{
+  padding:5px 11px !important;font-size:10.5px !important;letter-spacing:.04em;
+  background:#2563eb !important;
+}
+html #page-masuk #info-tagihan-tim .truncate{font-size:16px !important;margin-bottom:10px !important}
+html #page-masuk #info-tagihan-tim .grid > div{
+  background:#f8fafc !important;border-radius:12px !important;padding:9px 11px !important;
+}
+html #page-masuk #info-tagihan-tim .grid > div b{font-size:15px !important}
+html #page-masuk #info-tagihan-tim .rounded-lg.bg-blue-600{
+  margin-top:10px !important;padding:12px 14px !important;border-radius:14px !important;
+  background:linear-gradient(135deg,#2563eb,#4f46e5) !important;
+  box-shadow:0 8px 18px rgba(37,99,235,.28) !important;
+}
+html #page-masuk #info-tagihan-tim .rounded-lg.bg-blue-600 span{
+  font-size:11.5px !important;letter-spacing:.08em;opacity:.92;
+}
+html #page-masuk #info-tagihan-tim .rounded-lg.bg-blue-600 b{font-size:21px !important;letter-spacing:-.01em}
+
+/* ---------- PANEL OPSI (sewa, diskon, diskon member) ---------- */
+html #page-masuk .uang-masuk-option-panel,
+html #page-masuk #member-discount-allocation-wrap{
+  background:#fff !important;border:1px solid var(--um-line) !important;
+  border-radius:18px !important;padding:14px !important;
+  box-shadow:0 1px 3px rgba(15,23,42,.05) !important;
+}
+html #page-masuk .uang-masuk-option-panel > label.block,
+html #page-masuk #member-discount-allocation-wrap label.block{
+  font-size:13.5px !important;font-weight:900 !important;margin-bottom:2px !important;
+}
+html #page-masuk .uang-masuk-option-panel .grid{gap:8px !important}
+html #page-masuk .uang-masuk-option-panel .grid:first-of-type{grid-template-columns:minmax(0,1fr) !important}
+
+/* baris pilihan (checkbox & radio) = target sentuh besar */
+html #page-masuk .uang-masuk-option-panel label.cursor-pointer,
+html #page-masuk #member-discount-allocation-wrap label.cursor-pointer{
+  min-height:50px !important;padding:10px 12px !important;border-radius:14px !important;
+  background:var(--um-bg) !important;border:1.5px solid var(--um-line) !important;
+  transition:background .15s,border-color .15s,box-shadow .15s !important;
+}
+html #page-masuk label.cursor-pointer input[type="checkbox"],
+html #page-masuk label.cursor-pointer input[type="radio"]{
+  width:22px !important;height:22px !important;flex:0 0 22px;accent-color:var(--um-green);
+}
+html #page-masuk label.cursor-pointer span{font-size:13.5px !important;font-weight:800 !important;color:var(--um-ink) !important}
+html #page-masuk .uang-masuk-option-panel label.cursor-pointer:has(input:checked){
+  background:#f0fdf4 !important;border-color:var(--um-green) !important;
+  box-shadow:0 0 0 3px rgba(22,163,74,.12) !important;
+}
+/* diskon manual (ungu) */
+html #page-masuk [class*="border-violet-400"]{
+  background:#faf8ff !important;border-color:#ddd6fe !important;
+}
+html #page-masuk [class*="border-violet-400"] .grid.lg\:grid-cols-4,
+html #page-masuk [class*="border-violet-400"] .grid.sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+html #page-masuk [class*="border-violet-400"] label.cursor-pointer:has(input:checked){
+  background:#f5f3ff !important;border-color:#7c3aed !important;box-shadow:0 0 0 3px rgba(124,58,237,.14) !important;
+}
+html #page-masuk [class*="border-violet-400"] button[onclick*="simpanDiskonManualTersimpan"]{
+  min-height:48px !important;border-radius:14px !important;font-size:13px !important;
+  background:linear-gradient(135deg,#7c3aed,#6d28d9) !important;
+}
+/* diskon member (biru): 3 pilihan sejajar */
+html #page-masuk #member-discount-allocation-wrap{background:#f5f9ff !important;border-color:#bfdbfe !important}
+html #page-masuk #member-discount-allocation-wrap .grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:8px !important}
+html #page-masuk #member-discount-allocation-wrap label.cursor-pointer{
+  flex-direction:column !important;justify-content:center !important;text-align:center !important;gap:6px !important;padding:10px 6px !important;
+}
+html #page-masuk #member-discount-allocation-wrap label.cursor-pointer span{font-size:12.5px !important}
+html #page-masuk #member-discount-allocation-wrap label.cursor-pointer:has(input:checked){
+  background:#dbeafe !important;border-color:#2563eb !important;box-shadow:0 0 0 3px rgba(37,99,235,.14) !important;
+}
+
+/* ---------- KARTU PEMBAYARAN TIM ---------- */
+html #page-masuk .uang-masuk-payment-wrap{
+  display:grid !important;grid-template-columns:minmax(0,1fr) !important;gap:10px !important;
+}
+html #page-masuk .uang-masuk-payment-card{
+  background:#fff !important;border:1px solid var(--um-line) !important;
+  border-radius:18px !important;padding:14px !important;
+  box-shadow:0 1px 3px rgba(15,23,42,.05) !important;
+  display:flex !important;flex-direction:column !important;gap:10px !important;
+}
+html #page-masuk .uang-masuk-payment-card > label{
+  font-size:13.5px !important;font-weight:900 !important;color:#065f46 !important;
+  display:flex !important;align-items:center;gap:8px;
+}
+html #page-masuk .uang-masuk-payment-card > label::before{
+  content:"";width:8px;height:8px;border-radius:50%;background:var(--um-green);flex:0 0 8px;
+}
+html #page-masuk .uang-masuk-payment-card .space-y-2 > *,
+html #page-masuk .uang-masuk-payment-card > *{margin-top:0 !important;margin-bottom:0 !important}
+html #page-masuk .glass-input,
+html #page-masuk .uang-masuk-payment-card select,
+html #page-masuk .uang-masuk-payment-card input[type="text"]{
+  min-height:48px !important;padding:10px 14px !important;border-radius:14px !important;
+  font-size:16px !important;font-weight:800 !important;color:var(--um-ink) !important;
+  background:var(--um-bg) !important;border:1.5px solid var(--um-line) !important;box-shadow:none !important;
+}
+html #page-masuk .glass-input:focus,
+html #page-masuk .uang-masuk-payment-card select:focus,
+html #page-masuk .uang-masuk-payment-card input:focus{
+  outline:0 !important;background:#fff !important;border-color:var(--um-green) !important;
+  box-shadow:0 0 0 4px rgba(22,163,74,.13) !important;
+}
+html #page-masuk .uang-masuk-payment-card .block.text-\[10px\]{font-size:11.5px !important;color:var(--um-mute) !important;font-weight:800 !important}
+html #page-masuk .uang-masuk-method-trigger{
+  min-height:48px !important;border-radius:14px !important;background:var(--um-bg) !important;
+  border:1.5px solid var(--um-line) !important;font-weight:800 !important;
+}
+html #page-masuk .uang-masuk-method-option{min-height:46px !important;font-weight:800 !important}
+html #page-masuk .uang-masuk-payment-card label.cursor-pointer{
+  min-height:44px;font-size:12.5px !important;
+}
+
+/* ---------- BAR TOMBOL AKSI (selalu di bawah, dekat jempol) ---------- */
+html #page-masuk #uang-masuk-sticky-actions{
+  position:sticky !important;bottom:0 !important;z-index:125 !important;
+  display:grid !important;grid-template-columns:minmax(0,1fr) minmax(0,1.7fr) !important;
+  gap:8px !important;align-items:stretch !important;
+  padding:12px 0 calc(12px + env(safe-area-inset-bottom,0px)) !important;
+}
+html body.jadwal-uang-masuk-modal-active #page-masuk #uang-masuk-sticky-actions{
+  margin:6px calc(var(--um-pad) * -1) 0 !important;
+  padding:12px var(--um-pad) calc(12px + env(safe-area-inset-bottom,0px)) !important;
+  background:linear-gradient(180deg,rgba(255,255,255,.92),#fff 38%) !important;
+  border-top:1px solid #eef2f7 !important;
+  box-shadow:0 -10px 24px rgba(15,23,42,.08) !important;
+  backdrop-filter:blur(14px) !important;-webkit-backdrop-filter:blur(14px) !important;
+}
+html #page-masuk #uang-masuk-sticky-actions .uang-masuk-action-btn{
+  width:100% !important;min-width:0 !important;min-height:54px !important;
+  border-radius:16px !important;font-size:15px !important;font-weight:900 !important;
+  display:flex !important;align-items:center !important;justify-content:center !important;gap:7px !important;
+  border:0 !important;touch-action:manipulation;
+  transition:transform .1s,filter .15s,box-shadow .15s !important;
+}
+html #page-masuk #uang-masuk-sticky-actions .uang-masuk-action-btn:active{transform:scale(.97)}
+/* Harga Customer = tombol sekunder, baris atas penuh */
+html #page-masuk #btn-tampilkan-customer{
+  grid-column:1 / -1 !important;min-height:48px !important;
+  background:#eff6ff !important;color:#1d4ed8 !important;
+  border:1.5px solid #bfdbfe !important;box-shadow:none !important;font-size:14px !important;
+}
+html #page-masuk #btn-tampilkan-customer:disabled{opacity:.45 !important;filter:grayscale(.3)}
+/* Hapus = kiri, kecil & berwarna lembut (anti salah tekan) */
+html #page-masuk #btn-hapus-dari-jadwal{
+  grid-column:1 !important;background:#fef2f2 !important;color:#dc2626 !important;
+  border:1.5px solid #fecaca !important;box-shadow:none !important;font-size:14px !important;
+}
+html #page-masuk #btn-hapus-dari-jadwal.hidden{display:none !important}
+/* Simpan = tombol utama, paling besar, di kanan bawah (zona jempol) */
+html #page-masuk #btn-simpan-pemasukan{
+  grid-column:2 !important;color:#fff !important;font-size:16px !important;
+  background:linear-gradient(135deg,#16a34a,#059669) !important;
+  box-shadow:0 10px 22px rgba(22,163,74,.34) !important;
+}
+html #page-masuk #btn-hapus-dari-jadwal.hidden ~ #btn-simpan-pemasukan{grid-column:1 / -1 !important}
+html #page-masuk #btn-simpan-pemasukan:hover{filter:brightness(1.05)}
+
+/* ---------- TEKS KECIL LAIN ---------- */
+html #page-masuk #info-biaya-tambahan{font-size:12px !important;color:#92400e !important;font-style:normal !important}
+html #page-masuk #info-diskon-manual,
+html #page-masuk #info-diskon-member-alokasi{font-size:12px !important}
+html #page-masuk #tim-2-nama-save-row{border-radius:14px !important;padding:10px 12px !important}
+html #page-masuk #btn-simpan-nama-tim-2{min-height:42px !important;border-radius:12px !important;font-size:12px !important}
+
+/* ---------- FIX V4.1: hilangkan ruang kosong di bawah bar tombol ---------- */
+html body.jadwal-uang-masuk-modal-active #page-masuk > form,
+html body.jadwal-uang-masuk-modal-active #page-masuk > form:last-child{
+  padding-bottom:0 !important;margin-bottom:0 !important;min-height:0 !important;
+}
+html body.jadwal-uang-masuk-modal-active #page-masuk{
+  padding-bottom:0 !important;overflow-y:auto !important;
+}
+html body.jadwal-uang-masuk-modal-active #page-masuk > form > #uang-masuk-sticky-actions{
+  margin-bottom:0 !important;bottom:0 !important;
+  border-radius:0 !important;
+}
+@media(max-width:640px){
+  html body.jadwal-uang-masuk-modal-active #page-masuk > form,
+  html body.jadwal-uang-masuk-modal-active #page-masuk > form:last-child{padding-bottom:0 !important}
+  html body.jadwal-uang-masuk-modal-active #page-masuk > form > #uang-masuk-sticky-actions{
+    margin:6px calc(var(--um-pad) * -1) 0 !important;
+    padding-bottom:calc(14px + env(safe-area-inset-bottom,0px)) !important;
+  }
+}
+/* ---------- FIX V4.2: kartu melayang 5px dari tepi, 4 sudut bulat, tanpa efek memudar ---------- */
+@media(max-width:640px){
+  html body.jadwal-uang-masuk-modal-active #jadwal-uang-masuk-modal-backdrop{
+    align-items:center !important;justify-content:center !important;padding:5px !important;
+  }
+  html body.jadwal-uang-masuk-modal-active #page-masuk{
+    width:calc(100vw - 10px) !important;max-width:calc(100vw - 10px) !important;
+    height:auto !important;max-height:calc(100dvh - 10px) !important;
+    border-radius:24px !important;overflow-x:hidden !important;
+  }
+  html body.jadwal-uang-masuk-modal-active #page-masuk > h2::before{display:none !important}
+  html body.jadwal-uang-masuk-modal-active #page-masuk > h2{padding-top:18px !important}
+  html body.jadwal-uang-masuk-modal-active #jadwal-uang-masuk-modal-close{top:10px !important}
+}
+html body.jadwal-uang-masuk-modal-active #page-masuk{
+  border-radius:24px !important;background:#ffffff !important;
+  backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
+}
+/* header: solid, tidak transparan */
+html body.jadwal-uang-masuk-modal-active #page-masuk > h2{
+  background:#ffffff !important;opacity:1 !important;
+  backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
+  border-radius:24px 24px 0 0 !important;box-shadow:none !important;
+}
+/* bar tombol: solid putih, tanpa gradasi/blur/bayangan memudar */
+html body.jadwal-uang-masuk-modal-active #page-masuk #uang-masuk-sticky-actions{
+  background:#ffffff !important;
+  backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
+  box-shadow:none !important;border-top:1px solid #e8edf3 !important;
+  border-radius:0 0 24px 24px !important;
+}
+/* pastikan isi form tidak ikut pudar */
+html body.jadwal-uang-masuk-modal-active #page-masuk > form,
+html body.jadwal-uang-masuk-modal-active #page-masuk > form::after,
+html body.jadwal-uang-masuk-modal-active #page-masuk::after{
+  background-image:none !important;mask-image:none !important;-webkit-mask-image:none !important;
+}
+/* label kotak pilihan: jangan tertimpa ikon */
+html #page-masuk .masuk-field-value{padding:6px 46px 6px 14px !important}
+html #page-masuk .masuk-field-value > span:first-child{
+  white-space:normal !important;overflow-wrap:anywhere !important;
+  font-size:12.5px !important;width:auto !important;flex:1 1 auto;min-width:0;
+}
+/* tombol aksi: teks Hapus tidak terpotong */
+html #page-masuk #uang-masuk-sticky-actions{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) !important}
+html #page-masuk #btn-hapus-dari-jadwal{
+  font-size:13px !important;padding:0 6px !important;white-space:nowrap !important;
+}
+@media (prefers-reduced-motion:reduce){
+  html #page-masuk *{transition:none !important}
+}
+</style>
