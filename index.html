@@ -10855,21 +10855,34 @@ body > header {
 <div class="flex justify-between items-center mb-4">
 <h2 class="font-black text-base sm:text-lg text-slate-900 drop-shadow-sm w-full text-center">📅 BOOKING SCHEDULE</h2>
 </div>
-<div class="flex flex-col items-center justify-center mb-4 gap-3">
-<div class="flex items-center justify-center gap-2 p-1.5 rounded-xl border border-white/20 w-full sm:w-auto">
-<select class="p-1.5 rounded-lg text-xs glass-input font-bold text-center" id="filter-periode-jadwal" onchange="renderGridJadwal()">
+<div class="bs-period">
+<button type="button" class="bs-period-nav bs-period-prev" id="bs-periode-prev" onclick="bsGeserPeriode(-1)" aria-label="Periode sebelumnya">
+<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+</button>
+<select class="glass-input" id="filter-periode-jadwal" onchange="renderGridJadwal();bsSyncPeriode()" aria-label="Pilih periode jadwal">
 </select>
-</div>
-<button type="button" id="btn-cek-bentrok" onclick="cekBentrokJadwal()">🔍 Cek Bentrok Jadwal <span id="badge-cek-bentrok"></span></button>
+<button type="button" class="bs-period-nav bs-period-next" id="bs-periode-next" onclick="bsGeserPeriode(1)" aria-label="Periode berikutnya">
+<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+</button>
 </div>
 <div class="shadow-2xl rounded-xl border border-white/30 mb-4 overflow-hidden relative" id="booking-schedule-grid-wrap">
     <div id="booking-schedule-periods" class="booking-schedule-periods"></div>
 </div>
-<div class="schedule-legend flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs font-bold mt-4 p-3 rounded-2xl">
-<span class="schedule-legend-title font-black px-2">Keterangan</span>
-<span class="schedule-legend-item flex items-center gap-1.5"><span class="w-2.5 h-2.5 bg-blue-600 border border-blue-400 rounded-full"></span> <span class="text-blue-700 font-black">Member</span></span>
-<span class="schedule-legend-item flex items-center gap-1.5"><span class="w-2.5 h-2.5 bg-rose-600 border border-rose-400 rounded-full"></span> <span class="text-rose-700 font-black">Non-Member</span></span>
+<div class="bs-legend" role="group" aria-label="Keterangan warna jadwal">
+<div class="bs-legend-items">
+<div class="bs-legend-item is-member"><i class="bs-chip" aria-hidden="true"></i><span class="bs-legend-text"><b>Member</b></span></div>
+<div class="bs-legend-item is-non"><i class="bs-chip" aria-hidden="true"></i><span class="bs-legend-text"><b>Non-Member</b></span></div>
 </div>
+</div>
+
+<button type="button" id="btn-cek-bentrok" class="bs-bentrok" onclick="cekBentrokJadwal()">
+<span class="bs-bentrok-ico" aria-hidden="true">
+<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/><circle cx="12" cy="15" r="2.2"/><path d="M13.7 16.7l2 2"/></svg>
+<span id="badge-cek-bentrok"></span>
+</span>
+<span class="bs-bentrok-txt"><b>Cek Bentrok Jadwal</b><small>Pindai jadwal ganda dan jam yang saling bertabrakan</small></span>
+<span class="bs-bentrok-go" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></span>
+</button>
 
 </div>
 <!-- HALAMAN DAILY RECAP -->
@@ -48713,5 +48726,147 @@ main.space-y-6 > #page-minuman {
     setInterval(sync,500);
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
+})();
+</script>
+
+<style id="booking-schedule-revisi-v1">
+/* =========================================================
+   BOOKING SCHEDULE — REVISI: Periode besar, Keterangan besar,
+   Cek Bentrok dipindah ke paling bawah.
+   Selector sengaja dibuat spesifik agar menang atas override lama.
+   ========================================================= */
+html body #page-booking-schedule{--bs-navy:#0b2559;--bs-blue:#1d4ed8;--bs-rose:#e11d48;}
+
+/* ---------- PERIODE ---------- */
+html body #page-booking-schedule .bs-period{position:relative;display:block;width:100%;margin:0 0 14px;}
+html body #page-booking-schedule .bs-period #filter-periode-jadwal{
+  -webkit-appearance:none;appearance:none;
+  display:block!important;width:100%!important;min-width:0!important;max-width:100%!important;
+  height:62px!important;margin:0!important;padding:0 60px!important;
+  border-radius:20px!important;
+  font-size:clamp(15px,4.7vw,19px)!important;font-weight:900!important;letter-spacing:.01em;line-height:1.2;
+  color:var(--bs-navy)!important;text-align:center!important;text-align-last:center!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(220,234,255,.74))!important;
+  border:1.5px solid rgba(255,255,255,.96)!important;
+  box-shadow:0 12px 28px rgba(4,18,52,.30),inset 0 1px 0 #fff!important;
+  -webkit-backdrop-filter:blur(14px) saturate(140%)!important;backdrop-filter:blur(14px) saturate(140%)!important;
+  cursor:pointer;outline:none;
+}
+html body #page-booking-schedule .bs-period #filter-periode-jadwal:focus-visible{box-shadow:0 0 0 3px rgba(37,99,235,.55),0 12px 28px rgba(4,18,52,.30)!important;}
+html body #page-booking-schedule .bs-period #filter-periode-jadwal option{font-size:16px;font-weight:800;color:#0b2559;background:#fff;}
+html body #page-booking-schedule .bs-period .bs-period-nav{
+  position:absolute;top:50%;transform:translateY(-50%);z-index:2;
+  width:44px;height:44px;border-radius:14px;border:0;padding:0;cursor:pointer;
+  display:grid;place-items:center;color:#fff;
+  background:linear-gradient(145deg,#1d4ed8,#38a1f5);
+  box-shadow:0 5px 12px rgba(29,78,216,.40),inset 0 1px 0 rgba(255,255,255,.45);
+  transition:transform .12s ease,opacity .12s ease;
+}
+html body #page-booking-schedule .bs-period .bs-period-prev{left:9px;}
+html body #page-booking-schedule .bs-period .bs-period-next{right:9px;}
+html body #page-booking-schedule .bs-period .bs-period-nav:active{transform:translateY(-50%) scale(.92);}
+html body #page-booking-schedule .bs-period .bs-period-nav:disabled{opacity:.35;cursor:default;box-shadow:none;}
+html body #page-booking-schedule .bs-period .bs-period-nav:focus-visible{outline:3px solid rgba(255,255,255,.95);outline-offset:2px;}
+
+/* ---------- KETERANGAN ---------- */
+html body #page-booking-schedule .bs-legend{
+  width:100%;margin:14px 0 0;padding:16px 14px 14px;border-radius:22px;
+  background:linear-gradient(180deg,rgba(255,255,255,.88),rgba(228,239,255,.68));
+  border:1.5px solid rgba(255,255,255,.96);
+  box-shadow:0 12px 28px rgba(4,18,52,.26),inset 0 1px 0 #fff;
+  -webkit-backdrop-filter:blur(14px) saturate(140%);backdrop-filter:blur(14px) saturate(140%);
+}
+html body #page-booking-schedule .bs-legend-title{
+  margin:0 0 12px;text-align:center;font-size:17px;font-weight:900;line-height:1.2;color:var(--bs-navy);
+}
+html body #page-booking-schedule .bs-legend-items{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+html body #page-booking-schedule .bs-legend-item{
+  display:flex;align-items:center;gap:10px;min-width:0;padding:12px 10px;border-radius:16px;border:1.5px solid;
+}
+html body #page-booking-schedule .bs-legend-item.is-member{background:#e6f0ff;border-color:#8fb5fb;color:#1d4ed8;}
+html body #page-booking-schedule .bs-legend-item.is-non{background:#ffecef;border-color:#f9a3b3;color:#be123c;}
+html body #page-booking-schedule .bs-legend-item .bs-chip{
+  position:relative;flex:none;display:block;width:36px;height:26px;border-radius:9px;border:2.5px solid currentColor;background:#fff;
+  box-shadow:0 2px 6px rgba(15,23,42,.14);
+}
+html body #page-booking-schedule .bs-legend-item.is-member .bs-chip{background:#d6e6ff;}
+html body #page-booking-schedule .bs-legend-item.is-non .bs-chip{background:#ffdbe2;}
+html body #page-booking-schedule .bs-legend-item .bs-chip::after{
+  content:"";position:absolute;left:6px;right:6px;top:50%;height:3px;border-radius:2px;background:currentColor;transform:translateY(-50%);
+}
+html body #page-booking-schedule .bs-legend-item .bs-legend-text{display:block;min-width:0;}
+html body #page-booking-schedule .bs-legend-item b{display:block;font-size:16px;font-weight:900;line-height:1.15;color:currentColor;}
+html body #page-booking-schedule .bs-legend-item small{display:block;margin-top:2px;font-size:12px;font-weight:700;line-height:1.2;color:#475569;}
+
+/* ---------- CEK BENTROK JADWAL (paling bawah) ---------- */
+html body #page-booking-schedule #btn-cek-bentrok.bs-bentrok{
+  display:flex;align-items:center;gap:14px;width:100%;margin:12px 0 6px;padding:14px 14px 14px 14px;
+  border-radius:22px;text-align:left;cursor:pointer;color:var(--bs-navy);font-size:inherit;font-weight:inherit;
+  background:linear-gradient(135deg,rgba(255,255,255,.94),rgba(205,225,255,.76));
+  border:1.5px solid rgba(255,255,255,.96);
+  box-shadow:0 12px 28px rgba(4,18,52,.30),inset 0 1px 0 #fff;
+  -webkit-backdrop-filter:blur(14px) saturate(140%);backdrop-filter:blur(14px) saturate(140%);
+  transition:transform .12s ease,box-shadow .12s ease;
+}
+html body #page-booking-schedule #btn-cek-bentrok.bs-bentrok:active{transform:scale(.985);box-shadow:0 6px 16px rgba(4,18,52,.28),inset 0 1px 0 #fff;}
+html body #page-booking-schedule #btn-cek-bentrok.bs-bentrok:focus-visible{outline:3px solid rgba(37,99,235,.7);outline-offset:2px;}
+html body #page-booking-schedule #btn-cek-bentrok .bs-bentrok-ico{
+  position:relative;flex:none;width:56px;height:56px;border-radius:18px;display:grid;place-items:center;color:#fff;
+  background:linear-gradient(145deg,#1d4ed8,#38a1f5);
+  box-shadow:0 7px 16px rgba(29,78,216,.42),inset 0 1px 0 rgba(255,255,255,.5);
+}
+html body #page-booking-schedule #btn-cek-bentrok #badge-cek-bentrok{
+  position:absolute;top:-7px;right:-7px;min-width:24px;height:24px;padding:0 6px;border-radius:999px;
+  align-items:center;justify-content:center;background:#dc2626;color:#fff;font-size:12px;font-weight:900;line-height:1;
+  border:2.5px solid #fff;box-shadow:0 3px 8px rgba(220,38,38,.5);
+}
+html body #page-booking-schedule #btn-cek-bentrok .bs-bentrok-txt{display:block;flex:1 1 auto;min-width:0;}
+html body #page-booking-schedule #btn-cek-bentrok .bs-bentrok-txt b{display:block;font-size:17px;font-weight:900;line-height:1.2;color:var(--bs-navy);}
+html body #page-booking-schedule #btn-cek-bentrok .bs-bentrok-txt small{display:block;margin-top:3px;font-size:12.5px;font-weight:700;line-height:1.3;color:#475569;}
+html body #page-booking-schedule #btn-cek-bentrok .bs-bentrok-go{
+  flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:var(--bs-blue);background:rgba(37,99,235,.13);
+}
+
+/* Keterangan disederhanakan: hanya Member dan Non-Member, satu baris */
+html body #page-booking-schedule .bs-legend{padding:12px;}
+html body #page-booking-schedule .bs-legend-item{justify-content:center;padding:12px 8px;gap:8px;}
+html body #page-booking-schedule .bs-legend-item b{white-space:nowrap;font-size:clamp(14px,4.2vw,17px);}
+
+@media (max-width:360px){
+  html body #page-booking-schedule .bs-legend-item .bs-chip{width:30px;height:22px;}
+  html body #page-booking-schedule .bs-legend-item b{font-size:14.5px;}
+  html body #page-booking-schedule #btn-cek-bentrok .bs-bentrok-txt small{font-size:11.5px;}
+}
+@media (prefers-reduced-motion:reduce){
+  html body #page-booking-schedule .bs-period .bs-period-nav,
+  html body #page-booking-schedule #btn-cek-bentrok.bs-bentrok{transition:none;}
+}
+</style>
+<script>
+(function(){
+  function sel(){ return document.getElementById('filter-periode-jadwal'); }
+  function sync(){
+    var s = sel(); if(!s) return;
+    var p = document.getElementById('bs-periode-prev');
+    var n = document.getElementById('bs-periode-next');
+    if(p) p.disabled = s.selectedIndex <= 0;
+    if(n) n.disabled = s.selectedIndex < 0 || s.selectedIndex >= s.options.length - 1;
+  }
+  window.bsSyncPeriode = sync;
+  window.bsGeserPeriode = function(step){
+    var s = sel(); if(!s) return;
+    var i = s.selectedIndex + step;
+    if(i < 0 || i >= s.options.length) return;
+    s.selectedIndex = i;
+    s.dispatchEvent(new Event('change', { bubbles:true }));
+  };
+  function start(){
+    sync();
+    if(!window.MutationObserver) return;
+    var s = sel(), g = document.getElementById('booking-schedule-periods');
+    if(s) new MutationObserver(sync).observe(s, { childList:true });
+    if(g) new MutationObserver(sync).observe(g, { childList:true });
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
 </script>
