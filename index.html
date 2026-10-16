@@ -11664,7 +11664,7 @@ Alur pengeluaran: dipotong dari sumber uang yang dipilih saat input (Uang Lapang
 <option value="11:00">11:00</option><option value="12:00">12:00</option><option value="13:00">13:00</option><option value="14:00">14:00</option>
 <option value="15:00">15:00</option><option value="16:00">16:00</option><option value="17:00">17:00</option><option value="18:00">18:00</option>
 <option value="19:00">19:00</option><option value="20:00">20:00</option><option value="21:00">21:00</option><option value="22:00">22:00</option>
-<option value="23:00">23:00</option>
+<option value="23:00">23:00</option><option value="24:00">24:00</option><option value="01:00">01:00</option>
 </select>
 <label class="block text-xs font-bold mb-1 text-slate-900">Durasi Booking</label>
 <select class="w-full p-2 rounded mb-3 text-sm glass-input font-bold" id="b-durasi" required="">
@@ -13130,6 +13130,17 @@ function bentrokCekBookingBaru(tgl, jamMulai, durasi, opt){
     const h0 = parseInt(String(jamMulai).split(':')[0], 10);
     const out = [];
     if(!tgl || !Number.isFinite(h0)) return out;
+    const __urut = window.BOOKING_JAM_URUT || [];
+    const __i0 = __urut.indexOf(String(jamMulai).substring(0,5));
+    if(__i0 >= 0){
+        for(let i = 0; i < Math.max(1, Number(durasi) || 1); i++){
+            const jam = __urut[__i0 + i];
+            if(!jam) break;
+            const konflik = bentrokCekSlot(tgl, jam, opt);
+            if(konflik.length) out.push({ jam, konflik });
+        }
+        return out;
+    }
     for(let i = 0; i < Math.max(1, Number(durasi) || 1); i++){
         const jam = String(h0 + i).padStart(2, '0') + ':00';
         const konflik = bentrokCekSlot(tgl, jam, opt);
@@ -13138,6 +13149,7 @@ function bentrokCekBookingBaru(tgl, jamMulai, durasi, opt){
     return out;
 }
 
+window.bentrokCekSlot = bentrokCekSlot;
 function bentrokPesanBooking(tgl, daftar){
     const baris = daftar.slice(0, 6).map(x => `• ${bentrokTgl(tgl)} jam ${x.jam.replace(':','.')} → ${x.konflik.map(bentrokLabel).join(', ')}`);
     const lebih = daftar.length > 6 ? `\n… dan ${daftar.length - 6} jam lain` : '';
@@ -13231,7 +13243,7 @@ function bentrokScan(semua){
         if(memberOff.length) temuan.push({ jenis:'Booking bentrok dengan jadwal member/OFF', tgl:d, jam:j, baris: baris.concat(memberOff) });
         if(lain.some(c => c.tipe === 'tutup')) temuan.push({ jenis:'Booking di jam istirahat (18.00 = OFF)', tgl:d, jam:j, baris });
     });
-    temuan.sort((a, b) => (a.tgl + a.jam).localeCompare(b.tgl + b.jam));
+    temuan.sort((a, b) => (a.tgl + window.jamSortKey(a.jam)).localeCompare(b.tgl + window.jamSortKey(b.jam)));
 
     // Member ganda: hari + jam sama dan periode berlakunya beririsan.
     const grup = new Map();
@@ -15125,12 +15137,13 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
 
                 // Satu booking berdurasi beberapa jam disimpan sebagai beberapa slot 1 jam.
                 // DP hanya dicatat pada slot pertama agar tidak terhitung dua kali.
-                const startHour = Number(String(jamInput).split(':')[0]);
-                const endExclusive = startHour + durasi;
-                if(startHour < 0 || startHour > 23 || endExclusive > 24) {
-                    alert('Durasi booking melewati batas jadwal lapangan. Silakan pilih jam mulai yang lebih awal atau durasi yang lebih pendek.');
+                const __slotUrut = window.BOOKING_JAM_URUT || [];
+                const __startIdx = __slotUrut.indexOf(String(jamInput).substring(0,5));
+                if(__startIdx < 0 || __startIdx + durasi > __slotUrut.length) {
+                    alert('Durasi booking melewati batas jadwal lapangan (jam terakhir 01:00). Silakan pilih jam mulai yang lebih awal atau durasi yang lebih pendek.');
                     return;
                 }
+                const __jamAkhir = __slotUrut[__startIdx + durasi] || '02:00';
 
                 if(window.__savingBookingLock) return;
                 const __bentrokBooking = bentrokCekBookingBaru(tglInput, jamInput, durasi);
@@ -15142,8 +15155,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 const tanggalAwal = new Date(`${tglInput}T00:00:00`);
                 const bookingRecords = [];
                 for(let i = 0; i < durasi; i++) {
-                    const hour = startHour + i;
-                    const jamSlot = `${String(hour).padStart(2, '0')}:00`;
+                    const jamSlot = __slotUrut[__startIdx + i];
                     const slotDate = new Date(tanggalAwal);
                     // Durasi tidak boleh melewati 24:00; semua slot tetap di tanggal booking.
                     const gabungTglJam = `${tglInput}T${jamSlot}`;
@@ -15166,7 +15178,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                     await push(ref(db, 'booking'), record);
                 }
                 window.__savingBookingLock = false;
-                showSuccessPopup(`Booking ${namaBooking} berhasil disimpan untuk ${durasi} jam (${jamInput}–${String(endExclusive).padStart(2, '0')}:00).`);
+                showSuccessPopup(`Booking ${namaBooking} berhasil disimpan untuk ${durasi} jam (${jamInput}–${__jamAkhir}).`);
                 e.target.reset();
                 setDefaultDates();
                 if(document.getElementById('m-select-pilihan')) document.getElementById('m-select-pilihan').value = "";
@@ -15984,7 +15996,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             if(!Number.isFinite(h)) return '';
             // Jam 16.00 sudah masuk shift malam.
             if(h >= 7 && h <= 15) return 'pagi';
-            if(h >= 16 && h <= 24) return 'malam';
+            if((h >= 16 && h <= 24) || h === 1) return 'malam';
             return '';
         }
 
@@ -16772,7 +16784,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             // tanggal ditampilkan sebagai sedang libur dan klik akan mengembalikannya.
             const isLiburForAllSlots = dateStr => targetEntries.every(cell => isMemberLiburOnDate(cell, dateStr));
             const isLiburForAnySlot = dateStr => targetEntries.some(cell => isMemberLiburOnDate(cell, dateStr));
-            const slotText = targetEntries.map(cell => String(cell.jam || '').substring(0,5)).filter(Boolean).sort().join(', ');
+            const slotText = targetEntries.map(cell => String(cell.jam || '').substring(0,5)).filter(Boolean).sort((x, y) => window.jamSortKey(x).localeCompare(window.jamSortKey(y))).join(', ');
 
             document.getElementById('modal-libur-member')?.remove();
             const modal = document.createElement('div');
@@ -17523,7 +17535,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             }
         };
 
-        const listJam = ["07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00", "24:00"];
+        const listJam = ["07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00", "24:00", "01:00"];
         const listHariKey = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
 
         // Cache data tetap memakai struktur lama agar seluruh fungsi aplikasi tidak berubah.
@@ -17798,7 +17810,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                     if(!dues.has(key)) dues.set(key, { id:key, tanggal:dateStr, jam:String(jam).substring(0,5), nominal:harga, nama:cell.nama });
                 });
             }
-            return [...dues.values()].sort((a,b)=>(a.tanggal+a.jam).localeCompare(b.tanggal+b.jam));
+            return [...dues.values()].sort((a,b)=>(a.tanggal+window.jamSortKey(a.jam)).localeCompare(b.tanggal+window.jamSortKey(b.jam)));
         }
 
         function getAllocatedForMember(nama, dues) {
@@ -18031,7 +18043,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
             const current = select.value;
             const list = (dues || [])
                 .filter(d => Number(d.sisa || 0) > 0)
-                .sort((a,b)=>(a.tanggal+a.jam).localeCompare(b.tanggal+b.jam));
+                .sort((a,b)=>(a.tanggal+window.jamSortKey(a.jam)).localeCompare(b.tanggal+window.jamSortKey(b.jam)));
 
             const seen = new Set();
             const dates = [];
@@ -18510,7 +18522,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                     const entries = [...group.entries].sort((a, b) => {
                         const hd = (hariUrutan[a.hari] || 99) - (hariUrutan[b.hari] || 99);
                         if (hd !== 0) return hd;
-                        return String(a.jam).localeCompare(String(b.jam));
+                        return window.jamSortKey(a.jam).localeCompare(window.jamSortKey(b.jam));
                     });
 
                     const firstActive = entries.find(e => !e.isOff) || entries[0];
@@ -19249,7 +19261,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 }
                 paymentSlots = consecutiveSlots.length >= groupSlots.length ? consecutiveSlots : groupSlots;
             }
-            paymentSlots = [...new Set(paymentSlots)].sort();
+            paymentSlots = [...new Set(paymentSlots)].sort((x, y) => window.jamSortKey(x).localeCompare(window.jamSortKey(y)));
             // Jangan gabungkan jam berurutan bila lawan sparing-nya berbeda.
             paymentSlots = window.trimJamBySparingOpponent(targetNamaPembayaran, tgl, jamMain, paymentSlots);
 
@@ -20830,7 +20842,7 @@ const diskonManualEl = document.getElementById('in-diskon-manual');
                 };
             });
 
-            const jamList = Object.keys(schedules).sort((a,b) => a.localeCompare(b));
+            const jamList = Object.keys(schedules).sort((a,b) => window.jamSortKey(a).localeCompare(window.jamSortKey(b)));
 
             if(jamList.length === 0) {
                 listEl.innerHTML = `<div class="text-center p-4 rounded-xl bg-white/30 border border-slate-300/40 text-xs sm:text-sm font-bold text-slate-600">Tidak ada jadwal tim hari ini.</div>`;
@@ -20877,7 +20889,7 @@ return;
             });
 
             const renderedScheduleCards = grouped.map(group => {
-                const slots = group.slots.sort((a,b) => String(a.jam).localeCompare(String(b.jam)));
+                const slots = group.slots.sort((a,b) => window.jamSortKey(a.jam).localeCompare(window.jamSortKey(b.jam)));
                 const first = slots[0];
                 const isMember = slots.every(item => String(item.status || '').toLowerCase() === 'member');
                 const statusBadge = isMember
@@ -20907,10 +20919,10 @@ return;
                 // hasil pencocokan bookingGroupId, dan yang PALING LENGKAP yang dipakai.
                 const bookingSlotsBySequence = slots
                     .filter(x => x.booking)
-                    .sort((a,b) => String(a.jam).localeCompare(String(b.jam)));
+                    .sort((a,b) => window.jamSortKey(a.jam).localeCompare(window.jamSortKey(b.jam)));
                 const slotsByGroupId = bookingGroupId
                     ? slots.filter(x => String(x.bookingGroupId || '') === bookingGroupId)
-                        .sort((a,b) => String(a.jam).localeCompare(String(b.jam)))
+                        .sort((a,b) => window.jamSortKey(a.jam).localeCompare(window.jamSortKey(b.jam)))
                     : [];
                 const consecutiveRun = (() => {
                     if (!bookingSlotsBySequence.length) return [];
@@ -29703,23 +29715,59 @@ body.minuman-history-modal-open{overflow:hidden !important}
     overlay.addEventListener('pointerdown',e=>{if(e.target===overlay)closePopup();});
   }
 
+  function selectTitle(sel){
+    let t = sel.closest('.masuk-field-card')?.getAttribute('aria-label') || sel.getAttribute('aria-label') || '';
+    if(!t && sel.id){ try{ const l=document.querySelector('label[for="'+sel.id.replace(/"/g,'\\"')+'"]'); if(l) t=l.textContent; }catch(_){} }
+    if(!t){ const l=sel.closest('label'); if(l){ const c=l.cloneNode(true); c.querySelectorAll('select,option').forEach(n=>n.remove()); t=c.textContent; } }
+    if(!t){ let p=sel.previousElementSibling; for(let i=0;p&&i<3;i++,p=p.previousElementSibling){ const x=(p.textContent||'').trim(); if(/^(LABEL|SPAN|DIV|P|H\d)$/.test(p.tagName)&&x&&x.length<70){ t=x; break; } } }
+    t=String(t||'').replace(/\(boleh dikosongkan\)/ig,'').replace(/\s+/g,' ').trim();
+    return t || 'Pilih salah satu';
+  }
+
   function openSelectMenu(select){
     if(select && select.id==='edit-b-jam'){ openEditBookingJamPicker(select); return; }
     closePopup(); activeSelect=select;
     const overlay=document.createElement('div'); overlay.className='glass-native-popup-backdrop glass-select-backdrop';
     const card=document.createElement('div'); card.className='glass-native-popup-card glass-select-card';
-    card.innerHTML=`<div class="glass-native-popup-head"><div><div class="glass-native-popup-title">⌄ ${esc(select?.closest('.masuk-field-card')?.getAttribute('aria-label') || 'PILIH OPSI')}</div><div class="glass-native-popup-sub">Pilih salah satu pilihan</div></div><button class="glass-native-popup-close glass-select-close" type="button" aria-label="Tutup">✕</button></div><div class="glass-native-popup-body"><div class="glass-select-options" data-options></div></div>`;
+    card.setAttribute('role','dialog'); card.setAttribute('aria-modal','true');
+    const withSearch = select.options.length > 7;
+    card.innerHTML=`<div class="glass-native-popup-head"><div><div class="glass-native-popup-title">${esc(selectTitle(select))}</div><div class="glass-native-popup-sub">Pilih salah satu pilihan</div></div><button class="glass-native-popup-close glass-select-close" type="button" aria-label="Tutup">✕</button></div>${withSearch?'<div class="glass-select-search-wrap"><input type="search" class="glass-select-search" placeholder="Cari pilihan..." autocomplete="off" enterkeyhint="search" aria-label="Cari pilihan"></div>':''}<div class="glass-native-popup-body"><div class="glass-select-options" data-options role="listbox"></div><div class="glass-select-empty" data-empty style="display:none">Tidak ada pilihan yang cocok</div></div>`;
     overlay.appendChild(card); document.body.appendChild(overlay); activePopup=overlay;
     const grid=card.querySelector('[data-options]');
-    Array.from(select.options).forEach(opt=>{
+    function addOption(opt){
       if(opt.disabled || opt.hidden) return;
-      const b=document.createElement('button'); b.type='button'; b.className='glass-select-option'+(opt.value===select.value?' is-selected':''); b.textContent=opt.textContent || opt.value;
+      const b=document.createElement('button'); b.type='button'; b.setAttribute('role','option');
+      b.className='glass-select-option'+(opt.selected?' is-selected':'');
+      b.setAttribute('aria-selected',opt.selected?'true':'false');
+      b.textContent=opt.textContent || opt.value;
+      b.dataset.q=String(opt.textContent||opt.value||'').toLowerCase();
       let moved=false, sx=0, sy=0;
       b.addEventListener('pointerdown',ev=>{sx=ev.clientX;sy=ev.clientY;moved=false;ev.stopPropagation();});
       b.addEventListener('pointermove',ev=>{if(Math.hypot(ev.clientX-sx,ev.clientY-sy)>10)moved=true;});
-      b.addEventListener('pointerup',ev=>{ev.preventDefault();ev.stopPropagation();if(moved)return;select.value=opt.value;fireChange(select);closePopup();});
+      b.addEventListener('pointerup',ev=>{ev.preventDefault();ev.stopPropagation();if(moved)return;select.selectedIndex=opt.index;fireChange(select);closePopup();});
+      b.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();select.selectedIndex=opt.index;fireChange(select);closePopup();}});
       grid.appendChild(b);
+    }
+    Array.from(select.children).forEach(ch=>{
+      if(ch.tagName==='OPTGROUP'){
+        const h=document.createElement('div'); h.className='glass-select-group'; h.textContent=ch.label||''; grid.appendChild(h);
+        Array.from(ch.children).forEach(addOption);
+      } else addOption(ch);
     });
+    const search=card.querySelector('.glass-select-search');
+    if(search){
+      const empty=card.querySelector('[data-empty]');
+      search.addEventListener('input',()=>{
+        const q=search.value.trim().toLowerCase(); let any=false;
+        grid.querySelectorAll('.glass-select-option').forEach(b=>{const show=!q||b.dataset.q.includes(q); b.style.display=show?'':'none'; if(show) any=true;});
+        grid.querySelectorAll('.glass-select-group').forEach(g=>{g.style.display=q?'none':'';});
+        empty.style.display=any?'none':'';
+      });
+      if(!(window.matchMedia && matchMedia('(pointer:coarse)').matches)) setTimeout(()=>search.focus(),40);
+    }
+    const body=card.querySelector('.glass-native-popup-body');
+    const picked=grid.querySelector('.is-selected');
+    if(picked) setTimeout(()=>{ const r=picked.getBoundingClientRect(), br=body.getBoundingClientRect(); body.scrollTop += (r.top-br.top)-(body.clientHeight/2)+(r.height/2); },0);
     card.querySelector('.glass-select-close').onclick=closePopup;
     overlay.addEventListener('pointerdown',e=>{if(e.target===overlay)closePopup();});
   }
@@ -31593,10 +31641,10 @@ body.jadwal-uang-masuk-modal-active #page-masuk {
         bookings.forEach(g=>g.slots.forEach(slot=>bookingSlotKeys.add(normName(g.nama)+'|'+slot.jam)));
         const members=getHistoryMemberSchedules(dateKey,bookingSlotKeys);
         const groups=[...bookings,...members];
-        groups.sort((a,b)=>String(a.slots?.[0]?.jam||'').localeCompare(String(b.slots?.[0]?.jam||'')) || String(a.nama).localeCompare(String(b.nama),'id'));
+        groups.sort((a,b)=>window.jamSortKey(a.slots?.[0]?.jam||'').localeCompare(window.jamSortKey(b.slots?.[0]?.jam||'')) || String(a.nama).localeCompare(String(b.nama),'id'));
 
         return groups.map(g=>{
-            const slots=[...g.slots].sort((a,b)=>a.jam.localeCompare(b.jam));
+            const slots=[...g.slots].sort((a,b)=>window.jamSortKey(a.jam).localeCompare(window.jamSortKey(b.jam)));
             const canceled=g.booking && isHistoryCancelled(dateKey,g.nama,slots);
             if(canceled){
                 return {nama:g.nama,jam:slots.map(x=>x.jam).join(' • '),status:'BATAL BOOKING',className:'batal',kind:g.status==='Member'?'MEMBER':'BOOKING',paid:0,total:0,dp:slots.reduce((s,x)=>s+Number(x.item?.dp||0),0)};
@@ -34499,6 +34547,168 @@ html body.jadwal-uang-masuk-modal-active #page-masuk #btn-tampilkan-customer:dis
   html body.jadwal-uang-masuk-modal-active #page-masuk #btn-tampilkan-customer{animation:none !important}
 }
 </style>
+
+<!-- =====================================================================
+     SEMUA POPUP PILIHAN/TANGGAL/JAM/BULAN BAWAAN HP & WINDOWS -> POPUP KACA KUSTOM
+     Memakai pustaka popup yang sudah ada (__openGlassNativePopupFor), sehingga
+     form Sparing, Booking, Member, Edit, dll. tampil seragam. Value/onchange tidak berubah.
+     Opt-out per elemen: tambahkan atribut data-native-picker="true".
+     ===================================================================== -->
+<style id="global-custom-picker-everywhere-css">
+.glass-select-card{display:flex !important;flex-direction:column !important}
+.glass-select-card .glass-native-popup-body{flex:1 1 auto !important;min-height:0 !important;max-height:none !important}
+.glass-select-search-wrap{padding:0 16px 8px}
+.glass-select-search{width:100%;min-height:44px;box-sizing:border-box;padding:10px 14px;border-radius:13px;border:1px solid rgba(148,163,184,.35);background:rgba(255,255,255,.75);color:#172033;font-size:16px;font-weight:700;outline:none;-webkit-appearance:none;appearance:none}
+.glass-select-search:focus{border-color:rgba(245,158,11,.6);box-shadow:0 0 0 3px rgba(245,158,11,.14)}
+.glass-select-group{padding:10px 4px 2px;font-size:10px;font-weight:950;color:#64748b}
+.glass-select-empty{padding:18px 8px;text-align:center;font-size:12px;font-weight:800;color:#64748b}
+.glass-select-option[aria-selected="true"]::after{content:"✓";margin-left:auto;padding-left:10px;font-weight:950}
+.glass-select-option{text-align:left !important}
+/* Panah dropdown bawaan Windows/HP diganti panah seragam */
+html body select:not([multiple]):not(.hidden):not([aria-hidden="true"]):not(.uang-masuk-method-native):not(.masuk-native-control):not(.minuman-payment-select){
+  -webkit-appearance:none !important;-moz-appearance:none !important;appearance:none !important;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat:no-repeat !important;background-position:right 12px center !important;background-size:14px !important;
+  padding-right:34px !important;text-overflow:ellipsis;
+}
+/* Ikon kalender/jam bawaan browser pada input tanggal/waktu tetap rapi */
+input[type="date"],input[type="time"],input[type="month"]{-webkit-tap-highlight-color:transparent}
+</style>
+
+<script id="global-custom-picker-everywhere-js">
+(function(){
+  'use strict';
+  const SEL='select, input[type="date"], input[type="time"], input[type="month"]';
+  let touchStart=null, lastOpen=0;
+
+  function pickEl(e){
+    const t=e.target; if(!t || !t.closest) return null;
+    const el=t.closest(SEL); if(!el) return null;
+    if(el.disabled || el.readOnly || el.dataset.nativePicker==='true') return null;
+    if(el.tagName==='SELECT' && (el.multiple || el.size>1)) return null;
+    if(el.closest('.masuk-field-card')) return null;          // kartu Uang Masuk sudah punya pemicu sendiri
+    if(el.getAttribute('aria-hidden')==='true') return null;   // input native tersembunyi di balik tombol kustom
+    return el;
+  }
+  function open(el){
+    lastOpen=Date.now();
+    if(typeof window.__openGlassNativePopupFor==='function') window.__openGlassNativePopupFor(el);
+  }
+
+  // Desktop (Windows/Mac): cegah dropdown/kalender bawaan browser
+  document.addEventListener('mousedown',function(e){ if(e.button===0 && pickEl(e)) e.preventDefault(); },true);
+  document.addEventListener('click',function(e){
+    const el=pickEl(e); if(!el) return;
+    e.preventDefault();
+    if(Date.now()-lastOpen<500) return;
+    open(el);
+  },true);
+
+  // HP (Android/iOS): ketukan tanpa geser membuka popup kustom, bukan roda/dialog bawaan
+  document.addEventListener('touchstart',function(e){
+    const t=e.touches && e.touches[0]; if(!t){ touchStart=null; return; }
+    touchStart={x:t.clientX,y:t.clientY,el:pickEl(e)};
+  },{capture:true,passive:true});
+  document.addEventListener('touchend',function(e){
+    if(!touchStart || !touchStart.el) { touchStart=null; return; }
+    const t=e.changedTouches && e.changedTouches[0];
+    const moved=t ? Math.hypot(t.clientX-touchStart.x,t.clientY-touchStart.y)>10 : true;
+    const el=touchStart.el; touchStart=null;
+    if(moved) return;
+    if(e.cancelable) e.preventDefault();
+    open(el);
+  },{capture:true,passive:false});
+
+  // Pemanggilan programatik showPicker() juga dialihkan ke popup kustom
+  [HTMLInputElement,window.HTMLSelectElement].forEach(function(C){
+    if(!C || !C.prototype || typeof C.prototype.showPicker!=='function') return;
+    const orig=C.prototype.showPicker;
+    C.prototype.showPicker=function(){
+      const isTarget=(this.tagName==='SELECT') || /^(date|time|month)$/.test(this.type);
+      if(isTarget && !this.disabled && !this.readOnly && this.dataset.nativePicker!=='true' && typeof window.__openGlassNativePopupFor==='function'){
+        window.__openGlassNativePopupFor(this); return;
+      }
+      return orig.apply(this,arguments);
+    };
+  });
+})();
+</script>
+
+
+<script id="booking-jam-terisi-filter">
+(function(){
+  'use strict';
+  // Urutan slot dalam satu hari operasional: 07:00 ... 24:00, lalu 01:00 (dini hari, tetap tanggal yang sama)
+  window.BOOKING_JAM_URUT = ['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00','23:00','24:00','01:00'];
+  // Kunci pengurutan: jam dini hari (00-06) dianggap setelah 24:00
+  window.jamSortKey = function(j){
+    const s = String(j == null ? '' : j).substring(0,5);
+    const m = /^(\d{1,2}):(\d{2})$/.exec(s);
+    if(!m) return s;
+    const h = parseInt(m[1],10);
+    return String(h < 7 ? h + 24 : h).padStart(2,'0') + ':' + m[2];
+  };
+
+  const $ = id => document.getElementById(id);
+  let lastSig = '';
+
+  function rebuild(sel, items, wanted){
+    const keep = items.some(i => i.value === wanted) ? wanted : (items[0] ? items[0].value : '');
+    sel.innerHTML = '';
+    items.forEach(i => {
+      const o = document.createElement('option');
+      o.value = i.value; o.textContent = i.label;
+      if(i.disabled) o.disabled = true;
+      sel.appendChild(o);
+    });
+    sel.value = keep;
+    return keep;
+  }
+
+  function refresh(force){
+    const page = $('page-booking');
+    const selJam = $('b-jam'), selDur = $('b-durasi'), inTgl = $('b-tanggal');
+    if(!page || !selJam || !selDur || !inTgl) return;
+    if(!force && page.classList.contains('hidden')) return;
+    const cek = window.bentrokCekSlot;
+    if(typeof cek !== 'function') return;
+    const urut = window.BOOKING_JAM_URUT, tgl = inTgl.value;
+
+    const free = urut.filter(j => { if(!tgl) return true; try { return cek(tgl, j).length === 0; } catch(_) { return true; } });
+    const sig = tgl + '|' + free.join(',') + '|' + selJam.value + '|' + selDur.value;
+    if(!force && sig === lastSig) return;
+
+    // 1) Jam mulai: hanya jam yang masih kosong
+    const jamItems = free.length ? free.map(j => ({value:j,label:j})) : [{value:'',label:'Tidak ada jam kosong',disabled:true}];
+    const jamDipilih = rebuild(selJam, jamItems, selJam.value);
+
+    // 2) Durasi: batasi sampai jam kosong berurutan dari jam mulai
+    let maxDur = 1;
+    const i0 = urut.indexOf(jamDipilih);
+    if(i0 >= 0){
+      maxDur = 0;
+      for(let i = i0; i < urut.length && maxDur < 8 && free.includes(urut[i]); i++) maxDur++;
+      maxDur = Math.max(1, maxDur);
+    }
+    const durItems = Array.from({length:maxDur}, (_,k) => ({value:String(k+1), label:(k+1)+' Jam'}));
+    rebuild(selDur, durItems, selDur.value);
+
+    lastSig = tgl + '|' + free.join(',') + '|' + selJam.value + '|' + selDur.value;
+  }
+
+  document.addEventListener('change', function(e){
+    const id = e.target && e.target.id;
+    if(id === 'b-tanggal' || id === 'b-jam' || id === 'b-durasi') refresh(true);
+  }, true);
+  document.addEventListener('input', function(e){
+    if(e.target && e.target.id === 'b-tanggal') refresh(true);
+  }, true);
+  // Data jadwal datang dari Firebase kapan saja & tanggal bisa diubah lewat kode: cek berkala saat form Booking terbuka
+  setInterval(function(){ refresh(false); }, 1200);
+  document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ refresh(true); }, 800); });
+})();
+</script>
+
 </body>
 
 <style id="FINAL_FIX_UANG_KELUAR_ONE_BIG_GLASS_CARD">
